@@ -30,7 +30,8 @@ button{
 button.primary{background:var(--accent);border-color:var(--accent);color:#05251c;width:100%;margin-top:12px}
 button.secondary{width:100%;margin-top:8px}
 button.smallbtn{padding:8px 10px;font-size:.85rem}
-.tab.active{background:var(--accent);color:#05251c;border-color:var(--accent)}
+.tab.active,
+.position-mode-switch button.active{background:var(--accent);color:#05251c;border-color:var(--accent)}
 label{display:block;color:var(--muted);font-size:.86rem;margin:10px 0 5px}
 input,select{
   width:100%;background:var(--input);color:var(--text);border:1px solid var(--line);
@@ -175,6 +176,7 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
 
 #encodedBlock{
   margin-top:14px;
+  scroll-margin-top:84px;
   padding:14px 14px 12px;
   border-radius:16px;
   background:var(--focus-bg);
@@ -284,6 +286,11 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
 }
 :root[data-theme="day"] .ephemeral-step-letter{color:#fff}
 .ephemeral-radio-value{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:10px;
   margin-top:8px;
   padding:14px;
   border:2px dashed var(--focus-line);
@@ -292,6 +299,14 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
   font-size:1.22rem;
   font-weight:900;
   letter-spacing:.025em;
+}
+.ephemeral-value-icons{
+  font-size:1.6rem;
+  line-height:1;
+  white-space:nowrap;
+}
+@media(max-width:600px){
+  .ephemeral-radio-value{flex-direction:column}
 }
 .ephemeral-radio-tag{
   margin-top:6px;
@@ -360,7 +375,8 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
   background:#f4f4f4;color:#080808;border-color:#151515
 }
 :root[data-theme="day"] button.primary,
-:root[data-theme="day"] .tab.active{
+:root[data-theme="day"] .tab.active,
+:root[data-theme="day"] .position-mode-switch button.active{
   background:#0759a8;color:#ffffff;border-color:#0759a8
 }
 :root[data-theme="day"] .zone-summary,
@@ -511,7 +527,7 @@ section[id$="Panel"]{
 }
 
 .zone-alias-inline::before{
-  content:"ALIAS DE ZONE";
+  content:"ALIAS ZONE";
   display:block;
   margin-bottom:5px;
   font-size:.70rem;
@@ -623,6 +639,14 @@ section[id$="Panel"]{
   color:var(--focus-muted);
   margin-bottom:5px;
 }
+.result-fishing-icons{
+  display:none;
+  margin-bottom:8px;
+  font-size:1.8rem;
+}
+.position-confirmed .result-fishing-icons{
+  display:block;
+}
 .plotter-coordinate strong{
   display:block;
   font-size:1.35rem;
@@ -699,10 +723,6 @@ section[id$="Panel"]{
   grid-template-columns:1fr 1fr;
   gap:8px;
   margin:4px 0 14px;
-  padding:4px;
-  border:1px solid var(--line);
-  border-radius:14px;
-  background:rgba(255,255,255,.025);
 }
 .position-mode-switch button{
   margin:0;
@@ -715,9 +735,6 @@ section[id$="Panel"]{
   letter-spacing:.025em;
 }
 .position-mode-switch button.active{
-  border-color:var(--focus-line);
-  background:var(--focus-bg);
-  color:var(--focus-text);
   box-shadow:0 5px 16px rgba(0,0,0,.16);
 }
 .position-mode-caption{
@@ -765,9 +782,6 @@ section[id$="Panel"]{
 }
 .position-canonical-preview{
   margin-top:9px;
-  padding:9px 11px;
-  border-radius:11px;
-  border:1px solid var(--line);
   color:var(--muted);
   font-size:.78rem;
   text-align:center;
@@ -775,7 +789,6 @@ section[id$="Panel"]{
 .position-canonical-preview strong{
   color:var(--text);
 }
-:root[data-theme="day"] .position-mode-switch,
 :root[data-theme="day"] .ddm-axis{
   background:#fbfcfd;
 }
@@ -984,13 +997,15 @@ select.ephemeral-zone-active{
 }
 .ephemeral-zone-center{
   margin-top:10px;
-  padding:10px 11px;
-  border:1px solid var(--ephemeral-line);
-  border-radius:11px;
-  background:rgba(255,255,255,.03);
 }
 .ephemeral-zone-center .zone-coord-label{
+  display:block;
+  margin-bottom:8px;
   color:var(--ephemeral-line);
+}
+.ephemeral-zone-center>strong{
+  display:block;
+  margin-top:4px;
 }
 .ephemeral-local-only{
   margin-top:5px;
@@ -1259,6 +1274,7 @@ select.ephemeral-zone-active{
 
 .provisional-position-block{
   margin-top:14px;
+  scroll-margin-top:84px;
   padding:14px;
   border:2px solid #d97706!important;
   border-radius:16px;
@@ -1333,6 +1349,24 @@ select.ephemeral-zone-active{
 /* ===== V3.28 — workflow radio complet ===== */
 .zone-confirm-inline{margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .zone-confirm-btn{flex:1 1 230px;min-height:44px}
+#receivedZoneNotice{flex:0 0 100%;margin-top:0}
+.zone-delete-trigger{margin-top:8px;min-height:44px}
+.zone-delete-dialog{
+  width:min(440px,calc(100% - 24px));
+  max-height:calc(100dvh - 32px);
+  overflow:auto;
+  padding:20px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:var(--card);
+  color:var(--text);
+}
+.zone-delete-dialog::backdrop{background:rgba(0,0,0,.65)}
+.zone-delete-name{display:block;margin:12px 0;overflow-wrap:anywhere}
+.zone-delete-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.zone-delete-actions button{flex:1 1 140px;min-height:48px}
+#confirmZoneDelete,
+:root[data-theme="day"] #confirmZoneDelete{background:#b42332;border-color:#b42332;color:#fff}
 .protocol-state-confirmed{color:#d9ffe8;background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.68)}
 :root[data-theme="day"] .protocol-state-confirmed{color:#075d2a;background:#eaf8ef;border-color:#228b4e}
 .active-transmission-header{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
@@ -1623,21 +1657,32 @@ button:focus-visible,
   opacity:1 !important;
 }
 
-/* Violet : vrai bouton de création de zone éphémère */
-#ephemeralZoneBtn{
+/* Violet commun aux actions de zone éphémère en émission et réception */
+#ephemeralZoneBtn,
+#receivedZoneToggle,
+#addReceivedZoneBtn{
   background:#7c4dcb !important;
   border-color:#7c4dcb !important;
   color:#fff !important;
   box-shadow:0 3px 0 rgba(63,34,114,.38) !important;
 }
-#ephemeralZoneBtn:hover{
+#ephemeralZoneBtn:hover,
+#receivedZoneToggle:hover,
+#addReceivedZoneBtn:hover{
   filter:brightness(1.06);
 }
-#ephemeralZoneBtn:disabled{
+#ephemeralZoneBtn:disabled,
+#addReceivedZoneBtn:disabled{
   background:#5f4a89 !important;
   border-color:#5f4a89 !important;
   color:#f2ecff !important;
   opacity:.62 !important;
+}
+#receivedZoneToggle{
+  border-radius:12px;
+}
+.terrain-details[open]>#receivedZoneToggle{
+  border-radius:12px 12px 0 0;
 }
 
 
@@ -1714,6 +1759,25 @@ button:focus-visible,
 
 
 /* ===== V3.28.14 — bulle étape 3 émission ===== */
+.sender-expected-label .action-cue,
+.sender-final-label .action-cue,
+#receiverReplyLabel .action-cue{
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:.5rem;
+}
+.sender-expected-label .action-cue .cue-icon,
+.sender-final-label .action-cue .cue-icon,
+#receiverReplyLabel .action-cue .cue-icon{
+  font-size:1.6rem;
+}
+@media(max-width:600px){
+  #receiverReplyLabel .action-cue{
+    display:flex;
+    flex-direction:column;
+  }
+}
+
 .transmit-step-heading{
   margin-top:10px;
   margin-bottom:8px;
@@ -1987,9 +2051,11 @@ button:focus-visible,
       <div id="sendZoneSummary" class="zone-summary"></div>
       <div id="sendZoneAlias" class="zone-alias-inline radio-block hidden"></div>
       <div class="zone-confirm-inline" id="sendZoneConfirmBlock">
-        <div id="sendZoneConfirmState" class="protocol-state-pill protocol-state-provisional">● ALIAS À CONFIRMER</div>
-        <button class="secondary zone-confirm-btn" id="sendZoneConfirmBtn">J’AI COMPARÉ — L’ALIAS CORRESPOND</button>
+        <div id="sendZoneConfirmState" class="protocol-state-pill protocol-state-provisional">● ALIAS ZONE À CONFIRMER</div>
+        <button class="secondary zone-confirm-btn" id="sendZoneConfirmBtn">J’AI COMPARÉ — L’ALIAS ZONE CORRESPOND</button>
       </div>
+      <button type="button" class="smallbtn zone-delete-trigger hidden" id="sendDeleteZoneBtn">🗑 Supprimer cette zone</button>
+      <div id="sendZoneActionStatus" class="status hidden" role="status"></div>
       <details class="terrain-details">
         <summary>Aide sur le choix de la zone</summary>
         <div class="details-body small">
@@ -2050,6 +2116,8 @@ button:focus-visible,
         </div>
       </div>
 
+      <div id="driftStatus" class="status warn">Entre une position pour vérifier sa dérive par rapport au centre.</div>
+
       <div class="action-stack">
         <button class="secondary" id="gpsBtn">UTILISER LE GPS DU TÉLÉPHONE</button>
         <button class="secondary" id="ephemeralZoneBtn">CRÉER UNE ZONE ÉPHÉMÈRE AUTOUR DE CETTE POSITION</button>
@@ -2062,7 +2130,10 @@ button:focus-visible,
         <div class="ephemeral-workflow">
           <div class="ephemeral-protocol-step is-radio">
             <div class="ephemeral-step-title"><span class="ephemeral-step-letter">A</span>Transmettre l’ancre publique · degrés décimaux</div>
-            <div id="ephemeralCenter" class="ephemeral-radio-value"></div>
+            <div class="ephemeral-radio-value">
+              <span class="ephemeral-value-icons" aria-hidden="true">📣</span>
+              <span id="ephemeralCenter"></span>
+            </div>
             <div class="ephemeral-radio-tag">À dire à la VHF</div>
             <div class="small" style="margin-top:8px;text-align:center">
               Grille 0,25° : décimales attendues <strong>.00 / .25 / .50 / .75</strong>. Le centre virtuel réel n’est jamais annoncé.
@@ -2070,13 +2141,16 @@ button:focus-visible,
           </div>
 
           <div id="ephemeralAliasStep" class="ephemeral-protocol-step is-radio">
-            <div class="ephemeral-step-title"><span class="ephemeral-step-letter">B</span>Vérifier l'alias radio</div>
-            <div id="ephemeralAlias" class="ephemeral-radio-value">Calcul…</div>
+            <div class="ephemeral-step-title"><span class="ephemeral-step-letter">B</span>Vérifier l’alias zone</div>
+            <div class="ephemeral-radio-value">
+              <span class="ephemeral-value-icons" aria-hidden="true">📣 👂</span>
+              <span id="ephemeralAlias">Calcul…</span>
+            </div>
             <div class="ephemeral-radio-tag">Vérification humaine à la VHF</div>
             <div class="small" style="margin-top:8px;text-align:center">
               Le récepteur saisit l'ancre puis annonce l'alias obtenu. Compare-le avec celui affiché ici, puis confirme manuellement la zone.
             </div>
-            <button class="primary" id="ephemeralAliasConfirmBtn" disabled>J’AI COMPARÉ — L’ALIAS CORRESPOND</button>
+            <button class="primary" id="ephemeralAliasConfirmBtn" disabled>J’AI COMPARÉ — L’ALIAS ZONE CORRESPOND</button>
             <div id="ephemeralConfirmStatus" class="status hidden"></div>
           </div>
 
@@ -2088,16 +2162,15 @@ button:focus-visible,
         </div>
 
         <div id="ephemeralMetrics" class="metric" style="margin-top:10px"></div>
-        <details class="terrain-details">
+        <details class="zone-decimal-details">
           <summary>Détails techniques de la zone éphémère</summary>
-          <div class="details-body small">
+          <div class="zone-decimal-body">
             Règles V2 : ancre publique sur une grille de 0,25°, décalage secret dérivé de la session (jusqu'à ±100 km par axe),
             carré virtuel 250 × 250 km et bateau à au moins 50 km de chaque bord du carré secret.
           </div>
         </details>
       </div>
 
-      <div id="driftStatus" class="status warn">Entre une position pour vérifier sa dérive par rapport au centre.</div>
 
       <button class="primary" id="encodeBtn">GÉNÉRER LA PHRASE</button>
       <div id="encodeStatus" class="status hidden"></div>
@@ -2161,12 +2234,15 @@ button:focus-visible,
       <div id="recvZoneSummary" class="zone-summary"></div>
       <div id="recvZoneAlias" class="zone-alias-inline radio-block hidden"></div>
       <div class="zone-confirm-inline" id="recvZoneConfirmBlock">
-        <div id="recvZoneConfirmState" class="protocol-state-pill protocol-state-provisional">● ALIAS À CONFIRMER</div>
-        <button class="secondary zone-confirm-btn" id="recvZoneConfirmBtn">J’AI COMPARÉ — L’ALIAS CORRESPOND</button>
+        <div id="recvZoneConfirmState" class="protocol-state-pill protocol-state-provisional">● ALIAS ZONE À CONFIRMER</div>
+        <div id="receivedZoneNotice" class="status hidden" role="status"></div>
+        <button class="secondary zone-confirm-btn" id="recvZoneConfirmBtn">J’AI COMPARÉ — L’ALIAS ZONE CORRESPOND</button>
       </div>
+      <button type="button" class="smallbtn zone-delete-trigger hidden" id="recvDeleteZoneBtn">🗑 Supprimer cette zone</button>
+      <div id="recvZoneActionStatus" class="status hidden" role="status"></div>
 
-      <details class="terrain-details">
-        <summary>Zone éphémère : saisir l’ancre décimale annoncée</summary>
+      <details class="terrain-details" id="receivedZoneDetails">
+        <summary id="receivedZoneToggle">Zone éphémère : saisir l’ancre décimale annoncée</summary>
         <div class="details-body">
           <div class="small" style="margin-bottom:8px">
             Si l’émetteur vient de créer une zone éphémère, saisis l’<strong>ancre publique en degrés décimaux</strong>.
@@ -2198,9 +2274,9 @@ button:focus-visible,
         <button class="secondary" id="clearWords">EFFACER LES MOTS</button>
       </div>
 
-      <details class="terrain-details receive-message-help">
+      <details class="zone-decimal-details receive-message-help">
         <summary>Aide à la saisie des mots</summary>
-        <div class="details-body small">
+        <div class="zone-decimal-body">
           Format radio : <strong>SUJET + QUALIFICATIF + ET/OU + SUJET + QUALIFICATIF</strong>.
           L’autocomplétion commence dès la première lettre. Un champ n’est validé que lorsqu’il correspond exactement à un mot du catalogue.
           Les accents facilitent la lecture mais sont ignorés par le protocole : <strong>FUMÉE</strong> et <strong>FUMEE</strong> sont équivalents.
@@ -2384,6 +2460,16 @@ button:focus-visible,
   </div>
 
 </main>
+<dialog id="zoneDeleteDialog" class="zone-delete-dialog" aria-labelledby="zoneDeleteTitle" aria-describedby="zoneDeleteName zoneDeleteDescription">
+  <h2 id="zoneDeleteTitle">Supprimer cette zone ?</h2>
+  <strong id="zoneDeleteName" class="zone-delete-name"></strong>
+  <p id="zoneDeleteDescription"></p>
+  <div id="zoneDeleteError" class="status hidden" role="alert"></div>
+  <div class="zone-delete-actions">
+    <button type="button" id="cancelZoneDelete" autofocus>Annuler</button>
+    <button type="button" id="confirmZoneDelete">Supprimer la zone</button>
+  </div>
+</dialog>
 
 <script>
 "use strict";
@@ -3391,6 +3477,8 @@ const ZONE_CONFIRM_STORAGE_KEY="vhfGpsZoneConfirmV2";
 
 const confirmedZoneIds=new Set();
 let ephemeralWorkflowRevision=0;
+let receivedZoneNoticeContext=null;
+let zoneDeletionNotice=null;
 
 function confirmationSessionKey(){
   const secret=activeSecret();
@@ -3476,7 +3564,7 @@ function refreshEncodeState(){
 
   btn.disabled=!(protocolOk && zoneOk);
   btn.textContent=!zoneOk
-    ?"CONFIRME L’ALIAS POUR GÉNÉRER LA PHRASE"
+    ?"CONFIRME L’ALIAS ZONE POUR GÉNÉRER LA PHRASE"
     :"GÉNÉRER LA PHRASE";
 }
 
@@ -3484,6 +3572,14 @@ function refreshZoneConfirmationUi(){
   const z=activeZone();
   const validSecret=validateSessionSecret(activeSecret()).ok;
   const confirmed=!!z && validSecret && isZoneConfirmed(z);
+
+  if(receivedZoneNoticeContext && (
+    receivedZoneNoticeContext.zoneId!==z?.id ||
+    receivedZoneNoticeContext.secret!==activeSecret() || confirmed
+  )){
+    hideStatus("receivedZoneNotice");
+    receivedZoneNoticeContext=null;
+  }
 
   for(const side of ["send","recv"]){
     const state=$(side+"ZoneConfirmState");
@@ -3495,18 +3591,18 @@ function refreshZoneConfirmationUi(){
     block.classList.toggle("hidden",side==="send" && !!z && isAnchoredZone(z));
 
     state.className="protocol-state-pill "+(confirmed?"protocol-state-confirmed":"protocol-state-provisional");
-    state.textContent=confirmed?"● ALIAS CONFIRMÉ":"● ALIAS À CONFIRMER";
+    state.textContent=confirmed?"● ALIAS ZONE CONFIRMÉ":"● ALIAS ZONE À CONFIRMER";
 
     btn.classList.remove("zone-confirm-pending","zone-confirm-done","zone-confirm-unavailable");
 
     if(confirmed){
       btn.classList.add("zone-confirm-done");
       btn.disabled=true;
-      btn.textContent="✓ ALIAS CONFIRMÉ — ZONE DÉBLOQUÉE";
+      btn.textContent="✓ ALIAS ZONE CONFIRMÉ — ZONE DÉBLOQUÉE";
     }else if(validSecret && z){
       btn.classList.add("zone-confirm-pending");
       btn.disabled=false;
-      btn.textContent="CONFIRMER L’ALIAS — OBLIGATOIRE";
+      btn.textContent="CONFIRMER L’ALIAS ZONE — OBLIGATOIRE";
     }else{
       btn.classList.add("zone-confirm-unavailable");
       btn.disabled=true;
@@ -3564,19 +3660,15 @@ async function refreshEphemeralWorkflow(){
   confirmBtn.classList.remove("ephemeral-confirm-pending","ephemeral-confirm-done","zone-confirm-pending","zone-confirm-done");
   confirmBtn.disabled=true;
   confirmBtn.textContent=confirmed
-    ?"✓ ALIAS CONFIRMÉ — ZONE DÉBLOQUÉE"
-    :"CONFIRMER L’ALIAS — OBLIGATOIRE";
+    ?"✓ ALIAS ZONE CONFIRMÉ — ZONE DÉBLOQUÉE"
+    :"CONFIRMER L’ALIAS ZONE — OBLIGATOIRE";
   if(confirmed){
     confirmBtn.classList.add("ephemeral-confirm-done");
   }else{
     confirmBtn.classList.add("ephemeral-confirm-pending");
   }
 
-  if(confirmed){
-    setStatus("ephemeralConfirmStatus","Alias comparé et confirmé manuellement pour cette zone et cette session radio.","ok");
-  }else{
-    hideStatus("ephemeralConfirmStatus");
-  }
+  hideStatus("ephemeralConfirmStatus");
 
   const secret=activeSecret();
   if(!validateSessionSecret(secret).ok){
@@ -3613,7 +3705,6 @@ function zoneSummary(z){
   const b=zoneBounds(z),name=escapeHtml(z.name);
 
   if(isAnchoredZone(z)){
-    const centerMarine=`${formatDegMin(z.lat,true)} / ${formatDegMin(z.lon,false)}`;
     return `<div class="zone-ephemeral-banner">ZONE ÉPHÉMÈRE ACTIVE</div>`+
       `<strong>${name}</strong>`+
       `<div class="zone-marine-center ephemeral-anchor-panel">`+
@@ -3623,7 +3714,8 @@ function zoneSummary(z){
       `<div class="small" style="margin-top:5px">Grille 0,25° · décimales .00 / .25 / .50 / .75</div>`+
       `<div class="ephemeral-zone-center">`+
         `<span class="zone-coord-label">Centre de la zone · Marine</span>`+
-        `<strong>${centerMarine}</strong>`+
+        `<strong>${formatDegMin(z.lat,true)}</strong>`+
+        `<strong>${formatDegMin(z.lon,false)}</strong>`+
         `<div class="ephemeral-secret-warning">`+
           `<strong>NE PAS TRANSMETTRE À LA VHF</strong>`+
           `Centre virtuel calculé localement à partir de l’ancre publique + du secret de session.`+
@@ -3810,8 +3902,13 @@ async function refreshZoneAliases(){
 }
 
 function updateZoneSummaries(){
+  clearZoneDeletionNotice();
   syncZoneSelects();
   const z=activeZone();
+  for(const side of ["send","recv"]){
+    $(side+"DeleteZoneBtn").classList.toggle("hidden",!z || !!z.builtin);
+    hideStatus(side+"ZoneActionStatus");
+  }
   if(!z)return;
 
   const ephemeral=isAnchoredZone(z);
@@ -3898,8 +3995,8 @@ async function showReceiverCheckReminder(){
   const state=$("receiverReminderAliasState");
   state.className="receiver-check-state "+(confirmed?"ok":"warn");
   state.textContent=confirmed
-    ?"✓ ALIAS DE ZONE CONFIRMÉ"
-    :"⚠ ALIAS DE ZONE À CONFIRMER AVANT DÉCODAGE";
+    ?"✓ ALIAS ZONE CONFIRMÉ"
+    :"⚠ ALIAS ZONE À CONFIRMER AVANT DÉCODAGE";
 
   box.classList.remove("hidden");
 }
@@ -4008,7 +4105,10 @@ async function createEphemeralZoneCandidate(lat,lon,secret){
   return candidates[secureRandomIndex(candidates.length)];
 }
 
-function ephemeralLocalLabel(){const d=new Date(),hh=String(d.getHours()).padStart(2,"0"),mm=String(d.getMinutes()).padStart(2,"0");return `ÉPHÉMÈRE ${hh}:${mm}`;}
+function ephemeralLocalLabel(name="ÉPHÉMÈRE"){
+  const d=new Date(),hh=String(d.getHours()).padStart(2,"0"),mm=String(d.getMinutes()).padStart(2,"0");
+  return `${name} ${hh}:${mm}`;
+}
 async function saveOrSelectEphemeralZone(anchorLat,anchorLon,secret,name=ephemeralLocalLabel()){
   assertValidPublicAnchor(anchorLat,anchorLon);
   const aLat=canonicalAnchorCoord(anchorLat),aLon=canonicalAnchorCoord(anchorLon);
@@ -4347,10 +4447,12 @@ function formatDegMin(value,isLat){
 
 function formatCoordsBoth(lat,lon){
   const signed=`${lat.toFixed(4)}, ${lon.toFixed(4)}`;
-  const marine=`${formatDegMin(lat,true)} / ${formatDegMin(lon,false)}`;
+  const marineLat=formatDegMin(lat,true),marineLon=formatDegMin(lon,false);
   return `<div class="plotter-coordinate">`+
+           `<span class="result-fishing-icons" aria-hidden="true">🐟 🎣</span>`+
            `<span class="coord-label">Marine · degrés + minutes décimales</span>`+
-           `<strong>${marine}</strong>`+
+           `<strong>${marineLat}</strong>`+
+           `<strong>${marineLon}</strong>`+
          `</div>`+
          `<div class="coord-secondary">`+
            `<div><strong>Décimal signé :</strong> ${signed}</div>`+
@@ -4552,13 +4654,10 @@ function handleFinalConfirmationChoice(word,button){
 
   if(got===expected){
     button.classList.add("correct");
-    setStatus(
-      "finalConfirmStatus",
-      "Confirmation finale correcte — position confirmée.",
-      "ok"
-    );
+    hideStatus("finalConfirmStatus");
     $("newReceptionAfterFailure").classList.add("hidden");
     markPositionConfirmed();
+    $("decodedBlock").scrollIntoView({behavior:"smooth",block:"start"});
     return;
   }
 
@@ -4661,7 +4760,11 @@ async function encodeSelectedPosition(){
 
 $("encodeBtn").onclick=async()=>{
   try{
-    await encodeSelectedPosition();
+    const result=await encodeSelectedPosition();
+    if(result.d.index===result.e.index && result.d.receivedTag===result.e.tag &&
+       !$("sendPanel").classList.contains("hidden")){
+      $("encodedBlock").scrollIntoView({behavior:"smooth",block:"start"});
+    }
   }catch(e){
     setStatus("encodeStatus",e.message||String(e),"bad");
   }
@@ -4709,26 +4812,27 @@ $("ephemeralZoneBtn").onclick=async()=>{
 };
 
 $("sendZoneConfirmBtn").onclick=async()=>{
+  hideStatus("encodeStatus");
   try{
     await confirmActiveZoneAlias();
-    setStatus("encodeStatus","Alias de zone confirmé pour cette session.","ok");
   }catch(e){setStatus("encodeStatus",e.message||String(e),"bad");}
 };
 
 $("recvZoneConfirmBtn").onclick=async()=>{
+  hideStatus("decodeStatus");
   try{
     await confirmActiveZoneAlias();
-    setStatus("decodeStatus","Alias de zone confirmé pour cette session.","ok");
   }catch(e){setStatus("decodeStatus",e.message||String(e),"bad");}
 };
 
 $("ephemeralAliasConfirmBtn").onclick=async()=>{
+  hideStatus("encodeStatus");
+  hideStatus("ephemeralConfirmStatus");
   try{
     const z=selectedZone(sendZone);
     if(!isAnchoredZone(z))throw new Error("La zone sélectionnée n’est pas une zone éphémère.");
     await confirmActiveZoneAlias();
     invalidateEncodedResult();
-    setStatus("encodeStatus","Alias comparé et confirmé. Tu peux maintenant générer la phrase de position.","ok");
   }catch(e){
     setStatus("ephemeralConfirmStatus",e.message||String(e),"bad");
   }
@@ -5473,31 +5577,86 @@ $("saveZoneBtn").onclick=()=>{
 };
 
 $("addReceivedZoneBtn").onclick=async()=>{
+  const button=$("addReceivedZoneBtn");
+  if(button.disabled)return;
+  button.disabled=true;
+  hideStatus("receivedZoneStatus");
   try{
     const secret=activeSecret();if(!validateSessionSecret(secret).ok)throw new Error("Valide d’abord le secret de session pour reconstruire la zone.");
     const rawAnchorLat=parseNum($("receivedZoneLat").value),rawAnchorLon=parseNum($("receivedZoneLon").value);
     assertValidPublicAnchor(rawAnchorLat,rawAnchorLon);
     const anchorLat=canonicalAnchorCoord(rawAnchorLat),anchorLon=canonicalAnchorCoord(rawAnchorLon);
-    const localName=String($("receivedZoneName").value??"").trim().toUpperCase()||"ZONE REÇUE";
+    const localName=ephemeralLocalLabel(String($("receivedZoneName").value??"").trim().toUpperCase()||"ZONE REÇUE");
     let z=zones.find(x=>isAnchoredZone(x)&&x.anchorLat===anchorLat&&x.anchorLon===anchorLon),created=false;
     if(!z){z=await saveOrSelectEphemeralZone(anchorLat,anchorLon,secret,localName);created=true;}
     populateZones(z.id);
     setActiveZone(z.id,{invalidate:true,persist:true,refresh:true});
     refreshDecodeState();
     const alias=await zoneAlias(secret,z);
+    if(activeSecret()!==secret || activeZone()?.id!==z.id)return;
+    receivedZoneNoticeContext={zoneId:z.id,secret};
     setStatus(
-      "receivedZoneStatus",
+      "receivedZoneNotice",
       `${created?"Zone reconstruite":"Zone déjà connue"} sous « ${z.name} ». Vérifie maintenant que l’émetteur annonce exactement l’alias « ${alias.text} » avant de poursuivre.`,
       "warn"
     );
-  }catch(e){setStatus("receivedZoneStatus",e.message||String(e),"bad");}
+    refreshZoneConfirmationUi();
+    for(const id of ["receivedZoneName","receivedZoneLat","receivedZoneLon"]){
+      $(id).value="";
+    }
+    $("receivedZoneDetails").open=false;
+    $("recvZoneConfirmBtn").focus({preventScroll:true});
+    $("recvZoneConfirmBlock").scrollIntoView({block:"nearest"});
+  }catch(e){
+    $("receivedZoneDetails").open=true;
+    setStatus("receivedZoneStatus",e.message||String(e),"bad");
+  }finally{
+    button.disabled=false;
+  }
 };
 
 
-$("deleteZoneBtn").onclick=()=>{
-  const id=$("manageZoneSelect").value,z=zones.find(x=>x.id===id);
-  if(!z)return setStatus("zoneStatus","Aucune zone personnalisée sélectionnée.","warn");
-  if(z.builtin)return setStatus("zoneStatus","Une zone intégrée ne peut pas être supprimée.","warn");
+let pendingZoneDeletion=null;
+
+function clearZoneDeletionNotice(){
+  if(!zoneDeletionNotice)return;
+  clearTimeout(zoneDeletionNotice.timer);
+  for(const id of ["zoneStatus","sendZoneActionStatus","recvZoneActionStatus"]){
+    const el=$(id);
+    if(el.textContent===zoneDeletionNotice.message && el.className==="status ok")hideStatus(id);
+  }
+  zoneDeletionNotice=null;
+}
+
+function showZoneDeletionNotice(message){
+  clearZoneDeletionNotice();
+  const notice={message,timer:null};
+  zoneDeletionNotice=notice;
+  for(const id of ["zoneStatus","sendZoneActionStatus","recvZoneActionStatus"]){
+    setStatus(id,message,"ok");
+  }
+  notice.timer=setTimeout(()=>{
+    if(zoneDeletionNotice===notice)clearZoneDeletionNotice();
+  },5000);
+}
+
+function requestZoneDeletion(id,focusId){
+  const z=zones.find(x=>x.id===id);
+  if(!z || z.builtin)return;
+  pendingZoneDeletion={id:z.id,focusId};
+  $("zoneDeleteName").textContent=z.name;
+  $("zoneDeleteDescription").textContent=activeZoneId===z.id
+    ?"Cette zone sera supprimée de cet appareil. Les résultats préparés pour cette zone seront effacés et une zone intégrée deviendra active."
+    :"Cette zone sera supprimée de cet appareil. La zone active sera conservée.";
+  hideStatus("zoneDeleteError");
+  $("zoneDeleteDialog").showModal();
+  $("cancelZoneDelete").focus();
+}
+
+function deleteCustomZone(id){
+  const z=zones.find(x=>x.id===id);
+  if(!z)throw new Error("Cette zone n’existe plus.");
+  if(z.builtin)throw new Error("Une zone intégrée ne peut pas être supprimée.");
   confirmedZoneIds.delete(z.id);
   saveZoneConfirmations();
   const wasActive=activeZoneId===z.id;
@@ -5510,7 +5669,27 @@ $("deleteZoneBtn").onclick=()=>{
 
   populateZones(fallback);
   if(fallback)setActiveZone(fallback,{invalidate:true,persist:true,refresh:true});
-  setStatus("zoneStatus",`Zone « ${z.name} » supprimée.${wasActive?" Une zone intégrée est maintenant active.":""}`,"ok");
+  const message=`Zone « ${z.name} » supprimée.${wasActive?" Une zone intégrée est maintenant active.":""}`;
+  showZoneDeletionNotice(message);
+}
+
+$("sendDeleteZoneBtn").onclick=()=>requestZoneDeletion(activeZoneId,"sendZone");
+$("recvDeleteZoneBtn").onclick=()=>requestZoneDeletion(activeZoneId,"recvZone");
+$("deleteZoneBtn").onclick=()=>requestZoneDeletion($("manageZoneSelect").value,"manageZoneSelect");
+$("cancelZoneDelete").onclick=()=>$("zoneDeleteDialog").close();
+$("zoneDeleteDialog").addEventListener("close",()=>{
+  const focusId=pendingZoneDeletion?.focusId;
+  pendingZoneDeletion=null;
+  if(focusId)$(focusId).focus({preventScroll:true});
+});
+$("confirmZoneDelete").onclick=()=>{
+  if(!pendingZoneDeletion)return;
+  try{
+    deleteCustomZone(pendingZoneDeletion.id);
+    $("zoneDeleteDialog").close();
+  }catch(e){
+    setStatus("zoneDeleteError",e.message||String(e),"bad");
+  }
 };
 populateZones();
 initPositionInputUi();
