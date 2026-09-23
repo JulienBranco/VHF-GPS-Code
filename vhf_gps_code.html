@@ -519,7 +519,8 @@ section[id$="Panel"]{
   gap:6px;
 }
 #gpsBtn,
-#centerGpsBtn{
+#centerGpsBtn,
+#relativeGpsBtn{
   display:inline-flex;
   align-items:center;
   gap:6px;
@@ -531,7 +532,8 @@ section[id$="Panel"]{
   text-align:left;
 }
 #gpsBtn .gps-icon,
-#centerGpsBtn .gps-icon{flex-shrink:0;font-size:1.2rem}
+#centerGpsBtn .gps-icon,
+#relativeGpsBtn .gps-icon{flex-shrink:0;font-size:1.2rem}
 .terrain-label{
   text-transform:uppercase;
   letter-spacing:.075em;
@@ -1083,8 +1085,8 @@ section[id$="Panel"]{
 
 /* ===== V3.23 — identité visuelle forte des zones éphémères ===== */
 :root{
-  --builtin-zone-bg:rgba(42,112,180,.13);
-  --builtin-zone-line:#72b5f5;
+  --builtin-zone-bg:#30291f;
+  --builtin-zone-line:#d5a765;
   --ephemeral-line:#c79cff;
   --ephemeral-bg:rgba(140,82,255,.13);
   --ephemeral-text:#eadcff;
@@ -1094,8 +1096,8 @@ section[id$="Panel"]{
   --custom-zone-banner-text:#063c36;
 }
 :root[data-theme="day"]{
-  --builtin-zone-bg:#eef5fc;
-  --builtin-zone-line:#0759a8;
+  --builtin-zone-bg:#fbf0dd;
+  --builtin-zone-line:#946321;
   --ephemeral-line:#6d3fc0;
   --ephemeral-bg:#f3ecff;
   --ephemeral-text:#3b176f;
@@ -1639,6 +1641,45 @@ select.custom-zone-active{
 :root[data-theme="day"] #decodedBlock.position-confirmed .plotter-coordinate strong{
   color:#075d2a;
 }
+.relative-position{
+  margin-top:18px;
+  padding-top:16px;
+  border-top:1px solid rgba(34,197,94,.45);
+}
+.relative-position h3{margin:0 0 6px;font-size:1.04rem}
+.relative-position .small{margin:0 0 12px}
+.relative-position .position-entry-help{margin:0 0 12px}
+.relative-position .ddm-axis{padding:0;border:0;background:transparent}
+:root[data-theme="day"] .relative-position .ddm-axis{background:transparent}
+.relative-position input,
+.relative-position select{
+  background:transparent;
+  color:var(--text);
+  border-color:rgba(34,197,94,.65);
+}
+:root[data-theme="day"] .relative-position input,
+:root[data-theme="day"] .relative-position select{
+  background:transparent;
+  color:var(--text);
+  border-color:#218a4d;
+}
+.relative-position input:focus,
+.relative-position select:focus{border-color:var(--ok);box-shadow:0 0 0 2px var(--ok)}
+:root[data-theme="day"] .relative-position input:focus,
+:root[data-theme="day"] .relative-position select:focus{border-color:#086b2b;box-shadow:0 0 0 2px #086b2b}
+.relative-position select option{background:var(--card);color:var(--text)}
+.relative-position .position-mode-switch{margin-bottom:12px}
+.relative-position-result{
+  margin-top:14px;
+  padding:12px 14px;
+  border-radius:12px;
+  background:rgba(34,197,94,.14);
+  color:#bfffd4;
+}
+.relative-position-result strong{display:block;font-size:1.3rem;line-height:1.35}
+.relative-position-result span{display:block;margin-top:4px}
+.relative-position-result .small{margin:8px 0 0;color:inherit}
+:root[data-theme="day"] .relative-position-result{background:#dff4e5;color:#075d2a}
 @media(max-width:420px){.final-confirm-choice{font-size:.92rem;min-height:56px}.sender-final-word{font-size:1.8rem}}
 
 
@@ -2563,14 +2604,56 @@ button:focus-visible,
           AFFICHER QUAND MÊME LA POSITION NON CONFIRMÉE
         </button>
 
-        <div id="decodedCoordsWrap" class="hidden">
+      <div id="decodedCoordsWrap" class="hidden">
           <div class="unconfirmed-position-warning">
             ⚠ POSITION NON CONFIRMÉE — ne pas la considérer comme validée par l'émetteur.
           </div>
           <div id="decodedCoords" class="coords"></div>
-          <div id="decodedOffset" class="metric"></div>
-        </div>
+        <div id="decodedOffset" class="metric"></div>
       </div>
+      <div id="relativePositionBlock" class="relative-position hidden">
+        <h3>Me situer par rapport au point reçu</h3>
+        <p class="small">Entre ta position actuelle ou relève-la avec le GPS du téléphone. Le calcul reste sur cet appareil.</p>
+        <div class="position-entry-help">
+          <button type="button" id="relativeGpsBtn"><span class="gps-icon" aria-hidden="true">🛰️</span><span>Utiliser le GPS du téléphone</span></button>
+        </div>
+        <div id="relativePositionMode" class="position-mode-switch" role="group" aria-label="Format de ta position">
+          <button type="button" id="relativeModeMarine" class="active" aria-pressed="true">MARINE · ° + MINUTES</button>
+          <button type="button" id="relativeModeDecimal" aria-pressed="false">DÉCIMAL</button>
+        </div>
+        <div id="relativeMarineInput">
+          <div class="ddm-grid">
+            <div class="ddm-axis">
+              <label for="relativeLatDeg">Ma latitude</label>
+              <div class="ddm-fields">
+                <input id="relativeLatDeg" inputmode="numeric" maxlength="2" placeholder="46" aria-label="Degrés de ma latitude">
+                <span class="ddm-unit">°</span>
+                <input id="relativeLatMin" inputmode="decimal" placeholder="15.010" aria-label="Minutes de ma latitude">
+                <span class="ddm-unit">'</span>
+                <select id="relativeLatHem" aria-label="Hémisphère de ma latitude"><option value="N">N</option><option value="S">S</option></select>
+              </div>
+            </div>
+            <div class="ddm-axis">
+              <label for="relativeLonDeg">Ma longitude</label>
+              <div class="ddm-fields">
+                <input id="relativeLonDeg" inputmode="numeric" maxlength="3" placeholder="002" aria-label="Degrés de ma longitude">
+                <span class="ddm-unit">°</span>
+                <input id="relativeLonMin" inputmode="decimal" placeholder="04.984" aria-label="Minutes de ma longitude">
+                <span class="ddm-unit">'</span>
+                <select id="relativeLonHem" aria-label="Hémisphère de ma longitude"><option value="E">E</option><option value="W">W</option></select>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="relativeDecimalInput" class="grid2 hidden">
+          <div><label for="relativeLat">Ma latitude décimale</label><input id="relativeLat" inputmode="decimal" placeholder="46.250167"></div>
+          <div><label for="relativeLon">Ma longitude décimale</label><input id="relativeLon" inputmode="decimal" placeholder="-2.083067"></div>
+        </div>
+        <div id="relativeGpsStatus" class="status hidden" role="status"></div>
+        <div id="relativeInputStatus" class="status hidden" role="status"></div>
+        <div id="relativePositionResult" class="relative-position-result hidden" aria-live="polite"></div>
+      </div>
+    </div>
     </div>
   </section>
 
@@ -2723,7 +2806,7 @@ function initTheme(){
   }
 }
 
-const APP_VERSION="3.28.50";
+const APP_VERSION="3.28.53";
 const PROTOCOL_ID="VHF-GPS-PROTO-5";
 
 function protocolShortLabel(){
@@ -4736,6 +4819,166 @@ function formatCoordsBoth(lat,lon){
 
 function haversineM(a,b,c,d){const R=6371000,p=Math.PI/180;const x=(c-a)*p,y=(d-b)*p;const q=Math.sin(x/2)**2+Math.cos(a*p)*Math.cos(c*p)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(q));}
 
+function initialBearingTrueDeg(lat1,lon1,lat2,lon2){
+  const p=Math.PI/180,a=lat1*p,b=lat2*p,d=(lon2-lon1)*p;
+  const y=Math.sin(d)*Math.cos(b);
+  const x=Math.cos(a)*Math.sin(b)-Math.sin(a)*Math.cos(b)*Math.cos(d);
+  if(Math.abs(x)<1e-12&&Math.abs(y)<1e-12)return null;
+  return (Math.atan2(y,x)*180/Math.PI+360)%360;
+}
+
+let relativePositionMode="marine",relativePositionRevision=0,relativeGpsFix=null;
+
+function relativePositionReady(){
+  const d=currentDecodedResult;
+  return $("decodedBlock").classList.contains("position-confirmed") &&
+    !!d && Number.isFinite(d.lat) && Number.isFinite(d.lon);
+}
+
+function clearRelativePositionFields(){
+  for(const id of ["relativeLatDeg","relativeLatMin","relativeLonDeg","relativeLonMin","relativeLat","relativeLon"])$(id).value="";
+  $("relativeLatHem").value="N";
+  $("relativeLonHem").value="E";
+}
+
+function setRelativePositionFields(lat,lon){
+  const a=decimalAxisToDdm(lat,true),b=decimalAxisToDdm(lon,false);
+  if(!a||!b)return;
+  $("relativeLatDeg").value=String(a.deg).padStart(2,"0");
+  $("relativeLatMin").value=a.min.toFixed(3);
+  $("relativeLatHem").value=a.hem;
+  $("relativeLonDeg").value=String(b.deg).padStart(3,"0");
+  $("relativeLonMin").value=b.min.toFixed(3);
+  $("relativeLonHem").value=b.hem;
+  $("relativeLat").value=lat.toFixed(6);
+  $("relativeLon").value=lon.toFixed(6);
+}
+
+function readRelativePosition(){
+  if(relativeGpsFix)return{ok:true,lat:relativeGpsFix.lat,lon:relativeGpsFix.lon};
+  if(relativePositionMode==="marine"){
+    const a=parseDdmAxis("relativeLatDeg","relativeLatMin","relativeLatHem",true);
+    const b=parseDdmAxis("relativeLonDeg","relativeLonMin","relativeLonHem",false);
+    if(!a.ok)return{ok:false,empty:a.empty&&b.empty,error:a.error};
+    if(!b.ok)return{ok:false,empty:false,error:b.error};
+    return{ok:true,lat:a.value,lon:b.value};
+  }
+  const a=String($("relativeLat").value??"").trim();
+  const b=String($("relativeLon").value??"").trim();
+  if(!a&&!b)return{ok:false,empty:true};
+  const lat=parseNum(a),lon=parseNum(b);
+  if(!Number.isFinite(lat)||lat<-90||lat>90||!Number.isFinite(lon)||lon<-180||lon>180){
+    return{ok:false,empty:false,error:"Coordonnées invalides : latitude -90 à 90, longitude -180 à 180."};
+  }
+  return{ok:true,lat,lon};
+}
+
+function renderRelativePosition(){
+  const result=$("relativePositionResult");
+  result.classList.add("hidden");
+  if(!relativePositionReady())return;
+  const p=readRelativePosition();
+  if(!p.ok){
+    if(p.empty)hideStatus("relativeInputStatus");
+    else setStatus("relativeInputStatus",p.error,"bad");
+    return;
+  }
+  hideStatus("relativeInputStatus");
+  const d=currentDecodedResult;
+  const metres=haversineM(p.lat,p.lon,d.lat,d.lon);
+  const nm=metres/1852,km=metres/1000;
+  const bearing=metres<1?null:initialBearingTrueDeg(p.lat,p.lon,d.lat,d.lon);
+  const direction=bearing===null
+    ?"Tu es au point transmis, à la précision du calcul."
+    :`Direction directe : ${String(Math.round(bearing)%360).padStart(3,"0")}° vrai`;
+  result.innerHTML=`<strong>Point transmis à ${fmt(nm,nm<1?2:1)} milles nautiques (${fmt(km,km<1?2:1)} km)</strong>`+
+    `<span>${direction}</span>`+
+    `<div class="small">Depuis ${formatDegMin(p.lat,true)} / ${formatDegMin(p.lon,false)}. Direction géométrique, pas une route tenant compte des dangers ou du courant.</div>`;
+  result.classList.remove("hidden");
+}
+
+function setRelativePositionMode(mode){
+  const p=readRelativePosition();
+  relativePositionRevision++;
+  relativePositionMode=mode==="decimal"?"decimal":"marine";
+  const marine=relativePositionMode==="marine";
+  $("relativeMarineInput").classList.toggle("hidden",!marine);
+  $("relativeDecimalInput").classList.toggle("hidden",marine);
+  $("relativeModeMarine").classList.toggle("active",marine);
+  $("relativeModeDecimal").classList.toggle("active",!marine);
+  $("relativeModeMarine").setAttribute("aria-pressed",String(marine));
+  $("relativeModeDecimal").setAttribute("aria-pressed",String(!marine));
+  if(p.ok)setRelativePositionFields(p.lat,p.lon);
+  else{
+    relativeGpsFix=null;
+    clearRelativePositionFields();
+  }
+  renderRelativePosition();
+}
+
+function resetRelativePosition(){
+  relativePositionRevision++;
+  relativeGpsFix=null;
+  clearRelativePositionFields();
+  relativePositionMode="marine";
+  $("relativeMarineInput").classList.remove("hidden");
+  $("relativeDecimalInput").classList.add("hidden");
+  $("relativeModeMarine").classList.add("active");
+  $("relativeModeDecimal").classList.remove("active");
+  $("relativeModeMarine").setAttribute("aria-pressed","true");
+  $("relativeModeDecimal").setAttribute("aria-pressed","false");
+  hideStatus("relativeGpsStatus");
+  hideStatus("relativeInputStatus");
+  $("relativePositionResult").innerHTML="";
+  $("relativePositionResult").classList.add("hidden");
+  $("relativePositionBlock").classList.add("hidden");
+}
+
+function onRelativeManualChange(){
+  relativePositionRevision++;
+  relativeGpsFix=null;
+  hideStatus("relativeGpsStatus");
+  renderRelativePosition();
+}
+
+$("relativeModeMarine").onclick=()=>setRelativePositionMode("marine");
+$("relativeModeDecimal").onclick=()=>setRelativePositionMode("decimal");
+for(const id of ["relativeLatDeg","relativeLatMin","relativeLonDeg","relativeLonMin","relativeLatHem","relativeLonHem","relativeLat","relativeLon"]){
+  $(id).addEventListener(id.endsWith("Hem")?"change":"input",onRelativeManualChange);
+}
+$("relativeGpsBtn").onclick=()=>{
+  if(!relativePositionReady())return;
+  if(!navigator.geolocation){
+    setStatus("relativeGpsStatus","GPS du téléphone indisponible : saisis ta position manuellement.","bad");
+    return;
+  }
+  const revision=++relativePositionRevision,target=currentDecodedResult;
+  setStatus("relativeGpsStatus","Acquisition GPS en cours…","warn");
+  navigator.geolocation.getCurrentPosition(
+    fix=>{
+      if(revision!==relativePositionRevision||target!==currentDecodedResult||!relativePositionReady())return;
+      const lat=Number(fix.coords.latitude),lon=Number(fix.coords.longitude);
+      if(!Number.isFinite(lat)||lat<-90||lat>90||!Number.isFinite(lon)||lon<-180||lon>180){
+        setStatus("relativeGpsStatus","Position GPS invalide : saisis ta position manuellement.","bad");
+        return;
+      }
+      const accuracy=Number(fix.coords.accuracy),time=Number(fix.timestamp);
+      relativeGpsFix={lat,lon};
+      setRelativePositionFields(lat,lon);
+      const timeText=Number.isFinite(time)&&time>0
+        ?` à ${new Date(time).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`:"";
+      const accuracyText=Number.isFinite(accuracy)&&accuracy>=0?` · précision annoncée ±${Math.round(accuracy)} m`:"";
+      setStatus("relativeGpsStatus",`Position GPS relevée${timeText}${accuracyText}.`,accuracy>100?"warn":"ok");
+      renderRelativePosition();
+    },
+    error=>{
+      if(revision!==relativePositionRevision||target!==currentDecodedResult||!relativePositionReady())return;
+      setStatus("relativeGpsStatus",`GPS : ${error.message||"acquisition impossible"}. Saisis ta position manuellement.`,"bad");
+    },
+    {enableHighAccuracy:true,timeout:12000,maximumAge:0}
+  );
+};
+
 
 function returnRow(word,title,action){return `<div class="returnrow"><div class="returnword">${escapeHtml(displayWord(word))}</div><div class="returnaction"><strong>${escapeHtml(title)}</strong>${escapeHtml(action)}</div></div>`;}
 async function renderSenderReturns(e,z,phrase){
@@ -4780,6 +5023,7 @@ function hideReceiverReply(){
 }
 
 function showProvisionalDecodedPosition(lat,lon,metricHtml){
+  resetRelativePosition();
   $("decodedBlock").classList.remove("position-confirmed");
   const pill=$("decodedBlock").querySelector(".protocol-state-pill");
   if(pill){
@@ -4885,6 +5129,9 @@ function markPositionConfirmed(){
   if(warning){
     warning.textContent="POSITION CONFIRMÉE PAR L’ÉCHANGE RADIO COMPLET";
   }
+  $("relativeLatHem").value=currentDecodedResult.lat>=0?"N":"S";
+  $("relativeLonHem").value=currentDecodedResult.lon>=0?"E":"W";
+  $("relativePositionBlock").classList.remove("hidden");
 }
 
 function markFinalConfirmationFailed(detail,selectedButton=null){
@@ -5177,6 +5424,7 @@ function receiverCanDecode(){
 
 function invalidateDecodedResult(){
   decodeRevision++;
+  resetRelativePosition();
   if(autoDecodeTimer){clearTimeout(autoDecodeTimer);autoDecodeTimer=null;}
   currentDecodedResult=null;
   currentFinalChoices=[];
@@ -5567,6 +5815,7 @@ function retryFinalRadioConfirmation(){
 
   consumedFinalAttemptKeys.delete(currentFinalAttemptKey);
   finalChoiceLocked=false;
+  resetRelativePosition();
 
   $("finalConfirmBlock").classList.remove("final-failed");
   $("newReceptionAfterFailure").classList.add("hidden");

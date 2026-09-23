@@ -379,3 +379,43 @@ test('émission normale : création éphémère et confirmation toujours fonctio
   assert.equal($('encodeBtn').disabled,false);
   assert.equal($('encodeBtn').classList.contains('encode-ready'),true);
 `));
+
+test('position confirmée : distance, relèvement vrai et saisie manuelle', t => check(t, `
+  currentDecodedResult={lat:46,lon:-2};
+  markPositionConfirmed();
+  assert.equal($('relativePositionBlock').classList.contains('hidden'),false);
+  setRelativePositionMode('decimal');
+  $('relativeLat').value='46';$('relativeLon').value='-3';onRelativeManualChange();
+  assert.equal($('relativePositionResult').classList.contains('hidden'),false);
+  assert.match($('relativePositionResult').innerHTML,/milles nautiques/);
+  assert.match($('relativePositionResult').innerHTML,/090° vrai/);
+  $('relativeLon').value='200';onRelativeManualChange();
+  assert.equal($('relativePositionResult').classList.contains('hidden'),true);
+  assert.match($('relativeInputStatus').textContent,/Coordonnées invalides/);
+  assert.ok(Math.abs(haversineM(0,0,1,0)-111195)<50);
+  assert.equal(Math.round(initialBearingTrueDeg(0,0,1,0)),0);
+`));
+
+test('une acquisition GPS tardive ne réaffiche pas une réception effacée', t => check(t, `
+  currentDecodedResult={lat:46,lon:-2};markPositionConfirmed();
+  let deliver;
+  navigator.geolocation={getCurrentPosition:success=>deliver=success};
+  $('relativeGpsBtn').onclick();
+  assert.equal(typeof deliver,'function');
+  invalidateDecodedResult();
+  deliver({coords:{latitude:46,longitude:-3,accuracy:12},timestamp:Date.now()});
+  assert.equal($('relativePositionBlock').classList.contains('hidden'),true);
+  assert.equal($('relativePositionResult').classList.contains('hidden'),true);
+  assert.equal($('relativeLat').value,'');
+`));
+
+test('GPS actuel : distance affichée avec heure et précision du relevé', t => check(t, `
+  currentDecodedResult={lat:46,lon:-2};markPositionConfirmed();
+  navigator.geolocation={getCurrentPosition:success=>success({
+    coords:{latitude:46,longitude:-3,accuracy:18},timestamp:Date.now()
+  })};
+  $('relativeGpsBtn').onclick();
+  assert.match($('relativeGpsStatus').textContent,/précision annoncée ±18 m/);
+  assert.match($('relativePositionResult').innerHTML,/090° vrai/);
+  assert.equal($('relativePositionResult').classList.contains('hidden'),false);
+`));
