@@ -2265,13 +2265,6 @@ button:focus-visible,
       </div>
       <button type="button" class="smallbtn zone-delete-trigger hidden" id="sendDeleteZoneBtn">🗑 Supprimer cette zone</button>
       <div id="sendZoneActionStatus" class="status hidden" role="status"></div>
-      <details class="terrain-details">
-        <summary>Aide sur le choix de la zone</summary>
-        <div class="details-body small">
-          Zones intégrées du secteur Iroise/Brest jusqu'à Bayonne/Capbreton.
-          Les carrés se chevauchent volontairement ; choisis celui dont le centre est le plus cohérent avec la sortie du jour.
-        </div>
-      </details>
     </div>
 
 
@@ -2731,7 +2724,7 @@ function initTheme(){
   }
 }
 
-const APP_VERSION="3.28.47";
+const APP_VERSION="3.28.49";
 const PROTOCOL_ID="VHF-GPS-PROTO-5";
 
 function protocolShortLabel(){
@@ -3503,7 +3496,9 @@ async function sessionFingerprint(secret){
 }
 
 async function showSessionFingerprint(secret){
+  const revision=activeSessionRevision;
   const fp=await sessionFingerprint(secret);
+  if(activeSecret()!==secret || activeSessionRevision!==revision)return null;
   $("fingerprintWords").textContent=`${fp.words[0]} · ${fp.words[1]} · ${fp.words[2]} | ${fp.nato}`;
   $("fingerprintBlock").classList.remove("hidden");
   $("sessionCompactStatus").textContent=`Session active · ${sessionAgeText()}`;
@@ -4058,7 +4053,10 @@ function populateZones(selid){
   return updateZoneSummaries();
 }
 
+let zoneAliasRefreshRevision=0;
+
 async function refreshZoneAliases(){
+  const revision=++zoneAliasRefreshRevision;
   const secret=activeSecret(),valid=validateSessionSecret(secret).ok;
 
   if(!valid){
@@ -4081,7 +4079,7 @@ async function refreshZoneAliases(){
 
   const requestedSecret=secret;
   const rows=await Promise.all(zones.map(async z=>({z,alias:await zoneAlias(secret,z)})));
-  if(activeSecret()!==requestedSecret)return;
+  if(revision!==zoneAliasRefreshRevision || activeSecret()!==requestedSecret)return;
 
   const counts=new Map();
   for(const r of rows)counts.set(r.alias.text,(counts.get(r.alias.text)||0)+1);
@@ -5639,8 +5637,16 @@ async function installValidatedSecret(secret,persist=true){
     localStorage.setItem(SESSION_SECRET_KEY,v.canonical);
   }
   syncSavedSecret(v.canonical);
+  const revision=activeSessionRevision;
   loadZoneConfirmations();
-  await showSessionFingerprint(v.canonical);await refreshZoneAliases();invalidateDecodedResult();refreshZoneConfirmationUi();refreshDecodeState();refreshEphemeralWorkflow();
+  const fingerprint=await showSessionFingerprint(v.canonical);
+  if(!fingerprint || activeSecret()!==v.canonical || activeSessionRevision!==revision)return null;
+  await refreshZoneAliases();
+  if(activeSecret()!==v.canonical || activeSessionRevision!==revision)return null;
+  invalidateDecodedResult();
+  refreshZoneConfirmationUi();
+  refreshDecodeState();
+  refreshEphemeralWorkflow();
   return v;
 }
 
@@ -5657,11 +5663,15 @@ initProtocolRuntime();
     $("sessionSettings").open=true;
     return;
   }
+  const pending=installValidatedSecret(saved,false);
+  const revision=activeSessionRevision;
   try{
-    const v=await installValidatedSecret(saved,false);
+    const v=await pending;
+    if(!v || activeSecret()!==saved || activeSessionRevision!==revision)return;
     $("sessionSettings").open=false;
     setStatus("secretStatus","Session chargée depuis cet appareil et active.","ok");
   }catch{
+    if(activeSessionRevision!==revision)return;
     localStorage.removeItem(SESSION_SECRET_KEY);
     syncSavedSecret("");
     hideSessionFingerprint();
@@ -5721,7 +5731,7 @@ async function activateSessionFromField({generated=false}={}){
 
   try{
     const installed=await installValidatedSecret(v.canonical,true);
-    if(revision!==sessionInputRevision)return false;
+    if(revision!==sessionInputRevision || !installed)return false;
     input.value=installed.canonical;
     setStatus(
       "secretStatus",

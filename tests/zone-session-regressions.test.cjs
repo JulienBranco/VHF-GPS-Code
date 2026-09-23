@@ -80,6 +80,86 @@ test('version et interopérabilité radio inchangée', t => check(t, `
   assert.equal(await protocolCompatDigestHex(),'9AAAB172829EE5C14801F4A9165B1E373B7284BFAA01B26C1795FC551CD42305');
 `));
 
+test('une ancienne empreinte ne remplace pas celle de la session active', t => check(t, `
+  const firstSecret=generateSessionSecret(),secondSecret=generateSessionSecret();
+  const original=sessionFingerprint;
+  let releaseFirst;
+  sessionFingerprint=secret=>secret===firstSecret
+    ?new Promise(resolve=>releaseFirst=()=>resolve({words:['ANCIEN','SECRET','RADIO'],nato:'ALFA'}))
+    :original(secret);
+
+  const first=installValidatedSecret(firstSecret);
+  assert.equal(activeSecret(),firstSecret);
+  assert.equal(typeof releaseFirst,'function');
+  await installValidatedSecret(secondSecret);
+  const currentWords=$('fingerprintWords').textContent;
+  assert.ok(currentWords);
+
+  releaseFirst();
+  assert.equal(await first,null);
+  assert.equal(activeSecret(),secondSecret);
+  assert.equal($('fingerprintWords').textContent,currentWords);
+
+  const interrupted=installValidatedSecret(firstSecret);
+  deactivateSessionWhileEditing();
+  releaseFirst();
+  assert.equal(await interrupted,null);
+  assert.equal($('fingerprintBlock').classList.contains('hidden'),true);
+  assert.equal($('fingerprintWords').textContent,'');
+  sessionFingerprint=original;
+`));
+
+test('une ancienne activation ne poursuit pas après un rafraîchissement d’alias tardif', t => check(t, `
+  const oldSecret=generateSessionSecret(),newSecret=generateSessionSecret();
+  const originalRefresh=refreshZoneAliases,originalFingerprint=showSessionFingerprint;
+  let releaseOld;
+  showSessionFingerprint=async()=>({words:['TEST'],nato:'ALFA'});
+  refreshZoneAliases=()=>activeSecret()===oldSecret
+    ?new Promise(resolve=>releaseOld=resolve)
+    :originalRefresh();
+
+  const oldActivation=installValidatedSecret(oldSecret);
+  await Promise.resolve();
+  assert.equal(typeof releaseOld,'function');
+  await installValidatedSecret(newSecret);
+  const decodedRevision=decodeRevision;
+
+  releaseOld();
+  assert.equal(await oldActivation,null);
+  assert.equal(activeSecret(),newSecret);
+  assert.equal(decodeRevision,decodedRevision);
+  refreshZoneAliases=originalRefresh;
+  showSessionFingerprint=originalFingerprint;
+`));
+
+test('un ancien calcul d’alias ne restaure pas une liste de zones périmée', t => check(t, `
+  const removed={id:'zone-ancienne',name:'ZONE ANCIENNE',lat:46.2,lon:-2.1,builtin:false};
+  const added={id:'zone-nouvelle',name:'ZONE NOUVELLE',lat:46.3,lon:-2.2,builtin:false};
+  zones.push(removed);
+  await populateZones();
+
+  const original=zoneAlias;
+  let releaseOld;
+  zoneAlias=(secret,zone)=>{
+    if(!releaseOld)return new Promise(resolve=>releaseOld=()=>original(secret,zone).then(resolve));
+    return original(secret,zone);
+  };
+  const stale=refreshZoneAliases();
+  assert.equal(typeof releaseOld,'function');
+
+  zones=zones.filter(zone=>zone.id!==removed.id);
+  zones.push(added);
+  await populateZones();
+  releaseOld();
+  await stale;
+
+  for(const select of [sendZone,recvZone]){
+    assert.equal(select.options.some(option=>option.value===removed.id),false);
+    assert.equal(select.options.some(option=>option.value===added.id),true);
+  }
+  zoneAlias=original;
+`));
+
 test('réception : ET/OU se choisit en un clic, se corrige et se remet à zéro', t => check(t, `
   assert.equal(receiverConnector,'');
   const initialRevision=decodeRevision;
