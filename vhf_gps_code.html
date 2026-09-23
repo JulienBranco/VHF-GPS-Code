@@ -724,17 +724,17 @@ section[id$="Panel"]{
 }
 #encodeBtn.encode-ready{background:#1c944f;border-color:#1c944f;color:#fff}
 #encodeBtn:disabled{
-  background:#493314;
-  color:#ffe0a3;
-  border-color:#946323;
+  background:#244936;
+  color:#d5ebdc;
+  border-color:#244936;
   cursor:not-allowed;
   box-shadow:none;
   opacity:1;
 }
 :root[data-theme="day"] #encodeBtn:disabled{
-  background:#f1ca89;
-  color:#5a3200;
-  border-color:#c58630;
+  background:#b7d5c2;
+  color:#204e33;
+  border-color:#b7d5c2;
 }
 #gpsBtn,
 #centerGpsBtn,
@@ -2227,7 +2227,7 @@ button:focus-visible,
       </div>
 
 
-      <button class="primary" id="encodeBtn" disabled>COMPLÈTE LA POSITION</button>
+      <button class="primary hidden" id="encodeBtn" disabled>COMPLÈTE LA POSITION</button>
       <div id="encodeStatus" class="status hidden"></div>
 
       <div id="encodedBlock" class="phrase-transmit-block hidden">
@@ -2567,7 +2567,7 @@ function initTheme(){
   }
 }
 
-const APP_VERSION="3.28.20";
+const APP_VERSION="3.28.22";
 const PROTOCOL_ID="VHF-GPS-PROTO-5";
 
 function protocolShortLabel(){
@@ -3628,6 +3628,7 @@ function refreshEncodeState(){
 
   const ready=protocolOk && secretOk && inside && zoneOk;
   btn.disabled=!ready;
+  btn.classList.toggle("hidden",!(protocolOk && secretOk && inside));
   btn.classList.toggle("encode-ready",ready);
   btn.textContent=!protocolOk
     ?(protocolRuntimeState===PROTOCOL_STATE.CHECKING?"VÉRIFICATION DU PROTOCOLE…":"PROTOCOLE INDISPONIBLE")
