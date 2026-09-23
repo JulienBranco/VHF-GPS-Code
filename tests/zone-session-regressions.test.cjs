@@ -80,6 +80,30 @@ test('version et interopérabilité radio inchangée', t => check(t, `
   assert.equal(await protocolCompatDigestHex(),'9AAAB172829EE5C14801F4A9165B1E373B7284BFAA01B26C1795FC551CD42305');
 `));
 
+test('réception : ET/OU se choisit en un clic, se corrige et se remet à zéro', t => check(t, `
+  assert.equal(receiverConnector,'');
+  const initialRevision=decodeRevision;
+  connectorButtons.ET.onclick();
+  assert.equal(receiverConnector,'ET');
+  assert.equal(connectorButtons.ET.classList.contains('active'),true);
+  assert.equal(connectorButtons.OU.classList.contains('active'),false);
+  assert.ok(decodeRevision>initialRevision);
+
+  connectorButtons.OU.onclick();
+  assert.equal(receiverConnector,'OU');
+  assert.equal(connectorButtons.ET.classList.contains('active'),false);
+  assert.equal(connectorButtons.OU.classList.contains('active'),true);
+
+  selectReceiverConnector('ET',{focusNext:false});
+  assert.equal(receiverConnector,'ET');
+  assert.equal(connectorButtons.ET.classList.contains('active'),true);
+
+  clearReceivedMessage();
+  assert.equal(receiverConnector,'');
+  assert.equal(connectorButtons.ET.classList.contains('active'),false);
+  assert.equal(connectorButtons.OU.classList.contains('active'),false);
+`));
+
 test('réception : retour vers une zone déjà confirmée exige une nouvelle comparaison', t => check(t, `
   const a=activeZone();
   const b=await saveOrSelectEphemeralZone(46.75,-24.5,activeSecret(),'B');
@@ -124,6 +148,61 @@ test('suppression : zone de repli à reconfirmer, zone non active sans effet sur
   requestZoneDeletion('','manageZoneSelect');
   assert.equal($('zoneStatus').textContent,'Aucune zone personnalisée sélectionnée.');
   assert.equal($('zoneDeleteDialog').open,false);
+`));
+
+test('suppression groupée : confirmation, conservation des zones fixes et repli à reconfirmer', t => check(t, `
+  const builtin=activeZone();await confirmActiveZoneAlias();
+  const fixed={id:'fixed-check',name:'FIXE',lat:46.25,lon:-2.08,builtin:false};
+  zones.push(fixed);saveZones();populateZones();
+  const first=await saveOrSelectEphemeralZone(46.75,-24.5,activeSecret(),'A');
+  const second=await saveOrSelectEphemeralZone(47.25,-25.5,activeSecret(),'B');
+  populateZones();
+  setActiveZone(first.id);await confirmActiveZoneAlias();
+  const button=$('deleteEphemeralZonesBtn');
+  assert.equal(button.disabled,false);assert.match(button.textContent,/2 ZONES ÉPHÉMÈRES/);
+  button.onclick();assert.equal($('zoneDeleteDialog').open,true);
+  assert.equal($('zoneDeleteName').textContent,'2 zones éphémères');
+  $('cancelZoneDelete').onclick();
+  assert.equal(zones.some(z=>z.id===first.id),true);
+  assert.equal(zones.some(z=>z.id===second.id),true);
+  button.onclick();$('confirmZoneDelete').onclick();
+  assert.equal($('zoneDeleteDialog').open,false);
+  assert.equal(activeZoneId,builtin.id);
+  assert.equal(isZoneConfirmed(builtin),false);
+  assert.equal(confirmedZoneIds.has(first.id),false);
+  assert.equal(zones.some(z=>z.id===first.id||z.id===second.id),false);
+  assert.equal(zones.some(z=>z.id===fixed.id),true);
+  assert.equal(JSON.parse(localStorage.getItem('vhfGpsZonesV4Custom')).some(z=>z.ephemeral),false);
+  assert.equal(button.disabled,true);
+  assert.match($('zoneStatus').textContent,/2 zones éphémères supprimées/);
+  loadZoneConfirmations();assert.equal(isZoneConfirmed(builtin),false);
+`));
+
+test('suppression groupée : une zone fixe active reste sélectionnée et confirmée', t => check(t, `
+  const fixed={id:'fixed-check',name:'FIXE',lat:46.25,lon:-2.08,builtin:false};
+  zones.push(fixed);saveZones();setActiveZone(fixed.id);await confirmActiveZoneAlias();
+  const ephemeral=await saveOrSelectEphemeralZone(46.75,-24.5,activeSecret(),'A');
+  populateZones();$('deleteEphemeralZonesBtn').onclick();$('confirmZoneDelete').onclick();
+  assert.equal(activeZoneId,fixed.id);
+  assert.equal(isZoneConfirmed(fixed),true);
+  assert.equal(zones.some(z=>z.id===ephemeral.id),false);
+  assert.equal(JSON.parse(localStorage.getItem('vhfGpsZonesV4Custom')).some(z=>z.id===fixed.id),true);
+`));
+
+test('suppression groupée : un calcul éphémère en cours ne recrée pas de zone', t => check(t, `
+  await saveOrSelectEphemeralZone(46.75,-24.5,activeSecret(),'EXISTANTE');
+  populateZones();
+  const original=deriveSecretCenter;
+  const center=await original(activeSecret(),47.25,-25.5);
+  let release;
+  deriveSecretCenter=()=>new Promise(resolve=>release=resolve);
+  const pending=saveOrSelectEphemeralZone(47.25,-25.5,activeSecret(),'EN COURS');
+  const rejection=assert.rejects(pending,/zones éphémères ont été supprimées/);
+  $('deleteEphemeralZonesBtn').onclick();$('confirmZoneDelete').onclick();
+  release(center);await rejection;
+  deriveSecretCenter=original;
+  assert.equal(zones.some(z=>z.ephemeral),false);
+  assert.equal(JSON.parse(localStorage.getItem('vhfGpsZonesV4Custom')).some(z=>z.ephemeral),false);
 `));
 
 test('expiration et purge sélectionnent le repli via la même règle de confirmation', t => check(t, `

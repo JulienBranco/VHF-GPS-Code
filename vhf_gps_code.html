@@ -12,6 +12,11 @@
   --accent:#62ddb7;--ok:#7ce8a5;--warn:#ffd166;--bad:#ff8585;--input:#071920;
   --focus-bg:#0f2f3a;--focus-text:#eef9f7;--focus-line:#62ddb7;--focus-muted:#a9c5c3;
   --focus-shadow:0 10px 30px rgba(0,0,0,.30);
+  --session-bg:#283127;
+  --session-surface:#374333;
+  --session-line:#b3c879;
+  --session-muted:#c8d7b6;
+  --session-marker-text:#202b19;
   --radio-bg:#123b43;--radio-text:#f1fffb;--radio-line:#62ddb7;--radio-muted:#b7d9d2;
 }
 *{box-sizing:border-box}
@@ -71,13 +76,31 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
 .acklabel{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
 .ackword{font-size:1.8rem;font-weight:900;letter-spacing:.06em;margin-top:4px}
 
-.phrasegrid{display:grid;grid-template-columns:1fr 1fr 88px 1fr 1fr;gap:8px;align-items:start}
-.linkbox{display:flex;align-items:center;justify-content:center}
-.linkbox select{font-size:1.05rem;font-weight:900;text-align:center;padding:.72rem .35rem}
+.phrasegrid{display:grid;grid-template-columns:1fr 1fr 128px 1fr 1fr;gap:8px;align-items:start}
+.linkbox{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.linkbox button{
+  min-height:54px;
+  padding:10px 4px;
+  border:2px solid var(--radio-line);
+  background:var(--radio-bg);
+  color:var(--radio-text);
+  font-size:1.05rem;
+  font-weight:900;
+}
+.linkbox button.active{background:var(--accent);border-color:var(--accent);color:#05251c}
+:root[data-theme="day"] .linkbox button{
+  background:var(--radio-bg);
+  border-color:var(--radio-line);
+  color:var(--radio-text);
+}
+:root[data-theme="day"] .linkbox button.active{
+  background:var(--accent);
+  border-color:var(--accent);
+  color:#fff;
+}
 @media(max-width:760px){
   .phrasegrid{grid-template-columns:1fr 1fr}
   .linkbox{grid-column:1 / -1}
-  .linkbox select{width:140px}
 }
 
 
@@ -114,44 +137,41 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
 #decodeBtn:disabled{opacity:.42;cursor:not-allowed}
 
 
-.session-card{
+#sessionCard{
   padding:16px 18px;
-  background:var(--focus-bg);
+  background:var(--session-bg);
   color:var(--focus-text);
-  border:2px solid var(--focus-line);
-  box-shadow:var(--focus-shadow)
+  border:0;
+  box-shadow:none;
 }
 .session-card .small,
 .session-card p,
-.session-card label{color:var(--focus-muted)}
+.session-card label{color:var(--session-muted)}
 .session-card .badge{
   background:rgba(255,255,255,.08);
   color:var(--focus-text);
-  border:1px solid color-mix(in srgb, var(--focus-line) 55%, transparent)
+  border:1px solid color-mix(in srgb, var(--session-line) 55%, transparent)
 }
 :root[data-theme="day"] .session-card .badge{
-  background:#f3f8ff
-}
-:root[data-theme="day"] #sessionCompactStatus,
-:root[data-theme="day"] #sessionState{
-  background:#f8fbff
-}
-:root[data-theme="day"] .session-fingerprint{
-  background:#ffffff
+  background:var(--session-surface)
 }
 :root[data-theme="day"] #encodedWords.message{
   background:#ffffff
 }
 #sessionCompactStatus,
 #sessionState{
-  padding:12px 14px;
-  border-radius:12px;
-  background:rgba(255,255,255,.06);
-  border:1px solid color-mix(in srgb, var(--focus-line) 45%, transparent);
+  padding:10px 12px;
+  background:var(--session-surface);
+  border:0;
   color:var(--focus-text)
 }
 .session-compact-title{
-  display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px
+}
+.session-heading{display:inline-flex;align-items:center;gap:10px;white-space:nowrap}
+#sessionCard .session-step-number{
+  background:var(--session-line);
+  color:var(--session-marker-text);
 }
 .session-compact-title strong{font-size:1.08rem;letter-spacing:.01em}
 #fingerprintBlock .small{
@@ -159,14 +179,14 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
 }
 .session-fingerprint{
   font-size:1.26rem;font-weight:900;letter-spacing:.035em;word-spacing:.32em;text-align:center;
-  padding:14px 16px;border:2px solid var(--focus-line);background:rgba(255,255,255,.07);
-  border-radius:14px;margin-top:8px;color:var(--focus-text)
+  padding:12px 14px;border:2px solid var(--session-line);border-radius:12px;background:var(--session-surface);
+  margin-top:8px;color:var(--focus-text)
 }
 .session-details{
-  margin-top:12px;border-top:1px solid color-mix(in srgb, var(--focus-line) 35%, transparent);padding-top:6px
+  margin-top:12px;border-top:1px solid color-mix(in srgb, var(--session-line) 35%, transparent);padding-top:6px
 }
 .session-details>summary{
-  cursor:pointer;list-style:none;padding:10px 2px 4px;color:var(--focus-muted);font-weight:800;
+  cursor:pointer;list-style:none;padding:10px 2px 4px;color:var(--session-muted);font-weight:800;
   user-select:none
 }
 .session-details>summary::-webkit-details-marker{display:none}
@@ -359,6 +379,11 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
   --focus-line:#0759a8;
   --focus-muted:#43555f;
   --focus-shadow:0 8px 22px rgba(7,89,168,.08);
+  --session-bg:#f1f2e4;
+  --session-surface:#fffef5;
+  --session-line:#667a2e;
+  --session-muted:#46553f;
+  --session-marker-text:#ffffff;
   --radio-bg:#e8f4ff;
   --radio-text:#071d2c;
   --radio-line:#0759a8;
@@ -440,6 +465,21 @@ section[id$="Panel"]{
 }
 .terrain-card.is-primary{
   border-width:2px;
+}
+/* Les grandes étapes sont séparées par l'espace, sans cadre extérieur. */
+#sendPanel>.terrain-card,
+#receivePanel>.terrain-card{
+  background:transparent;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+  padding:8px 0;
+  margin:20px 0;
+  overflow:visible;
+}
+#sendPanel>.terrain-card+.terrain-card,
+#receivePanel>.terrain-card+.terrain-card{
+  margin-top:36px;
 }
 .step-heading{
   display:flex;
@@ -718,6 +758,50 @@ section[id$="Panel"]{
 }
 #driftStatus{
   font-size:.86rem;
+}
+#driftStatus.drift-outside{
+  color:#ffb1b1;
+  background:#451c20;
+  border:2px solid #ff6875;
+  font-size:.95rem;
+  font-weight:850;
+  line-height:1.45;
+}
+#driftStatus #useCompatibleZoneBtn{
+  display:block;
+  width:100%;
+  margin-top:12px;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  line-height:1.35;
+}
+:root[data-theme="day"] #driftStatus.drift-outside{
+  color:#8e101b;
+  background:#ffe9e9;
+  border-color:#be2430;
+}
+#driftStatus.drift-encodable{
+  color:#b5f5c9;
+  background:#163b29;
+  border:2px solid #45bd76;
+  font-size:.95rem;
+  font-weight:850;
+  line-height:1.45;
+}
+:root[data-theme="day"] #driftStatus.drift-encodable{
+  color:#075f27;
+  background:#e7f8eb;
+  border-color:#168447;
+}
+#driftStatus.drift-encodable.drift-edge{
+  color:#ffe09a;
+  background:#3c3016;
+  border-color:#e9ae3e;
+}
+:root[data-theme="day"] #driftStatus.drift-encodable.drift-edge{
+  color:#704000;
+  background:#fff4d7;
+  border-color:#b77912;
 }
 #encodeBtn{
   min-height:56px;
@@ -1000,6 +1084,8 @@ section[id$="Panel"]{
 
 /* ===== V3.23 — identité visuelle forte des zones éphémères ===== */
 :root{
+  --builtin-zone-bg:rgba(42,112,180,.13);
+  --builtin-zone-line:#72b5f5;
   --ephemeral-line:#c79cff;
   --ephemeral-bg:rgba(140,82,255,.13);
   --ephemeral-text:#eadcff;
@@ -1009,6 +1095,8 @@ section[id$="Panel"]{
   --custom-zone-banner-text:#063c36;
 }
 :root[data-theme="day"]{
+  --builtin-zone-bg:#eef5fc;
+  --builtin-zone-line:#0759a8;
   --ephemeral-line:#6d3fc0;
   --ephemeral-bg:#f3ecff;
   --ephemeral-text:#3b176f;
@@ -1018,11 +1106,29 @@ section[id$="Panel"]{
   --custom-zone-banner-text:#fff;
 }
 
-.zone-summary.ephemeral-active{
-  border:2px solid var(--ephemeral-line)!important;
-  background:var(--ephemeral-bg)!important;
-  color:var(--text);
-  box-shadow:var(--ephemeral-shadow);
+#sendPanel>.active-zone-section,
+#receivePanel>.active-zone-section{
+  background:var(--zone-section-bg,var(--builtin-zone-bg));
+  border-radius:14px;
+  padding:16px;
+}
+.active-zone-section[data-zone-type="custom"]{
+  --zone-section-bg:var(--custom-zone-bg);
+}
+.active-zone-section[data-zone-type="ephemeral"]{
+  --zone-section-bg:var(--ephemeral-bg);
+}
+#sendZoneSummary,
+#recvZoneSummary{
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+@media(max-width:600px){
+  #sendPanel>.active-zone-section,
+  #receivePanel>.active-zone-section{padding:12px}
 }
 .zone-summary.ephemeral-active .zone-ephemeral-banner,
 .zone-summary.custom-active .zone-custom-banner{
@@ -1048,12 +1154,10 @@ select.ephemeral-zone-active{
   border:3px solid var(--ephemeral-line)!important;
   box-shadow:var(--ephemeral-shadow);
 }
-
-.zone-summary.custom-active{
-  border:2px solid var(--custom-zone-line)!important;
-  background:var(--custom-zone-bg)!important;
-  color:var(--text);
+.active-zone-section[data-zone-type="builtin"]>select{
+  border:3px solid var(--builtin-zone-line)!important;
 }
+
 .zone-summary.custom-active .zone-custom-banner{
   background:var(--custom-zone-line);
   color:var(--custom-zone-banner-text);
@@ -1256,9 +1360,9 @@ select.custom-zone-active{
   margin-top:9px;
   padding:9px 11px;
   border-radius:10px;
-  border:1px solid color-mix(in srgb, var(--focus-line) 35%, transparent);
+  border:1px solid color-mix(in srgb, var(--session-line) 35%, transparent);
   background:rgba(255,255,255,.045);
-  color:var(--focus-muted);
+  color:var(--session-muted);
   font-size:.80rem;
   line-height:1.45;
 }
@@ -1267,7 +1371,7 @@ select.custom-zone-active{
   padding:9px 11px !important;
   font-size:.82rem;
 }
-:root[data-theme="day"] .session-paste-help{background:#f8fbff}
+:root[data-theme="day"] .session-paste-help{background:var(--session-surface)}
 
 
 /* ===== V3.26.3 — verrouillage réel de la grille sur mobile ===== */
@@ -1451,7 +1555,13 @@ select.custom-zone-active{
 #sendDeleteZoneBtn,
 #recvDeleteZoneBtn,
 #deleteZoneBtn,
+#deleteEphemeralZonesBtn,
 #confirmZoneDelete{background:#b42332;border-color:#b42332;color:#fff}
+#deleteEphemeralZonesBtn:disabled{
+  opacity:.55;
+  cursor:not-allowed;
+  box-shadow:none;
+}
 .protocol-state-confirmed{color:#d9ffe8;background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.68)}
 :root[data-theme="day"] .protocol-state-confirmed{color:#075d2a;background:#eaf8ef;border-color:#228b4e}
 .active-transmission-header{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
@@ -1471,6 +1581,65 @@ select.custom-zone-active{
 :root[data-theme="day"] .final-confirm-block{background:#fff8ec}
 :root[data-theme="day"] .position-confirmed{background:#eefaf2!important}
 :root[data-theme="day"] .position-confirmed .provisional-position-title{color:#075d2a}
+#decodedBlock.position-confirmed #decodedCoordsWrap{
+  margin-top:12px;
+  padding:12px;
+  border:1px solid #22a55b;
+  border-radius:10px;
+  background:rgba(34,197,94,.13);
+}
+#decodedBlock.position-confirmed .unconfirmed-position-warning{
+  margin:0;
+  padding:4px 0;
+  border:0;
+  background:transparent;
+  color:#bfffd4;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  font-size:1.08rem;
+  line-height:1.35;
+  text-align:left;
+}
+#decodedBlock.position-confirmed .unconfirmed-position-warning::before{
+  content:"✓";
+  display:grid;
+  place-items:center;
+  flex:0 0 1.7rem;
+  width:1.7rem;
+  height:1.7rem;
+  border-radius:50%;
+  background:#22c55e;
+  color:#062414;
+  font-size:1.15rem;
+  line-height:1;
+}
+:root[data-theme="day"] #decodedBlock.position-confirmed .unconfirmed-position-warning{
+  color:#075d2a;
+}
+:root[data-theme="day"] #decodedBlock.position-confirmed .unconfirmed-position-warning::before{
+  background:#087a35;
+  color:#fff;
+}
+#decodedBlock.position-confirmed .plotter-coordinate{
+  padding:12px 0 0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+}
+#decodedBlock.position-confirmed .plotter-coordinate .coord-label{
+  color:#91e5ad;
+}
+#decodedBlock.position-confirmed .plotter-coordinate strong{
+  color:#bfffd4;
+}
+:root[data-theme="day"] #decodedBlock.position-confirmed .plotter-coordinate .coord-label{
+  color:#177341;
+}
+:root[data-theme="day"] #decodedBlock.position-confirmed .plotter-coordinate strong{
+  color:#075d2a;
+}
 @media(max-width:420px){.final-confirm-choice{font-size:.92rem;min-height:56px}.sender-final-word{font-size:1.8rem}}
 
 
@@ -1613,11 +1782,6 @@ select.custom-zone-active{
   font-weight:900;
   text-align:center;
 }
-.receiver-check-state.ok{
-  color:#caffdc;
-  background:rgba(34,197,94,.14);
-  border:1px solid rgba(34,197,94,.55);
-}
 .receiver-check-state.warn{
   color:#ffd98a;
   background:rgba(217,119,6,.14);
@@ -1628,11 +1792,6 @@ select.custom-zone-active{
 }
 :root[data-theme="day"] .receiver-check-title{
   color:#8b4a00;
-}
-:root[data-theme="day"] .receiver-check-state.ok{
-  color:#075d2a;
-  background:#eaf8ef;
-  border-color:#228b4e;
 }
 :root[data-theme="day"] .receiver-check-state.warn{
   color:#7a4300;
@@ -1793,35 +1952,12 @@ button:focus-visible,
   white-space:nowrap;
 }
 
-.receiver-check-tip{
-  display:flex;
-  gap:9px;
-  align-items:flex-start;
-  margin-top:8px;
-  padding:9px 10px;
-  border-radius:12px;
-  background:rgba(80,120,255,.10);
-  border:1px solid rgba(110,145,255,.28);
-  font-size:.76rem;
-  line-height:1.35;
-}
-.receiver-check-tip-icon{
-  flex:0 0 auto;
-  font-size:1rem;
-  line-height:1;
-  transform:translateY(1px);
-}
 :root[data-theme="day"] .receiver-check-row-important{
   background:#fff8ec;
   border-color:#efd9a8;
 }
 :root[data-theme="day"] .receiver-check-row-important > span{
   color:#8a4f00;
-}
-:root[data-theme="day"] .receiver-check-tip{
-  background:#eef4ff;
-  border-color:#ccd9ff;
-  color:#24324f;
 }
 
 
@@ -1892,11 +2028,13 @@ button:focus-visible,
   line-height:1.35;
   overflow-wrap:anywhere;
 }
-.receiver-context-session{
+.receiver-context-session,
+.receiver-context-alias{
   border-color:#4d95dd;
   background:rgba(42,112,180,.14);
 }
-.receiver-context-session .receiver-context-label{
+.receiver-context-session .receiver-context-label,
+.receiver-context-alias .receiver-context-label{
   color:#9fd0ff;
 }
 .receiver-context-session-value{
@@ -1920,11 +2058,13 @@ button:focus-visible,
   opacity:.78;
 }
 
-:root[data-theme="day"] .receiver-context-session{
+:root[data-theme="day"] .receiver-context-session,
+:root[data-theme="day"] .receiver-context-alias{
   border-color:#6aa4d8;
   background:#eef7ff;
 }
-:root[data-theme="day"] .receiver-context-session .receiver-context-label{
+:root[data-theme="day"] .receiver-context-session .receiver-context-label,
+:root[data-theme="day"] .receiver-context-alias .receiver-context-label{
   color:#195a91;
 }
 :root[data-theme="day"] .receiver-context-zone{
@@ -1959,16 +2099,7 @@ button:focus-visible,
   color:var(--muted);
 }
 
-/* L'alias est l'information radio importante : il devient le bloc principal. */
-.receiver-context-alias{
-  margin-top:8px;
-  border-color:#d97706;
-  background:rgba(217,119,6,.14);
-  box-shadow:0 0 0 1px rgba(245,158,11,.08), inset 0 0 0 1px rgba(255,255,255,.025);
-}
-.receiver-context-alias .receiver-context-label{
-  color:#ffd98a;
-}
+/* L'alias reste mis en avant par sa typographie. */
 .receiver-context-alias-value{
   font-size:1.08rem;
   font-weight:950;
@@ -1984,13 +2115,6 @@ button:focus-visible,
   color:var(--muted);
 }
 
-:root[data-theme="day"] .receiver-context-alias{
-  border-color:#d97706;
-  background:#fff3dc;
-}
-:root[data-theme="day"] .receiver-context-alias .receiver-context-label{
-  color:#8a4f00;
-}
 :root[data-theme="day"] .receiver-zone-correspondence,
 :root[data-theme="day"] .receiver-zone-correspondence-value{
   color:#68727c;
@@ -2061,7 +2185,7 @@ button:focus-visible,
 
   <div class="card session-card" id="sessionCard">
     <div class="session-compact-title">
-      <strong>Session radio</strong>
+      <span class="session-heading"><span class="step-number session-step-number" aria-hidden="true">S</span><strong>Session radio</strong></span>
       <span>
         <span class="badge" id="protocolBadgeSession"></span>
         <span class="badge" id="compatBadge">COMPAT …</span>
@@ -2128,7 +2252,7 @@ button:focus-visible,
   </div>
 
   <section id="sendPanel">
-    <div class="card terrain-card" id="sendZoneCard">
+    <div class="card terrain-card active-zone-section" id="sendZoneCard">
       <div class="step-heading"><span class="step-number">1</span><h2>Zone active</h2></div>
       <div class="step-subtitle">Choisis la zone du secteur de pêche. Cette sélection est aussi utilisée côté RECEVOIR.</div>
       <label class="terrain-label">Zone sélectionnée</label>
@@ -2204,10 +2328,12 @@ button:focus-visible,
         </div>
       </div>
 
-      <div id="driftStatus" class="status warn">Entre une position pour vérifier sa dérive par rapport au centre.</div>
+      <div id="driftStatus" class="status warn">
+        <span id="driftStatusText">Entre une position pour vérifier sa dérive par rapport au centre.</span>
+        <button type="button" class="secondary hidden" id="useCompatibleZoneBtn" disabled></button>
+      </div>
 
       <div class="action-stack">
-        <button type="button" class="secondary hidden" id="useCompatibleZoneBtn" disabled></button>
         <button class="secondary" id="ephemeralZoneBtn" disabled>CRÉER UNE ZONE ÉPHÉMÈRE AUTOUR DE CETTE POSITION</button>
       </div>
 
@@ -2245,7 +2371,7 @@ button:focus-visible,
           <div id="ephemeralReadyStep" class="ephemeral-protocol-step ephemeral-confirmed hidden">
             <div class="ephemeral-step-title" style="justify-content:center"><span class="ephemeral-step-letter">C</span>Zone confirmée</div>
             <strong>La transmission de position est maintenant autorisée.</strong>
-            <div class="small">Utilise le bouton GÉNÉRER LA PHRASE ci-dessous. La phrase n'est affichée qu'à son emplacement normal.</div>
+            <div class="small">Utilise le bouton GÉNÉRER LE CODE ci-dessous. La phrase n'est affichée qu'à son emplacement normal.</div>
           </div>
         </div>
 
@@ -2320,7 +2446,7 @@ button:focus-visible,
   </section>
 
   <section id="receivePanel" class="hidden">
-    <div class="card terrain-card">
+    <div class="card terrain-card active-zone-section" id="recvZoneCard">
       <div class="step-heading"><span class="step-number">1</span><h2>Zone active</h2></div>
       <div class="step-subtitle">Cherche l'alias entendu à la VHF. Cette sélection devient aussi la zone active côté ÉMETTRE.</div>
       <label class="terrain-label">Zone sélectionnée</label>
@@ -2381,7 +2507,7 @@ button:focus-visible,
       <div id="decodeStatus" class="status hidden"></div>
 
       <div id="receiverCheckReminder" class="receiver-check-reminder hidden">
-        <div class="receiver-check-title">À VÉRIFIER AVANT DE RETENTER</div>
+        <div class="receiver-check-title"><span aria-hidden="true">⚠️</span> À VÉRIFIER AVANT DE RETENTER</div>
 
         <div class="receiver-context-card receiver-context-session">
           <div class="receiver-context-label">SESSION ACTIVE</div>
@@ -2396,14 +2522,9 @@ button:focus-visible,
         <div class="receiver-context-card receiver-context-alias">
           <div class="receiver-context-label">ALIAS ZONE ACTIVE</div>
           <div id="receiverReminderAlias" class="receiver-context-value receiver-context-alias-value">—</div>
+          <div id="receiverReminderAliasState" class="receiver-check-state warn hidden"></div>
         </div>
 
-        <div class="receiver-check-tip">
-          <span class="receiver-check-tip-icon">💡</span>
-          <span><strong>C’est cet alias qu’il faut comparer à la radio.</strong> Le nom de la zone active reste interne à l’application et ne doit pas être transmis à la VHF.</span>
-        </div>
-
-        <div id="receiverReminderAliasState" class="receiver-check-state">—</div>
       </div>
 
       <div id="receiverAckBlock" class="ackbox radio-block hidden">
@@ -2529,6 +2650,7 @@ button:focus-visible,
       <label>Zone personnalisée à supprimer</label>
       <select id="manageZoneSelect"><option value="">Aucune zone personnalisée</option></select>
       <button class="secondary" id="deleteZoneBtn">SUPPRIMER CETTE ZONE</button>
+      <button type="button" class="secondary" id="deleteEphemeralZonesBtn" disabled>AUCUNE ZONE ÉPHÉMÈRE À SUPPRIMER</button>
       <div id="zoneStatus" class="status hidden"></div>
     </div>
   </details>
@@ -2609,7 +2731,7 @@ function initTheme(){
   }
 }
 
-const APP_VERSION="3.28.27";
+const APP_VERSION="3.28.47";
 const PROTOCOL_ID="VHF-GPS-PROTO-5";
 
 function protocolShortLabel(){
@@ -3068,9 +3190,9 @@ function syncPositionFromMarine(){
     updatePositionCanonicalPreview(NaN,NaN);
 
     if(p.empty){
-      setStatus("driftStatus","Entre une position pour vérifier sa dérive par rapport au centre virtuel.","warn");
+      setDriftStatus("Entre une position pour vérifier sa dérive par rapport au centre virtuel.","warn");
     }else{
-      setStatus("driftStatus",p.error,"bad");
+      setDriftStatus(p.error,"bad");
     }
 
     invalidateEncodedResult();
@@ -3090,7 +3212,7 @@ function syncPositionFromDecimal(){
 
   if(!valid){
     updatePositionCanonicalPreview(NaN,NaN);
-    setStatus("driftStatus","Coordonnées décimales invalides : latitude -90 à 90, longitude -180 à 180.","bad");
+    setDriftStatus("Coordonnées décimales invalides : latitude -90 à 90, longitude -180 à 180.","bad");
     invalidateEncodedResult();
     refreshEphemeralWorkflow();
     return;
@@ -3505,6 +3627,7 @@ function loadZones(){
   return [...BUILTIN_ZONES.map(z=>({...z,lat:canonicalCoord(z.lat),lon:canonicalCoord(z.lon)})),...dedup.values()];
 }
 let zones=loadZones();
+let ephemeralDeletionRevision=0;
 
 function saveZones(){
   localStorage.setItem("vhfGpsZonesV4Custom",JSON.stringify(zones.filter(z=>!z.builtin&&isRecentEphemeral(z))));
@@ -3677,17 +3800,15 @@ function refreshEncodeState(){
     :!secretOk?"ACTIVE D’ABORD UNE SESSION"
     :!p.ok?"COMPLÈTE LA POSITION"
     :!inside?"POSITION HORS ZONE"
-    :!zoneOk?"CONFIRME L’ALIAS ZONE POUR GÉNÉRER LA PHRASE"
-    :"✓ GÉNÉRER LA PHRASE";
+    :!zoneOk?"CONFIRME L’ALIAS ZONE POUR GÉNÉRER LE CODE"
+    :"✓ 🔒 GÉNÉRER LE CODE";
   $("encodePositionMemo").classList.toggle("hidden",!ready);
   $("encodePositionLat").textContent=ready?formatDegMin(p.lat,true):"";
   $("encodePositionLon").textContent=ready?formatDegMin(p.lon,false):"";
 
   const best=z && p.ok && !inside?compatibleZones(p.lat,p.lon,z.id)[0]:null;
   const switchBtn=$("useCompatibleZoneBtn");
-  switchBtn.classList.toggle("hidden",!best);
   switchBtn.disabled=!best || !protocolOk || !secretOk;
-  switchBtn.textContent=best?`UTILISER LA ZONE COMPATIBLE : ${best.z.name}`:"";
   $("ephemeralZoneBtn").disabled=!(protocolOk && secretOk && p.ok);
 }
 
@@ -3892,6 +4013,12 @@ function zoneSummary(z){
 
 function populateManageZones(preferredId=""){
   const sel=$("manageZoneSelect"),custom=zones.filter(z=>!z.builtin).sort(compareZoneNames);
+  const ephemeralCount=zones.filter(z=>z.ephemeral).length;
+  const deleteEphemeralBtn=$("deleteEphemeralZonesBtn");
+  deleteEphemeralBtn.disabled=!ephemeralCount;
+  deleteEphemeralBtn.textContent=ephemeralCount
+    ?`SUPPRIMER ${ephemeralCount===1?"LA ZONE ÉPHÉMÈRE":`LES ${ephemeralCount} ZONES ÉPHÉMÈRES`}`
+    :"AUCUNE ZONE ÉPHÉMÈRE À SUPPRIMER";
   const old=preferredId||sel.value;
   sel.innerHTML="";
   if(!custom.length){
@@ -4021,6 +4148,9 @@ function updateZoneSummaries(){
   if(!z)return;
 
   const ephemeral=isAnchoredZone(z),custom=isCustomFixedZone(z);
+  for(const id of ["sendZoneCard","recvZoneCard"]){
+    $(id).dataset.zoneType=ephemeral?"ephemeral":custom?"custom":"builtin";
+  }
   for(const id of ["sendZoneSummary","recvZoneSummary"]){
     const el=$(id);
     el.innerHTML=zoneSummary(z);
@@ -4047,6 +4177,11 @@ function updateZoneSummaries(){
 }
 
 function setStatus(id,msg,type){const e=$(id);e.textContent=msg;e.className="status "+type;}
+function setDriftStatus(msg,type){
+  $("driftStatusText").textContent=msg;
+  $("driftStatus").className="status "+type;
+  $("useCompatibleZoneBtn").classList.add("hidden");
+}
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g,c=>({
     "&":"&amp;",
@@ -4112,9 +4247,9 @@ async function showReceiverCheckReminder(){
 
   const confirmed=!!z && validateSessionSecret(secret).ok && isZoneConfirmed(z);
   const state=$("receiverReminderAliasState");
-  state.className="receiver-check-state "+(confirmed?"ok":"warn");
+  state.className="receiver-check-state warn"+(confirmed?" hidden":"");
   state.textContent=confirmed
-    ?"✓ ALIAS ZONE CONFIRMÉ"
+    ?""
     :"⚠ ALIAS ZONE À CONFIRMER AVANT DÉCODAGE";
 
   box.classList.remove("hidden");
@@ -4140,8 +4275,7 @@ function compatibleZones(lat,lon,currentId){
 function checkDrift(){
   const p=readActivePosition();
   if(!p.ok){
-    setStatus(
-      "driftStatus",
+    setDriftStatus(
       p.empty?"Entre une position pour vérifier sa dérive par rapport au centre virtuel.":p.error,
       p.empty?"warn":"bad"
     );
@@ -4152,10 +4286,19 @@ function checkDrift(){
   const z=selectedZone(sendZone),c=zoneCheck(lat,lon,z);
   if(!c.inside){
     const a=compatibleZones(lat,lon,z.id);
-    setStatus("driftStatus",`HORS ZONE — dépassement ≈ ${fmt(c.overshoot)} km.${a.length?` Essaie ${a[0].z.name} (marge ${fmt(a[0].c.nearest)} km).`:" Aucune zone connue compatible."}`,"bad");
+    setDriftStatus(`⛔ HORS ZONE — dépassement ≈ ${fmt(c.overshoot)} km. Vérifie N/S et Est/Ouest (E/W).${a.length?"":" Aucune zone connue compatible."}`,"bad");
+    $("driftStatus").classList.add("drift-outside");
+    if(a.length){
+      const switchBtn=$("useCompatibleZoneBtn");
+      switchBtn.textContent=`UTILISER ${a[0].z.name} · marge ${fmt(a[0].c.nearest)} km`;
+      switchBtn.classList.remove("hidden");
+    }
     return false;
   }
-  setStatus("driftStatus",`${c.nearest<20?"ATTENTION":"Dans la zone"} — marge au bord le plus proche : ${fmt(c.nearest)} km.`,c.nearest<20?"warn":"ok");
+  const nearEdge=c.nearest<20;
+  setDriftStatus(`✅ POSITION ENCODABLE DANS CETTE ZONE — ${nearEdge?"attention, marge faible":"marge"} au bord le plus proche : ${fmt(c.nearest)} km.`,nearEdge?"warn":"ok");
+  $("driftStatus").classList.add("drift-encodable");
+  $("driftStatus").classList.toggle("drift-edge",nearEdge);
   return true;
 }
 
@@ -4233,8 +4376,14 @@ function assertZoneSessionCurrent(secret,revision){
     throw new Error("La session a changé pendant le calcul de la zone. Recommence avec la session active.");
   }
 }
-async function saveOrSelectEphemeralZone(anchorLat,anchorLon,secret,name=ephemeralLocalLabel(),revision=activeSessionRevision){
+function assertEphemeralDeletionCurrent(revision){
+  if(revision!==ephemeralDeletionRevision){
+    throw new Error("Les zones éphémères ont été supprimées pendant le calcul. Recommence si nécessaire.");
+  }
+}
+async function saveOrSelectEphemeralZone(anchorLat,anchorLon,secret,name=ephemeralLocalLabel(),revision=activeSessionRevision,deletionRevision=ephemeralDeletionRevision){
   assertZoneSessionCurrent(secret,revision);
+  assertEphemeralDeletionCurrent(deletionRevision);
   assertValidPublicAnchor(anchorLat,anchorLon);
   const aLat=canonicalAnchorCoord(anchorLat),aLon=canonicalAnchorCoord(anchorLon);
   const existing=zones.find(z=>!z.builtin&&isAnchoredZone(z)&&z.anchorLat===aLat&&z.anchorLon===aLon);
@@ -4242,6 +4391,7 @@ async function saveOrSelectEphemeralZone(anchorLat,anchorLon,secret,name=ephemer
   const center=await deriveSecretCenter(secret,aLat,aLon);
   // Aucun résultat d'une session quittée ne doit entrer dans l'état persistant.
   assertZoneSessionCurrent(secret,revision);
+  assertEphemeralDeletionCurrent(deletionRevision);
   const z={id:`eph-${Date.now()}-${secureRandomIndex(1000000)}`,name,lat:center.lat,lon:center.lon,anchorLat:aLat,anchorLon:aLon,builtin:false,ephemeral:true,createdAt:Date.now(),protocolId:PROTOCOL_ID};
   zones.push(z);saveZones();return z;
 }
@@ -4646,8 +4796,6 @@ function showProvisionalDecodedPosition(lat,lon,metricHtml){
   const warning=$("decodedBlock").querySelector(".unconfirmed-position-warning");
   if(warning){
     warning.textContent="⚠ POSITION NON CONFIRMÉE — ne pas la considérer comme validée par l’émetteur.";
-    warning.style.borderColor="";
-    warning.style.background="";
   }
 
   $("decodedCoords").innerHTML=formatCoordsBoth(lat,lon);
@@ -4738,9 +4886,7 @@ function markPositionConfirmed(){
 
   const warning=$("decodedBlock").querySelector(".unconfirmed-position-warning");
   if(warning){
-    warning.textContent="✓ POSITION CONFIRMÉE PAR L’ÉCHANGE RADIO COMPLET";
-    warning.style.borderColor="#22a55b";
-    warning.style.background="rgba(34,197,94,.13)";
+    warning.textContent="POSITION CONFIRMÉE PAR L’ÉCHANGE RADIO COMPLET";
   }
 }
 
@@ -4910,7 +5056,7 @@ $("encodeBtn").onclick=async()=>{
 $("ephemeralZoneBtn").onclick=async()=>{
   try{
     assertProtocolReady();
-    const secret=activeSecret(),sessionRevision=activeSessionRevision;
+    const secret=activeSecret(),sessionRevision=activeSessionRevision,deletionRevision=ephemeralDeletionRevision;
     if(!validateSessionSecret(secret).ok)throw new Error("Valide d’abord le secret de session.");
 
     const p=readActivePosition();
@@ -4923,7 +5069,8 @@ $("ephemeralZoneBtn").onclick=async()=>{
 
     const picked=await createEphemeralZoneCandidate(lat,lon,secret);
     assertZoneSessionCurrent(secret,sessionRevision);
-    const z=await saveOrSelectEphemeralZone(picked.z.anchorLat,picked.z.anchorLon,secret,ephemeralLocalLabel(),sessionRevision);
+    assertEphemeralDeletionCurrent(deletionRevision);
+    const z=await saveOrSelectEphemeralZone(picked.z.anchorLat,picked.z.anchorLon,secret,ephemeralLocalLabel(),sessionRevision,deletionRevision);
     assertZoneSessionCurrent(secret,sessionRevision);
 
     // Une nouvelle négociation radio doit être confirmée humainement,
@@ -4986,7 +5133,8 @@ wordGrid.innerHTML="";
 const wordInputs=[];
 const wordBoxes=[];
 const wordStates=[];
-let connectorSelect=null;
+let receiverConnector="";
+const connectorButtons={};
 let autoDecodeTimer=null;
 let decodeRevision=0;
 let decodeRunning=false;
@@ -5020,7 +5168,7 @@ function finalAttemptKey(d,z){
 
 function receiverReady(){
   const wordsOk=wordInputs.length===4 && wordInputs.every((_,i)=>wordIsExact(i));
-  const connectorOk=connectorSelect && !!connectorSelect.value;
+  const connectorOk=!!receiverConnector;
   const secretOk=validateSessionSecret(activeSecret()).ok;
   const zoneOk=isZoneConfirmed(selectedZone(recvZone));
   return wordsOk && connectorOk && secretOk && zoneOk;
@@ -5167,24 +5315,47 @@ function clearWord(slot){
 
 function nextAfterWord(i){
   if(i===0)return wordInputs[1];
-  if(i===1)return connectorSelect;
+  if(i===1)return connectorButtons.ET;
   if(i===2)return wordInputs[3];
   return null;
+}
+
+function renderReceiverConnector(){
+  for(const [value,button] of Object.entries(connectorButtons)){
+    const selected=receiverConnector===value;
+    button.classList.toggle("active",selected);
+    button.setAttribute("aria-pressed",String(selected));
+  }
+}
+
+function selectReceiverConnector(value,{focusNext=true}={}){
+  if(value!=="ET" && value!=="OU")return;
+  const changed=receiverConnector!==value;
+  receiverConnector=value;
+  renderReceiverConnector();
+  if(changed){
+    invalidateDecodedResult();
+    hideStatus("decodeStatus");
+    refreshDecodeState();
+  }
+  if(focusNext)wordInputs[2]?.focus();
 }
 
 for(let i=0;i<4;i++){
   if(i===2){
     const linkBox=document.createElement("div");
     linkBox.className="linkbox";
-    connectorSelect=document.createElement("select");
-    connectorSelect.id="recvConnector";
-    connectorSelect.innerHTML='<option value="" selected disabled>ET / OU</option><option value="ET">ET</option><option value="OU">OU</option>';
-    connectorSelect.onchange=()=>{
-      invalidateDecodedResult();
-      refreshDecodeState();
-      wordInputs[2]?.focus();
-    };
-    linkBox.appendChild(connectorSelect);
+    linkBox.setAttribute("role","group");
+    linkBox.setAttribute("aria-label","Connecteur entendu à la radio");
+    for(const value of ["ET","OU"]){
+      const button=document.createElement("button");
+      button.type="button";
+      button.textContent=value;
+      button.setAttribute("aria-pressed","false");
+      button.onclick=()=>selectReceiverConnector(value);
+      connectorButtons[value]=button;
+      linkBox.appendChild(button);
+    }
     wordGrid.appendChild(linkBox);
   }
 
@@ -5293,7 +5464,7 @@ async function runDecode(automatic=false){
     // et donc ne doit jamais produire de NACK.
     assertProtocolReady();
 
-    const words=wordInputs.map(x=>norm(x.value)),connector=connectorSelect.value;
+    const words=wordInputs.map(x=>norm(x.value)),connector=receiverConnector;
 
     for(let i=0;i<4;i++){
       if(!wordIsExact(i)){
@@ -5335,7 +5506,7 @@ async function runDecode(automatic=false){
         `<strong>NON CONFIRMÉ</strong> — correction probable : ${diag.connector}`
       );
       showReceiverReply(diag.word,"nack",`L'autre connecteur <strong>${diag.connector}</strong> valide le contrôle. Demande confirmation à l'émetteur avant d'accepter les coordonnées.`,`<button class="secondary" id="applyConnector">Après confirmation : appliquer ${diag.connector}</button>`);
-      setTimeout(()=>{const b=$("applyConnector");if(b)b.onclick=()=>{invalidateDecodedResult();connectorSelect.value=diag.connector;refreshDecodeState();};},0);
+      setTimeout(()=>{const b=$("applyConnector");if(b)b.onclick=()=>selectReceiverConnector(diag.connector,{focusNext:false});},0);
       setStatus("decodeStatus","Correction probable ET/OU trouvée, mais pas encore confirmée.","warn");return;
     }
     if(diag.type==="word"){
@@ -5379,7 +5550,8 @@ function clearReceivedMessage(){
     updateWordState(i);
   });
 
-  connectorSelect.value="";
+  receiverConnector="";
+  renderReceiverConnector();
   hideStatus("decodeStatus");
   $("decodedBlock").classList.add("hidden");
   hideReceiverReply();
@@ -5666,17 +5838,17 @@ for(const id of ["lat","lon"]){
 }
 
 $("gpsBtn").onclick=()=>{
-  if(!navigator.geolocation)return setStatus("driftStatus","GPS navigateur indisponible.","bad");
+  if(!navigator.geolocation)return setDriftStatus("GPS navigateur indisponible.","bad");
   navigator.geolocation.getCurrentPosition(
     p=>{
       setDecimalPosition(p.coords.latitude,p.coords.longitude,{updateMarine:true});
       handlePositionChanged();
       const accuracy=Number(p.coords.accuracy);
       if(Number.isFinite(accuracy)&&accuracy>100){
-        setStatus("driftStatus",`GPS récupéré, mais précision annoncée ±${Math.round(accuracy)} m. Vérifie avant transmission.`,"warn");
+        setDriftStatus(`GPS récupéré, mais précision annoncée ±${Math.round(accuracy)} m. Vérifie avant transmission.`,"warn");
       }
     },
-    e=>setStatus("driftStatus","GPS : "+e.message,"bad"),
+    e=>setDriftStatus("GPS : "+e.message,"bad"),
     {enableHighAccuracy:true,timeout:12000,maximumAge:5000}
   );
 };
@@ -5727,15 +5899,16 @@ $("addReceivedZoneBtn").onclick=async()=>{
   button.disabled=true;
   hideStatus("receivedZoneStatus");
   try{
-    const secret=activeSecret(),sessionRevision=activeSessionRevision;
+    const secret=activeSecret(),sessionRevision=activeSessionRevision,deletionRevision=ephemeralDeletionRevision;
     if(!validateSessionSecret(secret).ok)throw new Error("Valide d’abord le secret de session pour reconstruire la zone.");
     const rawAnchorLat=parseNum($("receivedZoneLat").value),rawAnchorLon=parseNum($("receivedZoneLon").value);
     assertValidPublicAnchor(rawAnchorLat,rawAnchorLon);
     const anchorLat=canonicalAnchorCoord(rawAnchorLat),anchorLon=canonicalAnchorCoord(rawAnchorLon);
     const localName=ephemeralLocalLabel(String($("receivedZoneName").value??"").trim().toUpperCase()||"ZONE REÇUE");
     let z=zones.find(x=>isAnchoredZone(x)&&x.anchorLat===anchorLat&&x.anchorLon===anchorLon),created=false;
-    if(!z){z=await saveOrSelectEphemeralZone(anchorLat,anchorLon,secret,localName,sessionRevision);created=true;}
+    if(!z){z=await saveOrSelectEphemeralZone(anchorLat,anchorLon,secret,localName,sessionRevision,deletionRevision);created=true;}
     assertZoneSessionCurrent(secret,sessionRevision);
+    assertEphemeralDeletionCurrent(deletionRevision);
     setActiveZone(z.id,{invalidate:true,persist:true,refresh:false});
     populateZones(z.id);
     refreshDecodeState();
@@ -5793,12 +5966,29 @@ function requestZoneDeletion(id,focusId){
     setStatus("zoneStatus","Aucune zone personnalisée sélectionnée.","warn");
     return;
   }
-  pendingZoneDeletion={id:z.id,focusId};
+  pendingZoneDeletion={kind:"single",id:z.id,focusId};
+  $("zoneDeleteTitle").textContent="Supprimer cette zone ?";
   $("zoneDeleteName").textContent=z.name;
   $("zoneDeleteDescription").textContent=activeZoneId===z.id
     ?"Cette zone sera supprimée de cet appareil. Les résultats préparés pour cette zone seront effacés et une zone intégrée deviendra active."
     :"Cette zone sera supprimée de cet appareil. La zone active sera conservée.";
   hideStatus("zoneDeleteError");
+  $("confirmZoneDelete").textContent="Supprimer la zone";
+  $("zoneDeleteDialog").showModal();
+  $("cancelZoneDelete").focus();
+}
+
+function requestEphemeralZonesDeletion(){
+  const count=zones.filter(z=>z.ephemeral).length;
+  if(!count)return;
+  pendingZoneDeletion={kind:"ephemeral-all",focusId:"manageZoneSelect"};
+  $("zoneDeleteTitle").textContent="Supprimer toutes les zones éphémères ?";
+  $("zoneDeleteName").textContent=`${count} zone${count>1?"s":""} éphémère${count>1?"s":""}`;
+  $("zoneDeleteDescription").textContent=zones.some(z=>z.ephemeral && z.id===activeZoneId)
+    ?"Ces zones seront supprimées de cet appareil. Une zone intégrée deviendra active et son alias devra être reconfirmé."
+    :"Ces zones seront supprimées de cet appareil. Les zones intégrées et personnalisées fixes seront conservées.";
+  hideStatus("zoneDeleteError");
+  $("confirmZoneDelete").textContent="Supprimer les zones éphémères";
   $("zoneDeleteDialog").showModal();
   $("cancelZoneDelete").focus();
 }
@@ -5823,9 +6013,28 @@ function deleteCustomZone(id){
   showZoneDeletionNotice(message);
 }
 
+function deleteAllEphemeralZones(){
+  const removed=zones.filter(z=>z.ephemeral);
+  if(!removed.length)throw new Error("Aucune zone éphémère à supprimer.");
+  ephemeralDeletionRevision++;
+  const wasActive=removed.some(z=>z.id===activeZoneId);
+  for(const z of removed)confirmedZoneIds.delete(z.id);
+  saveZoneConfirmations();
+  zones=zones.filter(z=>!z.ephemeral);
+  saveZones();
+
+  const fallback=wasActive
+    ?(zones.find(z=>z.builtin)?.id || zones[0]?.id || "")
+    :activeZoneId;
+  if(fallback)setActiveZone(fallback,{invalidate:true,persist:true,refresh:false});
+  populateZones(fallback);
+  showZoneDeletionNotice(`${removed.length} zone${removed.length>1?"s":""} éphémère${removed.length>1?"s":""} supprimée${removed.length>1?"s":""}.${wasActive?" Une zone intégrée est maintenant active.":""}`);
+}
+
 $("sendDeleteZoneBtn").onclick=()=>requestZoneDeletion(activeZoneId,"sendZone");
 $("recvDeleteZoneBtn").onclick=()=>requestZoneDeletion(activeZoneId,"recvZone");
 $("deleteZoneBtn").onclick=()=>requestZoneDeletion($("manageZoneSelect").value,"manageZoneSelect");
+$("deleteEphemeralZonesBtn").onclick=requestEphemeralZonesDeletion;
 $("cancelZoneDelete").onclick=()=>$("zoneDeleteDialog").close();
 $("zoneDeleteDialog").addEventListener("close",()=>{
   const focusId=pendingZoneDeletion?.focusId;
@@ -5835,7 +6044,8 @@ $("zoneDeleteDialog").addEventListener("close",()=>{
 $("confirmZoneDelete").onclick=()=>{
   if(!pendingZoneDeletion)return;
   try{
-    deleteCustomZone(pendingZoneDeletion.id);
+    if(pendingZoneDeletion.kind==="ephemeral-all")deleteAllEphemeralZones();
+    else deleteCustomZone(pendingZoneDeletion.id);
     $("zoneDeleteDialog").close();
   }catch(e){
     setStatus("zoneDeleteError",e.message||String(e),"bad");
