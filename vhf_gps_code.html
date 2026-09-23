@@ -479,7 +479,8 @@ section[id$="Panel"]{
   flex-wrap:wrap;
   gap:6px;
 }
-#gpsBtn{
+#gpsBtn,
+#centerGpsBtn{
   display:inline-flex;
   align-items:center;
   gap:6px;
@@ -490,7 +491,8 @@ section[id$="Panel"]{
   font-size:inherit;
   text-align:left;
 }
-#gpsBtn .gps-icon{flex-shrink:0;font-size:1.2rem}
+#gpsBtn .gps-icon,
+#centerGpsBtn .gps-icon{flex-shrink:0;font-size:1.2rem}
 .terrain-label{
   text-transform:uppercase;
   letter-spacing:.075em;
@@ -723,6 +725,16 @@ section[id$="Panel"]{
   letter-spacing:.025em;
 }
 #encodeBtn.encode-ready{background:#1c944f;border-color:#1c944f;color:#fff}
+#encodePositionMemo{
+  display:block;
+  margin-top:6px;
+  font-size:.85rem;
+  font-weight:600;
+  line-height:1.5;
+  letter-spacing:normal;
+  font-variant-numeric:tabular-nums;
+}
+#encodePositionMemo>span{display:block}
 #encodeBtn:disabled{
   background:#244936;
   color:#d5ebdc;
@@ -753,6 +765,7 @@ section[id$="Panel"]{
   cursor:not-allowed;
 }
 #sendZoneCard,
+#ephemeralBlock,
 #ephemeralAliasStep{scroll-margin-top:84px}
 
 @media(max-width:600px){
@@ -991,12 +1004,18 @@ section[id$="Panel"]{
   --ephemeral-bg:rgba(140,82,255,.13);
   --ephemeral-text:#eadcff;
   --ephemeral-shadow:0 0 0 2px rgba(199,156,255,.16),0 10px 28px rgba(0,0,0,.20);
+  --custom-zone-line:#51c9bd;
+  --custom-zone-bg:rgba(26,161,149,.13);
+  --custom-zone-banner-text:#063c36;
 }
 :root[data-theme="day"]{
   --ephemeral-line:#6d3fc0;
   --ephemeral-bg:#f3ecff;
   --ephemeral-text:#3b176f;
   --ephemeral-shadow:0 0 0 2px rgba(109,63,192,.10),0 8px 20px rgba(60,30,110,.10);
+  --custom-zone-line:#087b75;
+  --custom-zone-bg:#e4f5f2;
+  --custom-zone-banner-text:#fff;
 }
 
 .zone-summary.ephemeral-active{
@@ -1005,7 +1024,8 @@ section[id$="Panel"]{
   color:var(--text);
   box-shadow:var(--ephemeral-shadow);
 }
-.zone-summary.ephemeral-active .zone-ephemeral-banner{
+.zone-summary.ephemeral-active .zone-ephemeral-banner,
+.zone-summary.custom-active .zone-custom-banner{
   display:flex;
   align-items:center;
   justify-content:center;
@@ -1027,6 +1047,19 @@ section[id$="Panel"]{
 select.ephemeral-zone-active{
   border:3px solid var(--ephemeral-line)!important;
   box-shadow:var(--ephemeral-shadow);
+}
+
+.zone-summary.custom-active{
+  border:2px solid var(--custom-zone-line)!important;
+  background:var(--custom-zone-bg)!important;
+  color:var(--text);
+}
+.zone-summary.custom-active .zone-custom-banner{
+  background:var(--custom-zone-line);
+  color:var(--custom-zone-banner-text);
+}
+select.custom-zone-active{
+  border:3px solid var(--custom-zone-line)!important;
 }
 
 #ephemeralBlock.ephemeral-focus{
@@ -2227,7 +2260,13 @@ button:focus-visible,
       </div>
 
 
-      <button class="primary hidden" id="encodeBtn" disabled>COMPLÈTE LA POSITION</button>
+      <button class="primary hidden" id="encodeBtn" disabled>
+        <span id="encodeBtnLabel">COMPLÈTE LA POSITION</span>
+        <span id="encodePositionMemo" class="hidden">
+          <span id="encodePositionLat"></span>
+          <span id="encodePositionLon"></span>
+        </span>
+      </button>
       <div id="encodeStatus" class="status hidden"></div>
 
       <div id="encodedBlock" class="phrase-transmit-block hidden">
@@ -2434,6 +2473,10 @@ button:focus-visible,
       <input id="zoneName" placeholder="ex. ROCHEBONNE">
 
       <label>Coordonnées du centre</label>
+      <p class="small position-entry-help">
+        <span>Recopie les coordonnées du centre depuis le sondeur/traceur, ou</span>
+        <button type="button" id="centerGpsBtn"><span class="gps-icon" aria-hidden="true">🛰️</span><span>Utilise le GPS du téléphone</span></button>
+      </p>
       <div class="position-mode-switch" role="group" aria-label="Format du centre de la zone personnalisée">
         <button type="button" id="zoneCenterModeMarine" class="active" aria-pressed="true">MARINE · ° + MINUTES</button>
         <button type="button" id="zoneCenterModeDecimal" aria-pressed="false">DÉCIMAL</button>
@@ -2482,7 +2525,6 @@ button:focus-visible,
         </div>
       </div>
 
-      <button class="secondary" id="centerGpsBtn">PRENDRE MON GPS COMME CENTRE</button>
       <button class="primary" id="saveZoneBtn">ENREGISTRER LA ZONE</button>
       <label>Zone personnalisée à supprimer</label>
       <select id="manageZoneSelect"><option value="">Aucune zone personnalisée</option></select>
@@ -2567,7 +2609,7 @@ function initTheme(){
   }
 }
 
-const APP_VERSION="3.28.22";
+const APP_VERSION="3.28.27";
 const PROTOCOL_ID="VHF-GPS-PROTO-5";
 
 function protocolShortLabel(){
@@ -3630,13 +3672,16 @@ function refreshEncodeState(){
   btn.disabled=!ready;
   btn.classList.toggle("hidden",!(protocolOk && secretOk && inside));
   btn.classList.toggle("encode-ready",ready);
-  btn.textContent=!protocolOk
+  $("encodeBtnLabel").textContent=!protocolOk
     ?(protocolRuntimeState===PROTOCOL_STATE.CHECKING?"VÉRIFICATION DU PROTOCOLE…":"PROTOCOLE INDISPONIBLE")
     :!secretOk?"ACTIVE D’ABORD UNE SESSION"
     :!p.ok?"COMPLÈTE LA POSITION"
     :!inside?"POSITION HORS ZONE"
     :!zoneOk?"CONFIRME L’ALIAS ZONE POUR GÉNÉRER LA PHRASE"
     :"✓ GÉNÉRER LA PHRASE";
+  $("encodePositionMemo").classList.toggle("hidden",!ready);
+  $("encodePositionLat").textContent=ready?formatDegMin(p.lat,true):"";
+  $("encodePositionLon").textContent=ready?formatDegMin(p.lon,false):"";
 
   const best=z && p.ok && !inside?compatibleZones(p.lat,p.lon,z.id)[0]:null;
   const switchBtn=$("useCompatibleZoneBtn");
@@ -3820,7 +3865,8 @@ function zoneSummary(z){
   }
 
   const centerMarine=`${formatDegMin(z.lat,true)} / ${formatDegMin(z.lon,false)}`;
-  return `<strong>${name}</strong>`+
+  return (isCustomFixedZone(z)?`<div class="zone-custom-banner">ZONE PERSONNALISÉE ACTIVE</div>`:"")+
+    `<strong>${name}</strong>`+
     `<div class="zone-marine-center">`+
       `<span class="zone-coord-label">Centre · Marine</span>`+
       `${centerMarine}`+
@@ -3845,17 +3891,19 @@ function zoneSummary(z){
 }
 
 function populateManageZones(preferredId=""){
-  const sel=$("manageZoneSelect"),custom=zones.filter(z=>!z.builtin);
+  const sel=$("manageZoneSelect"),custom=zones.filter(z=>!z.builtin).sort(compareZoneNames);
   const old=preferredId||sel.value;
   sel.innerHTML="";
   if(!custom.length){
     const o=document.createElement("option");o.value="";o.textContent="Aucune zone personnalisée";sel.appendChild(o);return;
   }
-  for(const z of custom){const o=document.createElement("option");o.value=z.id;o.textContent=z.name;sel.appendChild(o);}
+  for(const z of custom){const o=document.createElement("option");o.value=z.id;o.textContent=zoneDisplayName(z);sel.appendChild(o);}
   if(custom.some(z=>z.id===old))sel.value=old;
 }
 
-function zoneDisplayName(z){return z.name;}
+function isCustomFixedZone(z){return !!z && !z.builtin && !z.ephemeral && !isAnchoredZone(z);}
+function zoneDisplayName(z){return isCustomFixedZone(z)?`** ${z.name} **`:z.name;}
+function compareZoneNames(a,b){return a.name.localeCompare(b.name,"fr",{sensitivity:"base"});}
 
 function populateZoneSelect(sel,entries,selectedId){
   sel.innerHTML="";
@@ -3872,7 +3920,7 @@ function populateZoneSelect(sel,entries,selectedId){
 function populateZones(selid){
   // Affichage uniquement : seul setActiveZone change la zone et sa confirmation.
   const plainEntries=[...zones]
-    .sort((a,b)=>zoneDisplayName(a).localeCompare(zoneDisplayName(b),"fr",{sensitivity:"base"}))
+    .sort(compareZoneNames)
     .map(z=>({z,label:zoneDisplayName(z)}));
 
   populateZoneSelect(sendZone,plainEntries,activeZoneId);
@@ -3880,7 +3928,7 @@ function populateZones(selid){
   syncZoneSelects();
 
   populateManageZones(selid);
-  updateZoneSummaries();
+  return updateZoneSummaries();
 }
 
 async function refreshZoneAliases(){
@@ -3888,7 +3936,7 @@ async function refreshZoneAliases(){
 
   if(!valid){
     const entries=[...zones]
-      .sort((a,b)=>zoneDisplayName(a).localeCompare(zoneDisplayName(b),"fr",{sensitivity:"base"}))
+      .sort(compareZoneNames)
       .map(z=>({z,label:zoneDisplayName(z)}));
     populateZoneSelect(sendZone,entries,activeZoneId);
     populateZoneSelect(recvZone,entries,activeZoneId);
@@ -3913,7 +3961,7 @@ async function refreshZoneAliases(){
 
   // ÉMETTRE : l'utilisateur connaît d'abord le nom du lieu.
   const sendRows=[...rows].sort((a,b)=>{
-    const byName=zoneDisplayName(a.z).localeCompare(zoneDisplayName(b.z),"fr",{sensitivity:"base"});
+    const byName=compareZoneNames(a.z,b.z);
     return byName || a.alias.text.localeCompare(b.alias.text,"fr",{sensitivity:"base"});
   });
   const sendEntries=sendRows.map(r=>({
@@ -3925,7 +3973,7 @@ async function refreshZoneAliases(){
   // RECEVOIR : l'utilisateur cherche l'alias entendu à la VHF.
   const recvRows=[...rows].sort((a,b)=>{
     const byAlias=a.alias.text.localeCompare(b.alias.text,"fr",{sensitivity:"base"});
-    return byAlias || zoneDisplayName(a.z).localeCompare(zoneDisplayName(b.z),"fr",{sensitivity:"base"});
+    return byAlias || compareZoneNames(a.z,b.z);
   });
   const recvEntries=recvRows.map(r=>({
     z:r.z,
@@ -3972,20 +4020,30 @@ function updateZoneSummaries(){
   }
   if(!z)return;
 
-  const ephemeral=isAnchoredZone(z);
+  const ephemeral=isAnchoredZone(z),custom=isCustomFixedZone(z);
   for(const id of ["sendZoneSummary","recvZoneSummary"]){
     const el=$(id);
     el.innerHTML=zoneSummary(z);
     el.classList.toggle("ephemeral-active",ephemeral);
+    el.classList.toggle("custom-active",custom);
   }
   sendZone.classList.toggle("ephemeral-zone-active",ephemeral);
   recvZone.classList.toggle("ephemeral-zone-active",ephemeral);
+  sendZone.classList.toggle("custom-zone-active",custom);
+  recvZone.classList.toggle("custom-zone-active",custom);
 
   checkDrift();
-  refreshZoneAliases();
-  refreshEphemeralWorkflow();
+  // Ces rafraîchissements se chevauchent ; leur ordre de fin n'est pas garanti.
+  // Les listes sendZone/recvZone doivent rester alignées sur activeZoneId :
+  // toute sélection réelle passe par setActiveZone, jamais par un rafraîchissement.
+  // Avant d'ajouter une mutation après un await, revérifier son contexte
+  // (session, zone, révision) et son interaction avec l'autre routine.
+  // Promise.all attend les deux appels, mais ne verrouille pas l'état partagé.
+  const aliasesReady=refreshZoneAliases();
+  const workflowReady=refreshEphemeralWorkflow();
   refreshZoneConfirmationUi();
   refreshEncodeState();
+  return Promise.all([aliasesReady,workflowReady]);
 }
 
 function setStatus(id,msg,type){const e=$(id);e.textContent=msg;e.className="status "+type;}
@@ -4874,8 +4932,7 @@ $("ephemeralZoneBtn").onclick=async()=>{
     saveZoneConfirmations();
 
     setActiveZone(z.id,{invalidate:true,persist:true,refresh:false});
-    populateZones(z.id);
-    await refreshEphemeralWorkflow();
+    await populateZones(z.id);
     if(activeSessionRevision!==sessionRevision || activeZone()?.id!==z.id)return;
 
     const c=zoneCheck(lat,lon,z);
@@ -4888,6 +4945,9 @@ $("ephemeralZoneBtn").onclick=async()=>{
       "Zone éphémère créée et sélectionnée. Annonce l’ancre, compare l’alias avec le correspondant, puis confirme-le pour débloquer la phrase.",
       "warn"
     );
+    if(!$("sendPanel").classList.contains("hidden")){
+      $("ephemeralBlock").scrollIntoView({behavior:"smooth",block:"start"});
+    }
   }catch(e){
     setStatus("encodeStatus",e.message||String(e),"bad");
   }

@@ -196,3 +196,27 @@ test('réception normale : création persistante, sélection et confirmation hum
   assert.equal(sendZone.value,z.id);assert.equal(recvZone.value,z.id);
   await confirmActiveZoneAlias();assert.equal(isZoneConfirmed(z),true);
 `));
+
+test('émission normale : création éphémère et confirmation toujours fonctionnelles', t => check(t, `
+  let scrolls=0;
+  $('ephemeralBlock').scrollIntoView=options=>{
+    assert.equal(options.behavior,'smooth');assert.equal(options.block,'start');
+    assert.equal($('ephemeralBlock').classList.contains('hidden'),false);
+    assert.equal($('ephemeralAliasConfirmBtn').disabled,false);
+    scrolls++;
+  };
+  const start=activeZone();
+  setPositionInputMode('decimal',{persist:false});
+  $('lat').value=String(start.lat);$('lon').value=String(start.lon);handlePositionChanged();
+  await $('ephemeralZoneBtn').onclick();
+  assert.equal(scrolls,1);
+  const z=activeZone();assert.equal(isAnchoredZone(z),true);
+  assert.equal(isZoneConfirmed(z),false);
+  assert.equal($('ephemeralBlock').classList.contains('hidden'),false);
+  assert.equal($('ephemeralAliasConfirmBtn').disabled,false);
+  assert.equal($('encodeBtn').disabled,true);
+  assert.match($('encodeStatus').textContent,/Zone éphémère créée et sélectionnée/);
+  await confirmActiveZoneAlias();
+  assert.equal($('encodeBtn').disabled,false);
+  assert.equal($('encodeBtn').classList.contains('encode-ready'),true);
+`));
