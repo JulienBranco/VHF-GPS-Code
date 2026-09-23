@@ -473,6 +473,24 @@ section[id$="Panel"]{
   font-size:.82rem;
   line-height:1.35;
 }
+.position-entry-help{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:6px;
+}
+#gpsBtn{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  max-width:100%;
+  min-height:44px;
+  margin:0;
+  padding:8px 10px;
+  font-size:inherit;
+  text-align:left;
+}
+#gpsBtn .gps-icon{flex-shrink:0;font-size:1.2rem}
 .terrain-label{
   text-transform:uppercase;
   letter-spacing:.075em;
@@ -2068,7 +2086,10 @@ button:focus-visible,
 
     <div class="card terrain-card is-primary">
       <div class="step-heading"><span class="step-number">2</span><h2>Position à transmettre</h2></div>
-      <div class="step-subtitle">Recopie directement la position du sondeur/traceur, ou utilise le GPS du téléphone.</div>
+      <div class="step-subtitle position-entry-help">
+        <span>Recopie directement la position du sondeur/traceur, ou</span>
+        <button type="button" id="gpsBtn"><span class="gps-icon" aria-hidden="true">🛰️</span><span>Utilise le GPS du téléphone</span></button>
+      </div>
 
       <div class="position-mode-switch" role="group" aria-label="Format de saisie de la position">
         <button type="button" id="positionModeMarine" class="active" aria-pressed="true">MARINE · ° + MINUTES</button>
@@ -2119,7 +2140,6 @@ button:focus-visible,
       <div id="driftStatus" class="status warn">Entre une position pour vérifier sa dérive par rapport au centre.</div>
 
       <div class="action-stack">
-        <button class="secondary" id="gpsBtn">UTILISER LE GPS DU TÉLÉPHONE</button>
         <button class="secondary" id="ephemeralZoneBtn">CRÉER UNE ZONE ÉPHÉMÈRE AUTOUR DE CETTE POSITION</button>
       </div>
 
@@ -4753,7 +4773,6 @@ async function encodeSelectedPosition(){
     `<div class="debugcell"><strong>ACK attendu / recalculé</strong>${e.ack} / ${d.ack}</div>`+
     `<div class="debugcell"><strong>Confirmation finale</strong>${e.finalConfirm} / ${d.finalConfirm}</div>`;
   $("debugBlock").classList.remove("hidden");
-  setStatus("encodeStatus","Phrase générée et testée automatiquement en décodage inverse.","ok");
 
   return {z,secret,lat,lon,e,phrase,d,err};
 }
