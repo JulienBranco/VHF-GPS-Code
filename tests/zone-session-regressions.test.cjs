@@ -11,7 +11,7 @@ const html = readFileSync(join(__dirname, '..', 'vhf_gps_code.html'), 'utf8');
 const script = new vm.Script(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
 
 async function boot() {
-  const elements = new Map(), storage = new Map(), timers = new Set();
+  const elements = new Map(), storage = new Map(), timers = new Set(), windowEvents = {};
   const noop = () => {};
   function element() {
     const events = {}, classes = new Set();
@@ -49,7 +49,11 @@ async function boot() {
       getElementById: id => { assert.ok(elements.has(id), `ID absent : ${id}`); return elements.get(id); },
       createElement: element, documentElement: { dataset: {} },
     },
-    window: { matchMedia: () => ({ matches: false, addEventListener: noop }) }, navigator: {},
+    window: {
+      matchMedia: () => ({ matches: false, addEventListener: noop }),
+      addEventListener: (name, fn) => windowEvents[name] = fn,
+      dispatchEvent: event => windowEvents[event.type]?.(event),
+    }, navigator: {},
     localStorage: {
       getItem: key => storage.get(key) ?? null,
       setItem: (key, value) => storage.set(key, String(value)),
@@ -440,4 +444,32 @@ test('une acquisition GPS tardive ne remplace pas les coordonnées saisies', t =
   requests[1].success({coords:{latitude:47,longitude:-3,accuracy:10}});
   assert.equal($('zoneLat').value,'46.3');
   assert.equal($('zoneLon').value,'-2.4');
+`));
+
+test('installation : confirmation directe disponible ou aide iPhone', t => check(t, `
+  globalThis.location={protocol:'https:',hostname:'example.test'};
+  navigator.serviceWorker={};
+  refreshInstallButton();
+  assert.equal($('installAppBtn').classList.contains('hidden'),false);
+
+  let prevented=false,prompted=0;
+  window.dispatchEvent({type:'beforeinstallprompt',preventDefault(){prevented=true;},
+    prompt(){prompted++;return Promise.resolve();},
+    userChoice:Promise.resolve({outcome:'accepted'})});
+  assert.equal(prevented,true);
+  await $('installAppBtn').onclick();
+  assert.equal(prompted,1);
+  window.dispatchEvent({type:'appinstalled'});
+  assert.equal($('installAppBtn').classList.contains('hidden'),true);
+
+  installEventCompleted=false;
+  navigator.userAgent='Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X)';
+  refreshInstallButton();
+  await $('installAppBtn').onclick();
+  assert.match($('installHelp').textContent,/Safari.*Partager.*Sur l’écran d’accueil/);
+  assert.equal($('installHelp').classList.contains('hidden'),false);
+  navigator.standalone=true;
+  refreshInstallButton();
+  assert.equal($('installAppBtn').classList.contains('hidden'),true);
+  assert.equal($('installHelp').classList.contains('hidden'),true);
 `));

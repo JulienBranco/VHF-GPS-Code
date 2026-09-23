@@ -6,10 +6,10 @@ L'application est autonome : le protocole radio et les calculs restent dans `vhf
 
 Publier **ensemble** `index.html`, `vhf_gps_code.html`, `manifest.webmanifest`, `sw.js` et le dossier `icons/` à la racine d'une même adresse HTTPS stable. Les chemins sont relatifs et conviennent aussi à un sous-dossier, par exemple GitHub Pages. L'ouverture directe du fichier HTML reste possible, mais ne permet pas l'installation de la PWA.
 
-Avant la sortie, ouvrir l'adresse avec du réseau, puis installer :
+Avant la sortie, ouvrir l'adresse avec du réseau, puis utiliser le bouton **« Installer l'application »** en haut de la page :
 
-- Android : commande « Installer l'application » du navigateur compatible.
-- iPhone : Safari → Partager → « Sur l'écran d'accueil ».
+- Android : si Chrome propose l'installation directe, confirmer sa fenêtre. Sinon, le bouton indique le chemin par le menu du navigateur.
+- iPhone : le bouton indique les gestes Safari → Partager → « Sur l'écran d'accueil » ; Safari ne permet pas à la page de lancer directement cette confirmation.
 
 **Ouvrir ensuite l'icône installée avec du réseau** et attendre l'indication **« PRÊTE HORS RÉSEAU »** dans cette application. Sur iPhone, le stockage de la web app peut être séparé de celui de Safari : une indication « prête » dans Safari ne suffit pas pour garantir que l'icône installée ouvrira hors réseau.
 

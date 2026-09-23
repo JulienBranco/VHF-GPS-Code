@@ -58,6 +58,8 @@ input:focus,select:focus{border-color:var(--accent)}
 .pwa-status.ready{color:var(--ok);background:rgba(34,197,94,.12)}
 .pwa-status.update{color:var(--warn);background:rgba(217,119,6,.12)}
 .pwa-status.problem{color:var(--bad);background:rgba(200,55,55,.12)}
+.install-app-btn{display:block;margin:0 0 14px;padding:10px 13px;background:rgba(98,221,183,.14);color:var(--text);border-color:var(--accent);font-size:.9rem}
+.install-help{margin:0 0 14px;padding:12px 14px;border-radius:10px;background:rgba(98,221,183,.08);color:var(--text);line-height:1.45;font-size:.9rem}
 :root[data-theme="day"] .pwa-status.pending,
 :root[data-theme="day"] .pwa-status.update{color:#704000;background:#fff4d7}
 :root[data-theme="day"] .pwa-status.ready{color:#075f27;background:#e7f8eb}
@@ -415,6 +417,8 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
 :root[data-theme="day"] button{
   background:#f4f4f4;color:#080808;border-color:#151515
 }
+:root[data-theme="day"] .install-app-btn{background:#e4f7eb;color:#075f27;border-color:#198a52}
+:root[data-theme="day"] .install-help{background:#effaf3;color:#17452b}
 :root[data-theme="day"] button.primary,
 :root[data-theme="day"] .tab.active,
 :root[data-theme="day"] .position-mode-switch button.active{
@@ -2230,6 +2234,8 @@ button:focus-visible,
   <h1>VHF GPS Code — <span id="appVersionHeading"></span> <span class="small">Compatibilité automatique</span></h1>
   <p><span class="badge" id="protocolBadgeTop"></span> <span class="badge">4 mots + ET/OU</span> <span class="badge">250 × 250 km</span> <span class="badge">maille 100 m</span> <span class="badge">hors connexion</span></p>
   <div id="pwaStatus" class="pwa-status hidden" role="status" aria-live="polite"></div>
+  <button type="button" id="installAppBtn" class="install-app-btn hidden" aria-controls="installHelp" aria-expanded="false">Installer l’application</button>
+  <div id="installHelp" class="install-help hidden" role="status"></div>
 
   <div class="theme-switch">
     <label for="themeMode">Affichage</label>
@@ -2768,7 +2774,7 @@ button:focus-visible,
   <details class="card utility-details small">
     <summary>Installer et vérifier le mode hors réseau</summary>
     <div class="utility-body">
-      <p>Avec du réseau, installe l’application : sur Android, utilise « Installer l’application » dans le navigateur ; sur iPhone, Safari → Partager → « Sur l’écran d’accueil ».</p>
+      <p>Avec du réseau, utilise le bouton « Installer l’application » en haut de la page. Sur Android, il peut ouvrir directement la confirmation ; sinon, utilise « Installer l’application » dans le menu du navigateur. Sur iPhone, le bouton explique le chemin Safari → Partager → « Sur l’écran d’accueil ».</p>
       <p>Ouvre ensuite l’icône installée <strong>avec du réseau</strong> et attends « PRÊTE HORS RÉSEAU » en haut de l’écran. Sur iPhone, les données saisies dans Safari peuvent ne pas être reprises : vérifie la session et les zones dans l’application installée.</p>
       <p>Avant de partir, passe en mode avion, ferme puis rouvre l’application depuis son icône. Vérifie la session, les zones et le GPS. Si le GPS ne répond pas, recopie la position du sondeur ou du traceur.</p>
       <p>Une mise à jour téléchargée n’interrompt pas l’application ouverte. Ferme puis rouvre l’application à quai pour l’utiliser.</p>
@@ -2835,7 +2841,7 @@ function initTheme(){
   }
 }
 
-const APP_VERSION="3.28.54";
+const APP_VERSION="3.28.56";
 const PROTOCOL_ID="VHF-GPS-PROTO-5";
 
 function protocolShortLabel(){
@@ -2861,6 +2867,53 @@ function setPwaStatus(message,kind){
   el.className=`pwa-status ${kind}`;
 }
 
+let deferredInstallPrompt=null;
+let installEventCompleted=false;
+function pwaIsInstalled(){
+  return navigator.standalone===true||window.matchMedia?.("(display-mode: standalone)").matches===true||installEventCompleted;
+}
+function refreshInstallButton(){
+  const button=$("installAppBtn");
+  const available=typeof location!=="undefined"&&
+    (location.protocol==="https:"||location.hostname==="localhost"||location.hostname==="127.0.0.1")&&
+    !!navigator.serviceWorker&&!pwaIsInstalled();
+  button.classList.toggle("hidden",!available);
+  if(!available){
+    $("installHelp").classList.add("hidden");
+    button.setAttribute("aria-expanded","false");
+  }
+}
+function installInstructions(){
+  const ua=String(navigator.userAgent||"");
+  const ios=/iPhone|iPad|iPod/i.test(ua)||(/Macintosh/i.test(ua)&&navigator.maxTouchPoints>1);
+  if(ios)return "Sur iPhone/iPad : ouvre cette page dans Safari, touche Partager, puis « Sur l’écran d’accueil » et « Ajouter ». Ouvre ensuite la nouvelle icône avec du réseau et attends « PRÊTE HORS RÉSEAU ».";
+  if(/Android/i.test(ua))return "Sur Android : dans le menu ⋮ de Chrome, choisis « Installer l’application » ou « Ajouter à l’écran d’accueil », puis confirme. Ouvre ensuite la nouvelle icône avec du réseau et attends « PRÊTE HORS RÉSEAU ».";
+  return "Dans le menu de ton navigateur, choisis « Installer l’application » ou « Ajouter à l’écran d’accueil ». Ouvre ensuite la nouvelle icône avec du réseau et attends « PRÊTE HORS RÉSEAU ».";
+}
+function showInstallInstructions(){
+  const help=$("installHelp"),button=$("installAppBtn");
+  help.textContent=installInstructions();
+  help.classList.remove("hidden");
+  button.setAttribute("aria-expanded","true");
+}
+document.getElementById("installAppBtn").onclick=async()=>{
+  if(deferredInstallPrompt){
+    const prompt=deferredInstallPrompt;
+    deferredInstallPrompt=null;
+    try{
+      await prompt.prompt();
+      await prompt.userChoice;
+    }catch(_){showInstallInstructions();}
+    return;
+  }
+  const help=$("installHelp"),button=$("installAppBtn");
+  if(help.classList.contains("hidden"))showInstallInstructions();
+  else{
+    help.classList.add("hidden");
+    button.setAttribute("aria-expanded","false");
+  }
+};
+
 async function initPwa(){
   if(typeof location==="undefined")return;
   const local=location.hostname==="localhost"||location.hostname==="127.0.0.1";
@@ -2873,6 +2926,7 @@ async function initPwa(){
     return;
   }
 
+  refreshInstallButton();
   setPwaStatus("Préparation du mode hors réseau…","pending");
   try{
     const registration=await navigator.serviceWorker.register("./sw.js",{
@@ -6431,7 +6485,19 @@ setActiveZone(activeZoneId,{refresh:false});
 populateZones();
 initPositionInputUi();
 initZoneCenterInputUi();
-if(window.addEventListener)window.addEventListener("load",initPwa);
+if(window.addEventListener){
+  window.addEventListener("beforeinstallprompt",event=>{
+    event.preventDefault();
+    deferredInstallPrompt=event;
+    refreshInstallButton();
+  });
+  window.addEventListener("appinstalled",()=>{
+    deferredInstallPrompt=null;
+    installEventCompleted=true;
+    refreshInstallButton();
+  });
+  window.addEventListener("load",initPwa);
+}
 </script>
 </body>
 </html>
