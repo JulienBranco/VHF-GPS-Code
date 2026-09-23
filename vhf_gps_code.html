@@ -2776,7 +2776,7 @@ button:focus-visible,
       <p>Avec du réseau, utilise le bouton « Installer l’application » en haut de la page. Sur Android, il peut ouvrir directement la confirmation ; sinon, utilise « Installer l’application » dans le menu du navigateur. Sur iPhone, le bouton explique le chemin Safari → Partager → « Sur l’écran d’accueil ».</p>
       <p>Ouvre ensuite l’icône installée <strong>avec du réseau</strong> et attends « PRÊTE HORS RÉSEAU » en haut de l’écran. Sur iPhone, les données saisies dans Safari peuvent ne pas être reprises : vérifie la session et les zones dans l’application installée.</p>
       <p>Avant de partir, passe en mode avion, ferme puis rouvre l’application depuis son icône. Vérifie la session, les zones et le GPS. Si le GPS ne répond pas, recopie la position du sondeur ou du traceur.</p>
-      <p>Une mise à jour téléchargée n’interrompt pas l’application ouverte. Ferme puis rouvre l’application à quai pour l’utiliser.</p>
+      <p>Une mise à jour téléchargée n’interrompt pas l’application ouverte. Si tu n’es pas en plein échange radio, ferme complètement l’application puis rouvre-la pour l’activer.</p>
     </div>
   </details>
 
@@ -2840,7 +2840,7 @@ function initTheme(){
   }
 }
 
-const APP_VERSION="3.28.58";
+const APP_VERSION="3.28.60";
 const PROTOCOL_ID="VHF-GPS-PROTO-5";
 
 function protocolShortLabel(){
@@ -2935,7 +2935,7 @@ async function initPwa(){
     const appUrl=new URL("vhf_gps_code.html",registration.scope).href;
     const showReady=async()=>{
       if(registration.waiting&&navigator.serviceWorker.controller){
-        setPwaStatus("Mise à jour prête · ferme puis rouvre l’application à quai.","update");
+        setPwaStatus("Nouvelle version téléchargée. Si tu n’es pas en plein échange radio, ferme complètement l’application puis rouvre-la pour l’activer.","update");
         return;
       }
       const cached=await caches.match(appUrl);
@@ -2945,7 +2945,7 @@ async function initPwa(){
       if(!worker)return;
       worker.addEventListener("statechange",()=>{
         if(worker.state==="installed"&&navigator.serviceWorker.controller){
-          setPwaStatus("Mise à jour prête · ferme puis rouvre l’application à quai.","update");
+          setPwaStatus("Nouvelle version téléchargée. Si tu n’es pas en plein échange radio, ferme complètement l’application puis rouvre-la pour l’activer.","update");
         }else if(worker.state==="activated"){
           showReady().catch(()=>setPwaStatus("Mode hors réseau non vérifié.","problem"));
         }else if(worker.state==="redundant"&&!registration.active){

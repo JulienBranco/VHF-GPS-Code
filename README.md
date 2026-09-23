@@ -21,6 +21,6 @@ Une PWA installée depuis HTTPS possède un espace de stockage distinct de celui
 
 Tester sur cet ordinateur avec `node tools/dev-server.cjs`, puis ouvrir `http://localhost:8080/`. `localhost` permet de tester les service workers sans certificat HTTPS. Pour un essai hors ligne, charger la page une première fois, attendre « PRÊTE HORS RÉSEAU », puis couper le réseau dans les outils du navigateur et rouvrir l'application.
 
-À chaque évolution, incrémenter **à la fois** `APP_VERSION` dans `vhf_gps_code.html` et `APP_VERSION` dans `sw.js`. Les tests vérifient cette concordance. Le nouveau cache doit être entièrement téléchargé avant d'être utilisé. Une mise à jour n'impose jamais de rechargement au cours d'un échange radio : fermer puis rouvrir l'application à quai.
+À chaque évolution, incrémenter **à la fois** `APP_VERSION` dans `vhf_gps_code.html` et `APP_VERSION` dans `sw.js`. Les tests vérifient cette concordance. Le nouveau cache doit être entièrement téléchargé avant d'être utilisé. Une mise à jour n'impose jamais de rechargement au cours d'un échange radio : une fois l'échange terminé, fermer complètement puis rouvrir l'application. S'il n'y a pas d'échange en cours, on peut le faire immédiatement. Une fois la nouvelle version annoncée comme téléchargée, sa réouverture ne requiert pas de réseau.
 
 Les fichiers `icons/*.png` sont générés par `tools/generate_pwa_icons.py` avec Pillow. Ils ne sont pas requis pour recalculer le protocole.
