@@ -109,7 +109,7 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
 
 
 .returntable{display:grid;gap:7px}
-.returnrow{display:grid;grid-template-columns:minmax(90px,130px) 1fr;gap:10px;align-items:center;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.03)}
+.returnrow{display:grid;grid-template-columns:minmax(90px,130px) 1fr;gap:10px;align-items:center;padding:9px 10px;border:0;border-left:3px solid var(--bad);background:rgba(200,55,55,.08)}
 .returnword{font-size:1.08rem;font-weight:950;letter-spacing:.04em;text-align:center}
 .returnaction strong{display:block;margin-bottom:2px}
 .nackbox{border-color:#d97706!important;background:rgba(217,119,6,.08)!important}
@@ -412,7 +412,6 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
 :root[data-theme="day"] .badge{
   background:#eeeeee;color:#111111;border:1px solid #666666
 }
-:root[data-theme="day"] .returnrow{background:#ffffff}
 :root[data-theme="day"] .status.ok{color:#075f27;background:#edf9f0;border-color:#075f27}
 :root[data-theme="day"] .status.warn{color:#704000;background:#fff7df;border-color:#704000}
 :root[data-theme="day"] .status.bad{color:#8e101b;background:#fff0f1;border-color:#8e101b}
@@ -2724,7 +2723,7 @@ function initTheme(){
   }
 }
 
-const APP_VERSION="3.28.49";
+const APP_VERSION="3.28.50";
 const PROTOCOL_ID="VHF-GPS-PROTO-5";
 
 function protocolShortLabel(){
