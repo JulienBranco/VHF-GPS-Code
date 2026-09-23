@@ -1,0 +1,17 @@
+{
+  "id": "./vhf_gps_code.html",
+  "name": "VHF GPS Code",
+  "short_name": "VHF GPS",
+  "description": "Échange de positions par VHF, utilisable hors réseau après installation.",
+  "lang": "fr",
+  "start_url": "./vhf_gps_code.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#06131a",
+  "theme_color": "#06131a",
+  "icons": [
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

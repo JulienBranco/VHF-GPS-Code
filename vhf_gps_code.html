@@ -3,6 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta id="themeColorMeta" name="theme-color" content="#06131a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="VHF GPS Code">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
 <title>VHF GPS Code</title>
 <style>
 :root{
@@ -46,6 +53,15 @@ input:focus,select:focus{border-color:var(--accent)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 .hidden{display:none!important}
+.pwa-status{display:inline-block;margin:0 0 8px;padding:6px 10px;border-radius:9px;font-size:.78rem;font-weight:850}
+.pwa-status.pending{color:var(--warn);background:rgba(217,119,6,.12)}
+.pwa-status.ready{color:var(--ok);background:rgba(34,197,94,.12)}
+.pwa-status.update{color:var(--warn);background:rgba(217,119,6,.12)}
+.pwa-status.problem{color:var(--bad);background:rgba(200,55,55,.12)}
+:root[data-theme="day"] .pwa-status.pending,
+:root[data-theme="day"] .pwa-status.update{color:#704000;background:#fff4d7}
+:root[data-theme="day"] .pwa-status.ready{color:#075f27;background:#e7f8eb}
+:root[data-theme="day"] .pwa-status.problem{color:#8e101b;background:#fff0f1}
 .status{margin-top:12px;padding:12px;border-radius:11px;border:1px solid transparent}
 .status.ok{color:var(--ok);background:#0d2b20;border-color:#1a5b43}
 .status.warn{color:var(--warn);background:#302813;border-color:#6c5925}
@@ -2213,6 +2229,7 @@ button:focus-visible,
 <main>
   <h1>VHF GPS Code — <span id="appVersionHeading"></span> <span class="small">Compatibilité automatique</span></h1>
   <p><span class="badge" id="protocolBadgeTop"></span> <span class="badge">4 mots + ET/OU</span> <span class="badge">250 × 250 km</span> <span class="badge">maille 100 m</span> <span class="badge">hors connexion</span></p>
+  <div id="pwaStatus" class="pwa-status hidden" role="status" aria-live="polite"></div>
 
   <div class="theme-switch">
     <label for="themeMode">Affichage</label>
@@ -2748,6 +2765,16 @@ button:focus-visible,
     </div>
   </details>
 
+  <details class="card utility-details small">
+    <summary>Installer et vérifier le mode hors réseau</summary>
+    <div class="utility-body">
+      <p>Avec du réseau, installe l’application : sur Android, utilise « Installer l’application » dans le navigateur ; sur iPhone, Safari → Partager → « Sur l’écran d’accueil ».</p>
+      <p>Ouvre ensuite l’icône installée <strong>avec du réseau</strong> et attends « PRÊTE HORS RÉSEAU » en haut de l’écran. Sur iPhone, les données saisies dans Safari peuvent ne pas être reprises : vérifie la session et les zones dans l’application installée.</p>
+      <p>Avant de partir, passe en mode avion, ferme puis rouvre l’application depuis son icône. Vérifie la session, les zones et le GPS. Si le GPS ne répond pas, recopie la position du sondeur ou du traceur.</p>
+      <p>Une mise à jour téléchargée n’interrompt pas l’application ouverte. Ferme puis rouvre l’application à quai pour l’utiliser.</p>
+    </div>
+  </details>
+
   <div class="app-credit">
     Logiciel édité par <strong>Julien Branco</strong> ·
     <a href="mailto:brancojulien@yahoo.fr">brancojulien@yahoo.fr</a> · 2026
@@ -2780,6 +2807,8 @@ function resolvedTheme(mode){
 function applyTheme(mode){
   const safe=["auto","day","night"].includes(mode)?mode:"auto";
   document.documentElement.dataset.theme=resolvedTheme(safe);
+  const themeMeta=document.getElementById("themeColorMeta");
+  if(themeMeta)themeMeta.content=document.documentElement.dataset.theme==="day"?"#ffffff":"#06131a";
   const sel=document.getElementById("themeMode");
   if(sel)sel.value=safe;
 }
@@ -2806,7 +2835,7 @@ function initTheme(){
   }
 }
 
-const APP_VERSION="3.28.53";
+const APP_VERSION="3.28.54";
 const PROTOCOL_ID="VHF-GPS-PROTO-5";
 
 function protocolShortLabel(){
@@ -2824,6 +2853,67 @@ function initVersionUi(){
   set("protocolInfoTitle",`Protocole ${app} / ${proto} :`);
   set("catalogInfoTitle",`Catalogue ${app} audité`);
   set("protocolInlineLabel",proto);
+}
+
+function setPwaStatus(message,kind){
+  const el=$("pwaStatus");
+  el.textContent=message;
+  el.className=`pwa-status ${kind}`;
+}
+
+async function initPwa(){
+  if(typeof location==="undefined")return;
+  const local=location.hostname==="localhost"||location.hostname==="127.0.0.1";
+  if(location.protocol!=="https:"&&!local){
+    if(location.protocol==="http:")setPwaStatus("Installation hors réseau : adresse HTTPS requise.","problem");
+    return;
+  }
+  if(!navigator.serviceWorker||!window.caches){
+    setPwaStatus("Mode hors réseau non pris en charge par ce navigateur.","problem");
+    return;
+  }
+
+  setPwaStatus("Préparation du mode hors réseau…","pending");
+  try{
+    const registration=await navigator.serviceWorker.register("./sw.js",{
+      scope:"./",
+      updateViaCache:"none"
+    });
+    const appUrl=new URL("vhf_gps_code.html",registration.scope).href;
+    const showReady=async()=>{
+      if(registration.waiting&&navigator.serviceWorker.controller){
+        setPwaStatus("Mise à jour prête · ferme puis rouvre l’application à quai.","update");
+        return;
+      }
+      const cached=await caches.match(appUrl);
+      setPwaStatus(cached?"✓ PRÊTE HORS RÉSEAU":"Préparation du mode hors réseau…",cached?"ready":"pending");
+    };
+    const watchInstall=worker=>{
+      if(!worker)return;
+      worker.addEventListener("statechange",()=>{
+        if(worker.state==="installed"&&navigator.serviceWorker.controller){
+          setPwaStatus("Mise à jour prête · ferme puis rouvre l’application à quai.","update");
+        }else if(worker.state==="activated"){
+          showReady().catch(()=>setPwaStatus("Mode hors réseau non vérifié.","problem"));
+        }else if(worker.state==="redundant"&&!registration.active){
+          setPwaStatus("Installation hors réseau incomplète. Réessaie avec du réseau.","problem");
+        }
+      });
+    };
+    watchInstall(registration.installing);
+    registration.addEventListener("updatefound",()=>watchInstall(registration.installing));
+    navigator.serviceWorker.addEventListener("controllerchange",()=>{
+      showReady().catch(()=>setPwaStatus("Mode hors réseau non vérifié.","problem"));
+    });
+    if(registration.active||registration.waiting)await showReady();
+    navigator.serviceWorker.ready.then(showReady).catch(()=>{
+      setPwaStatus("Mode hors réseau non vérifié.","problem");
+    });
+    if(registration.active&&navigator.onLine)registration.update().catch(()=>{});
+    if(navigator.storage?.persist)navigator.storage.persist().catch(()=>{});
+  }catch(_){
+    setPwaStatus("Installation hors réseau impossible. Réessaie avec du réseau.","problem");
+  }
 }
 const SIDE_KM=250, HALF_KM=125, CELL_KM=0.1, CELLS=2500;
 const ZONE_PROTOCOL_VERSION="ZONE-V3";
@@ -3084,6 +3174,7 @@ function fmt(n,d=1){return Number(n).toFixed(d).replace(".",",");}
 const POSITION_INPUT_MODE_KEY="vhfGpsPositionInputModeV1";
 let positionInputMode=localStorage.getItem(POSITION_INPUT_MODE_KEY)==="decimal"?"decimal":"marine";
 let positionUiSyncing=false;
+let senderGpsRevision=0;
 
 function decimalAxisToDdm(value,isLat){
   if(!Number.isFinite(value))return null;
@@ -3224,6 +3315,7 @@ function refreshPositionHemisphereDefaults(){
 }
 
 function setPositionInputMode(mode,{persist=true}={}){
+  senderGpsRevision++;
   positionInputMode=mode==="decimal"?"decimal":"marine";
   if(persist)localStorage.setItem(POSITION_INPUT_MODE_KEY,positionInputMode);
 
@@ -3255,6 +3347,7 @@ function handlePositionChanged(){
 
 function syncPositionFromMarine(){
   if(positionUiSyncing)return;
+  senderGpsRevision++;
 
   const p=readMarinePosition();
   if(!p.ok){
@@ -3281,6 +3374,7 @@ function syncPositionFromMarine(){
 
 function syncPositionFromDecimal(){
   if(positionUiSyncing)return;
+  senderGpsRevision++;
 
   const lat=parseNum($("lat").value),lon=parseNum($("lon").value);
   const valid=Number.isFinite(lat)&&lat>=-90&&lat<=90&&Number.isFinite(lon)&&lon>=-180&&lon<=180;
@@ -3306,6 +3400,7 @@ function initPositionInputUi(){
 const ZONE_CENTER_INPUT_MODE_KEY="vhfGpsZoneCenterInputModeV1";
 let zoneCenterInputMode=localStorage.getItem(ZONE_CENTER_INPUT_MODE_KEY)==="decimal"?"decimal":"marine";
 let zoneCenterUiSyncing=false;
+let centerGpsRevision=0;
 
 function readMarineZoneCenter(){
   const latPart=parseDdmAxis("zoneLatDeg","zoneLatMin","zoneLatHem",true);
@@ -3374,6 +3469,7 @@ function setZoneCenterDecimal(lat,lon,{updateMarine=true}={}){
 }
 
 function setZoneCenterInputMode(mode,{persist=true}={}){
+  centerGpsRevision++;
   zoneCenterInputMode=mode==="decimal"?"decimal":"marine";
   if(persist)localStorage.setItem(ZONE_CENTER_INPUT_MODE_KEY,zoneCenterInputMode);
 
@@ -3400,6 +3496,7 @@ function setZoneCenterInputMode(mode,{persist=true}={}){
 
 function syncZoneCenterFromMarine(){
   if(zoneCenterUiSyncing)return;
+  centerGpsRevision++;
 
   const p=readMarineZoneCenter();
   if(!p.ok){
@@ -3419,6 +3516,7 @@ function syncZoneCenterFromMarine(){
 
 function syncZoneCenterFromDecimal(){
   if(zoneCenterUiSyncing)return;
+  centerGpsRevision++;
 
   const lat=parseNum($("zoneLat").value),lon=parseNum($("zoneLon").value);
   if(!Number.isFinite(lat)||lat<-90||lat>90||!Number.isFinite(lon)||lon<-180||lon>180){
@@ -4975,7 +5073,7 @@ $("relativeGpsBtn").onclick=()=>{
       if(revision!==relativePositionRevision||target!==currentDecodedResult||!relativePositionReady())return;
       setStatus("relativeGpsStatus",`GPS : ${error.message||"acquisition impossible"}. Saisis ta position manuellement.`,"bad");
     },
-    {enableHighAccuracy:true,timeout:12000,maximumAge:0}
+    {enableHighAccuracy:true,timeout:60000,maximumAge:0}
   );
 };
 
@@ -6097,24 +6195,42 @@ for(const id of ["lat","lon"]){
 
 $("gpsBtn").onclick=()=>{
   if(!navigator.geolocation)return setDriftStatus("GPS navigateur indisponible.","bad");
+  const revision=++senderGpsRevision,sessionRevision=activeSessionRevision;
+  setDriftStatus("Acquisition GPS en cours…","warn");
   navigator.geolocation.getCurrentPosition(
     p=>{
-      setDecimalPosition(p.coords.latitude,p.coords.longitude,{updateMarine:true});
+      if(revision!==senderGpsRevision||sessionRevision!==activeSessionRevision)return;
+      const lat=Number(p.coords.latitude),lon=Number(p.coords.longitude);
+      if(!Number.isFinite(lat)||lat<-90||lat>90||!Number.isFinite(lon)||lon<-180||lon>180){
+        setDriftStatus("Position GPS invalide : recopie celle du sondeur ou du traceur.","bad");
+        return;
+      }
+      setDecimalPosition(lat,lon,{updateMarine:true});
       handlePositionChanged();
       const accuracy=Number(p.coords.accuracy);
       if(Number.isFinite(accuracy)&&accuracy>100){
         setDriftStatus(`GPS récupéré, mais précision annoncée ±${Math.round(accuracy)} m. Vérifie avant transmission.`,"warn");
       }
     },
-    e=>setDriftStatus("GPS : "+e.message,"bad"),
-    {enableHighAccuracy:true,timeout:12000,maximumAge:5000}
+    e=>{
+      if(revision===senderGpsRevision&&sessionRevision===activeSessionRevision)setDriftStatus("GPS : "+e.message,"bad");
+    },
+    {enableHighAccuracy:true,timeout:60000,maximumAge:0}
   );
 };
 $("centerGpsBtn").onclick=()=>{
   if(!navigator.geolocation)return setStatus("zoneStatus","GPS navigateur indisponible.","bad");
+  const revision=++centerGpsRevision;
+  setStatus("zoneStatus","Acquisition GPS du centre en cours…","warn");
   navigator.geolocation.getCurrentPosition(
     p=>{
-      setZoneCenterDecimal(p.coords.latitude,p.coords.longitude,{updateMarine:true});
+      if(revision!==centerGpsRevision)return;
+      const lat=Number(p.coords.latitude),lon=Number(p.coords.longitude);
+      if(!Number.isFinite(lat)||lat<-90||lat>90||!Number.isFinite(lon)||lon<-180||lon>180){
+        setStatus("zoneStatus","Position GPS invalide : saisis le centre manuellement.","bad");
+        return;
+      }
+      setZoneCenterDecimal(lat,lon,{updateMarine:true});
       const accuracy=Number(p.coords.accuracy);
       setStatus(
         "zoneStatus",
@@ -6124,8 +6240,10 @@ $("centerGpsBtn").onclick=()=>{
         Number.isFinite(accuracy)&&accuracy>100?"warn":"ok"
       );
     },
-    e=>setStatus("zoneStatus","GPS : "+e.message,"bad"),
-    {enableHighAccuracy:true,timeout:12000,maximumAge:5000}
+    e=>{
+      if(revision===centerGpsRevision)setStatus("zoneStatus","GPS : "+e.message,"bad");
+    },
+    {enableHighAccuracy:true,timeout:60000,maximumAge:0}
   );
 };
 $("saveZoneBtn").onclick=()=>{
@@ -6313,6 +6431,7 @@ setActiveZone(activeZoneId,{refresh:false});
 populateZones();
 initPositionInputUi();
 initZoneCenterInputUi();
+if(window.addEventListener)window.addEventListener("load",initPwa);
 </script>
 </body>
 </html>

@@ -419,3 +419,25 @@ test('GPS actuel : distance affichée avec heure et précision du relevé', t =>
   assert.match($('relativePositionResult').innerHTML,/090° vrai/);
   assert.equal($('relativePositionResult').classList.contains('hidden'),false);
 `));
+
+test('une acquisition GPS tardive ne remplace pas les coordonnées saisies', t => check(t, `
+  const requests=[];
+  navigator.geolocation={getCurrentPosition:(success,error,options)=>requests.push({success,options})};
+  setPositionInputMode('decimal',{persist:false});
+  $('gpsBtn').onclick();
+  assert.equal(requests[0].options.enableHighAccuracy,true);
+  assert.equal(requests[0].options.maximumAge,0);
+  assert.equal(requests[0].options.timeout,60000);
+  $('lat').value='46.1';$('lon').value='-2.2';syncPositionFromDecimal();
+  requests[0].success({coords:{latitude:47,longitude:-3,accuracy:10}});
+  assert.equal($('lat').value,'46.1');
+  assert.equal($('lon').value,'-2.2');
+
+  setZoneCenterInputMode('decimal',{persist:false});
+  $('centerGpsBtn').onclick();
+  assert.equal(requests[1].options.timeout,60000);
+  $('zoneLat').value='46.3';$('zoneLon').value='-2.4';syncZoneCenterFromDecimal();
+  requests[1].success({coords:{latitude:47,longitude:-3,accuracy:10}});
+  assert.equal($('zoneLat').value,'46.3');
+  assert.equal($('zoneLon').value,'-2.4');
+`));
