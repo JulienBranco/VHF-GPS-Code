@@ -722,6 +722,38 @@ section[id$="Panel"]{
   font-size:1.02rem;
   letter-spacing:.025em;
 }
+#encodeBtn.encode-ready{background:#1c944f;border-color:#1c944f;color:#fff}
+#encodeBtn:disabled{
+  background:#493314;
+  color:#ffe0a3;
+  border-color:#946323;
+  cursor:not-allowed;
+  box-shadow:none;
+  opacity:1;
+}
+:root[data-theme="day"] #encodeBtn:disabled{
+  background:#f1ca89;
+  color:#5a3200;
+  border-color:#c58630;
+}
+#gpsBtn,
+#centerGpsBtn,
+#useCompatibleZoneBtn,
+#cancelZoneDelete{
+  background:#0759a8;
+  border-color:#0759a8;
+  color:#fff;
+}
+#useCompatibleZoneBtn:disabled{
+  background:#25496b;
+  border-color:#25496b;
+  color:#d4e4f4;
+  opacity:1;
+  box-shadow:none;
+  cursor:not-allowed;
+}
+#sendZoneCard,
+#ephemeralAliasStep{scroll-margin-top:84px}
 
 @media(max-width:600px){
   main{padding:12px}
@@ -1383,8 +1415,10 @@ select.ephemeral-zone-active{
 .zone-delete-name{display:block;margin:12px 0;overflow-wrap:anywhere}
 .zone-delete-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
 .zone-delete-actions button{flex:1 1 140px;min-height:48px}
-#confirmZoneDelete,
-:root[data-theme="day"] #confirmZoneDelete{background:#b42332;border-color:#b42332;color:#fff}
+#sendDeleteZoneBtn,
+#recvDeleteZoneBtn,
+#deleteZoneBtn,
+#confirmZoneDelete{background:#b42332;border-color:#b42332;color:#fff}
 .protocol-state-confirmed{color:#d9ffe8;background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.68)}
 :root[data-theme="day"] .protocol-state-confirmed{color:#075d2a;background:#eaf8ef;border-color:#228b4e}
 .active-transmission-header{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
@@ -2061,7 +2095,7 @@ button:focus-visible,
   </div>
 
   <section id="sendPanel">
-    <div class="card terrain-card">
+    <div class="card terrain-card" id="sendZoneCard">
       <div class="step-heading"><span class="step-number">1</span><h2>Zone active</h2></div>
       <div class="step-subtitle">Choisis la zone du secteur de pêche. Cette sélection est aussi utilisée côté RECEVOIR.</div>
       <label class="terrain-label">Zone sélectionnée</label>
@@ -2140,7 +2174,8 @@ button:focus-visible,
       <div id="driftStatus" class="status warn">Entre une position pour vérifier sa dérive par rapport au centre.</div>
 
       <div class="action-stack">
-        <button class="secondary" id="ephemeralZoneBtn">CRÉER UNE ZONE ÉPHÉMÈRE AUTOUR DE CETTE POSITION</button>
+        <button type="button" class="secondary hidden" id="useCompatibleZoneBtn" disabled></button>
+        <button class="secondary" id="ephemeralZoneBtn" disabled>CRÉER UNE ZONE ÉPHÉMÈRE AUTOUR DE CETTE POSITION</button>
       </div>
 
       <div id="ephemeralBlock" class="card terrain-card ephemeral-focus hidden" style="margin-top:12px">
@@ -2192,7 +2227,7 @@ button:focus-visible,
       </div>
 
 
-      <button class="primary" id="encodeBtn">GÉNÉRER LA PHRASE</button>
+      <button class="primary" id="encodeBtn" disabled>COMPLÈTE LA POSITION</button>
       <div id="encodeStatus" class="status hidden"></div>
 
       <div id="encodedBlock" class="phrase-transmit-block hidden">
@@ -2532,7 +2567,7 @@ function initTheme(){
   }
 }
 
-const APP_VERSION="3.28.19";
+const APP_VERSION="3.28.20";
 const PROTOCOL_ID="VHF-GPS-PROTO-5";
 
 function protocolShortLabel(){
@@ -2609,10 +2644,6 @@ function setProtocolRuntimeState(state,detail=""){
   if(state!==PROTOCOL_STATE.OK && typeof invalidateDecodedResult==="function"){
     invalidateDecodedResult();
   }
-
-  const protocolUsable=state===PROTOCOL_STATE.OK;
-  const ephemeralBtn=$("ephemeralZoneBtn");
-  if(ephemeralBtn)ephemeralBtn.disabled=!protocolUsable;
 
   if(typeof refreshEncodeState==="function"){
     refreshEncodeState();
@@ -2974,6 +3005,7 @@ function setPositionInputMode(mode,{persist=true}={}){
     const m=readMarinePosition();
     if(m.ok)setDecimalPosition(m.lat,m.lon,{updateMarine:false});
   }
+  handlePositionChanged();
 }
 
 function handlePositionChanged(){
@@ -3177,6 +3209,7 @@ const NATO_WORDS=["ALFA","BRAVO","CHARLIE","DELTA","ECHO","FOXTROT","GOLF","HOTE
 
 let masterKeyCache={secret:"",key:null};
 let validatedSessionSecret="";
+let activeSessionRevision=0;
 
 function secureRandomIndex(max){
   if(!crypto?.getRandomValues)throw new Error("Générateur cryptographique indisponible.");
@@ -3243,13 +3276,16 @@ function sessionAgeText(){
 
 function syncSavedSecret(secret){
   const v=secret?validateOperationalSessionSecret(secret):{ok:false};
-  validatedSessionSecret=v.ok?v.canonical:"";
+  const nextSecret=v.ok?v.canonical:"";
+  if(nextSecret!==validatedSessionSecret)activeSessionRevision++;
+  validatedSessionSecret=nextSecret;
   $("sessionKey").value=validatedSessionSecret;
   masterKeyCache={secret:"",key:null};
   $("sessionState").textContent=validatedSessionSecret?"Session active et enregistrée.":"Aucune session active.";
   $("sessionCompactStatus").textContent=validatedSessionSecret
     ?`Session active · ${sessionAgeText()}`
     :"Aucune session active — ouvre les réglages pour en créer ou en coller une.";
+  refreshEncodeState();
 }
 
 async function deriveMasterKey(secret){
@@ -3439,6 +3475,7 @@ function purgeEphemeralZones(){
     const preferred=zones.some(z=>z.id===activeZoneId)
       ? activeZoneId
       : (zones.find(z=>z.builtin)?.id || zones[0]?.id || "");
+    setActiveZone(preferred,{refresh:false});
     populateZones(preferred);
   }
 }
@@ -3465,6 +3502,9 @@ function syncZoneSelects(){
 }
 
 function setActiveZone(id,{invalidate=true,persist=true,refresh=true}={}){
+  const before=zones.length;
+  zones=zones.filter(z=>z.builtin||isRecentEphemeral(z));
+  if(zones.length!==before)saveZones();
   const target=zones.find(z=>z.id===id) || zones[0];
   if(!target)return null;
 
@@ -3488,7 +3528,7 @@ function setActiveZone(id,{invalidate=true,persist=true,refresh=true}={}){
     }
   }
 
-  if(refresh)updateZoneSummaries();
+  if(refresh)populateZones();
   if(typeof refreshPositionHemisphereDefaults==="function")refreshPositionHemisphereDefaults();
   return target;
 }
@@ -3553,6 +3593,7 @@ function isZoneConfirmed(z){
 }
 
 function invalidateEncodedResult(){
+  hideStatus("encodeStatus");
   $("encodedBlock").classList.add("hidden");
   $("senderAckBlock").classList.add("hidden");
   $("debugBlock").classList.add("hidden");
@@ -3579,13 +3620,29 @@ function refreshEncodeState(){
   if(!btn)return;
 
   const z=selectedZone(sendZone);
+  const p=readActivePosition();
   const protocolOk=protocolRuntimeState===PROTOCOL_STATE.OK;
+  const secretOk=validateSessionSecret(activeSecret()).ok;
+  const inside=!!z && p.ok && zoneCheck(p.lat,p.lon,z).inside;
   const zoneOk=isZoneConfirmed(z);
 
-  btn.disabled=!(protocolOk && zoneOk);
-  btn.textContent=!zoneOk
-    ?"CONFIRME L’ALIAS ZONE POUR GÉNÉRER LA PHRASE"
-    :"GÉNÉRER LA PHRASE";
+  const ready=protocolOk && secretOk && inside && zoneOk;
+  btn.disabled=!ready;
+  btn.classList.toggle("encode-ready",ready);
+  btn.textContent=!protocolOk
+    ?(protocolRuntimeState===PROTOCOL_STATE.CHECKING?"VÉRIFICATION DU PROTOCOLE…":"PROTOCOLE INDISPONIBLE")
+    :!secretOk?"ACTIVE D’ABORD UNE SESSION"
+    :!p.ok?"COMPLÈTE LA POSITION"
+    :!inside?"POSITION HORS ZONE"
+    :!zoneOk?"CONFIRME L’ALIAS ZONE POUR GÉNÉRER LA PHRASE"
+    :"✓ GÉNÉRER LA PHRASE";
+
+  const best=z && p.ok && !inside?compatibleZones(p.lat,p.lon,z.id)[0]:null;
+  const switchBtn=$("useCompatibleZoneBtn");
+  switchBtn.classList.toggle("hidden",!best);
+  switchBtn.disabled=!best || !protocolOk || !secretOk;
+  switchBtn.textContent=best?`UTILISER LA ZONE COMPATIBLE : ${best.z.name}`:"";
+  $("ephemeralZoneBtn").disabled=!(protocolOk && secretOk && p.ok);
 }
 
 function refreshZoneConfirmationUi(){
@@ -3647,6 +3704,7 @@ async function confirmActiveZoneAlias(){
 }
 
 async function refreshEphemeralWorkflow(){
+  refreshEncodeState();
   const revision=++ephemeralWorkflowRevision;
   const z=selectedZone(sendZone);
   const block=$("ephemeralBlock");
@@ -3811,20 +3869,7 @@ function populateZoneSelect(sel,entries,selectedId){
 }
 
 function populateZones(selid){
-  const before=zones.length;
-  zones=zones.filter(z=>z.builtin||isRecentEphemeral(z));
-  if(zones.length!==before)saveZones();
-
-  const previousActive=activeZoneId;
-  const preferred=zones.some(z=>z.id===selid)
-    ? selid
-    : zones.some(z=>z.id===activeZoneId)
-      ? activeZoneId
-      : zones[0]?.id;
-
-  activeZoneId=preferred||"";
-  if(activeZoneId)localStorage.setItem(ACTIVE_ZONE_STORAGE_KEY,activeZoneId);
-
+  // Affichage uniquement : seul setActiveZone change la zone et sa confirmation.
   const plainEntries=[...zones]
     .sort((a,b)=>zoneDisplayName(a).localeCompare(zoneDisplayName(b),"fr",{sensitivity:"base"}))
     .map(z=>({z,label:zoneDisplayName(z)}));
@@ -3832,11 +3877,6 @@ function populateZones(selid){
   populateZoneSelect(sendZone,plainEntries,activeZoneId);
   populateZoneSelect(recvZone,plainEntries,activeZoneId);
   syncZoneSelects();
-
-  if(previousActive && previousActive!==activeZoneId){
-    invalidateEncodedResult();
-    invalidateDecodedResult();
-  }
 
   populateManageZones(selid);
   updateZoneSummaries();
@@ -4035,7 +4075,7 @@ function publicAnchorDistanceKm(lat,lon,anchorLat,anchorLon){
 }
 
 function compatibleZones(lat,lon,currentId){
-  return zones.filter(z=>z.id!==currentId).map(z=>({z,c:zoneCheck(lat,lon,z)})).filter(o=>o.c.inside).sort((a,b)=>b.c.nearest-a.c.nearest);
+  return zones.filter(z=>z.id!==currentId && isRecentEphemeral(z)).map(z=>({z,c:zoneCheck(lat,lon,z)})).filter(o=>o.c.inside).sort((a,b)=>b.c.nearest-a.c.nearest);
 }
 
 function checkDrift(){
@@ -4129,12 +4169,20 @@ function ephemeralLocalLabel(name="ÉPHÉMÈRE"){
   const d=new Date(),hh=String(d.getHours()).padStart(2,"0"),mm=String(d.getMinutes()).padStart(2,"0");
   return `${name} ${hh}:${mm}`;
 }
-async function saveOrSelectEphemeralZone(anchorLat,anchorLon,secret,name=ephemeralLocalLabel()){
+function assertZoneSessionCurrent(secret,revision){
+  if(activeSecret()!==secret || activeSessionRevision!==revision){
+    throw new Error("La session a changé pendant le calcul de la zone. Recommence avec la session active.");
+  }
+}
+async function saveOrSelectEphemeralZone(anchorLat,anchorLon,secret,name=ephemeralLocalLabel(),revision=activeSessionRevision){
+  assertZoneSessionCurrent(secret,revision);
   assertValidPublicAnchor(anchorLat,anchorLon);
   const aLat=canonicalAnchorCoord(anchorLat),aLon=canonicalAnchorCoord(anchorLon);
   const existing=zones.find(z=>!z.builtin&&isAnchoredZone(z)&&z.anchorLat===aLat&&z.anchorLon===aLon);
   if(existing)return existing;
   const center=await deriveSecretCenter(secret,aLat,aLon);
+  // Aucun résultat d'une session quittée ne doit entrer dans l'état persistant.
+  assertZoneSessionCurrent(secret,revision);
   const z={id:`eph-${Date.now()}-${secureRandomIndex(1000000)}`,name,lat:center.lat,lon:center.lon,anchorLat:aLat,anchorLon:aLon,builtin:false,ephemeral:true,createdAt:Date.now(),protocolId:PROTOCOL_ID};
   zones.push(z);saveZones();return z;
 }
@@ -4722,7 +4770,18 @@ async function diagnoseFailure(words,connector,secret,z){
   return{type:"repeat",word:nacks.repeat};
 }
 
-$("encodeBtn").textContent="GÉNÉRER LA PHRASE";
+$("useCompatibleZoneBtn").onclick=()=>{
+  refreshEncodeState();
+  if($("useCompatibleZoneBtn").disabled)return;
+  const p=readActivePosition(),z=selectedZone(sendZone);
+  const best=compatibleZones(p.lat,p.lon,z.id)[0];
+  if(!best)return;
+  setActiveZone(best.z.id,{invalidate:true,persist:true,refresh:true});
+  refreshDecodeState();
+  $("sendZone").focus({preventScroll:true});
+  const targetId=isAnchoredZone(best.z)?"ephemeralAliasStep":"sendZoneCard";
+  $(targetId).scrollIntoView({behavior:"smooth",block:"start"});
+};
 
 async function encodeSelectedPosition(){
   hideStatus("encodeStatus");
@@ -4792,7 +4851,7 @@ $("encodeBtn").onclick=async()=>{
 $("ephemeralZoneBtn").onclick=async()=>{
   try{
     assertProtocolReady();
-    const secret=activeSecret();
+    const secret=activeSecret(),sessionRevision=activeSessionRevision;
     if(!validateSessionSecret(secret).ok)throw new Error("Valide d’abord le secret de session.");
 
     const p=readActivePosition();
@@ -4804,16 +4863,19 @@ $("ephemeralZoneBtn").onclick=async()=>{
     invalidateEncodedResult();
 
     const picked=await createEphemeralZoneCandidate(lat,lon,secret);
-    const z=await saveOrSelectEphemeralZone(picked.z.anchorLat,picked.z.anchorLon,secret);
+    assertZoneSessionCurrent(secret,sessionRevision);
+    const z=await saveOrSelectEphemeralZone(picked.z.anchorLat,picked.z.anchorLon,secret,ephemeralLocalLabel(),sessionRevision);
+    assertZoneSessionCurrent(secret,sessionRevision);
 
     // Une nouvelle négociation radio doit être confirmée humainement,
     // même si cette ancre existait déjà localement.
     confirmedZoneIds.delete(z.id);
     saveZoneConfirmations();
 
+    setActiveZone(z.id,{invalidate:true,persist:true,refresh:false});
     populateZones(z.id);
-    setActiveZone(z.id,{invalidate:true,persist:true,refresh:true});
     await refreshEphemeralWorkflow();
+    if(activeSessionRevision!==sessionRevision || activeZone()?.id!==z.id)return;
 
     const c=zoneCheck(lat,lon,z);
     $("ephemeralMetrics").innerHTML=
@@ -5332,8 +5394,10 @@ async function installValidatedSecret(secret,persist=true){
     invalidateEncodedResult();
     setStatus(
       "encodeStatus",
-      "SESSION CHANGÉE — l’ancienne transmission a été annulée. Confirme l’alias puis génère une nouvelle phrase.",
-      "warn"
+      previous
+        ?"SESSION CHANGÉE — l’ancienne transmission a été annulée. Confirme l’alias puis génère une nouvelle phrase."
+        :"Session active",
+      previous?"warn":"ok"
     );
   }
   if(persist){
@@ -5376,6 +5440,7 @@ initProtocolRuntime();
 let sessionInputRevision=0;
 
 function deactivateSessionWhileEditing(){
+  if(validatedSessionSecret)activeSessionRevision++;
   validatedSessionSecret="";
   masterKeyCache={secret:"",key:null};
   confirmedZoneIds.clear();
@@ -5589,8 +5654,8 @@ $("saveZoneBtn").onclick=()=>{
     const id="z-"+Date.now();
     zones.push({id,name,lat,lon,builtin:false});
     saveZones();
+    setActiveZone(id,{invalidate:true,persist:true,refresh:false});
     populateZones(id);
-    setActiveZone(id,{invalidate:true,persist:true,refresh:true});
     setStatus("zoneStatus","Zone enregistrée. Son alias radio dépend du centre canonique et du secret, pas du libellé.","ok");
   }catch(e){setStatus("zoneStatus",e.message,"bad");}
 };
@@ -5601,18 +5666,20 @@ $("addReceivedZoneBtn").onclick=async()=>{
   button.disabled=true;
   hideStatus("receivedZoneStatus");
   try{
-    const secret=activeSecret();if(!validateSessionSecret(secret).ok)throw new Error("Valide d’abord le secret de session pour reconstruire la zone.");
+    const secret=activeSecret(),sessionRevision=activeSessionRevision;
+    if(!validateSessionSecret(secret).ok)throw new Error("Valide d’abord le secret de session pour reconstruire la zone.");
     const rawAnchorLat=parseNum($("receivedZoneLat").value),rawAnchorLon=parseNum($("receivedZoneLon").value);
     assertValidPublicAnchor(rawAnchorLat,rawAnchorLon);
     const anchorLat=canonicalAnchorCoord(rawAnchorLat),anchorLon=canonicalAnchorCoord(rawAnchorLon);
     const localName=ephemeralLocalLabel(String($("receivedZoneName").value??"").trim().toUpperCase()||"ZONE REÇUE");
     let z=zones.find(x=>isAnchoredZone(x)&&x.anchorLat===anchorLat&&x.anchorLon===anchorLon),created=false;
-    if(!z){z=await saveOrSelectEphemeralZone(anchorLat,anchorLon,secret,localName);created=true;}
+    if(!z){z=await saveOrSelectEphemeralZone(anchorLat,anchorLon,secret,localName,sessionRevision);created=true;}
+    assertZoneSessionCurrent(secret,sessionRevision);
+    setActiveZone(z.id,{invalidate:true,persist:true,refresh:false});
     populateZones(z.id);
-    setActiveZone(z.id,{invalidate:true,persist:true,refresh:true});
     refreshDecodeState();
     const alias=await zoneAlias(secret,z);
-    if(activeSecret()!==secret || activeZone()?.id!==z.id)return;
+    if(activeSessionRevision!==sessionRevision || activeSecret()!==secret || activeZone()?.id!==z.id)return;
     receivedZoneNoticeContext={zoneId:z.id,secret};
     setStatus(
       "receivedZoneNotice",
@@ -5661,7 +5728,10 @@ function showZoneDeletionNotice(message){
 
 function requestZoneDeletion(id,focusId){
   const z=zones.find(x=>x.id===id);
-  if(!z || z.builtin)return;
+  if(!z || z.builtin){
+    setStatus("zoneStatus","Aucune zone personnalisée sélectionnée.","warn");
+    return;
+  }
   pendingZoneDeletion={id:z.id,focusId};
   $("zoneDeleteName").textContent=z.name;
   $("zoneDeleteDescription").textContent=activeZoneId===z.id
@@ -5686,8 +5756,8 @@ function deleteCustomZone(id){
     ? (zones.find(x=>x.builtin)?.id || zones[0]?.id || "")
     : activeZoneId;
 
+  if(fallback)setActiveZone(fallback,{invalidate:true,persist:true,refresh:false});
   populateZones(fallback);
-  if(fallback)setActiveZone(fallback,{invalidate:true,persist:true,refresh:true});
   const message=`Zone « ${z.name} » supprimée.${wasActive?" Une zone intégrée est maintenant active.":""}`;
   showZoneDeletionNotice(message);
 }
@@ -5710,6 +5780,7 @@ $("confirmZoneDelete").onclick=()=>{
     setStatus("zoneDeleteError",e.message||String(e),"bad");
   }
 };
+setActiveZone(activeZoneId,{refresh:false});
 populateZones();
 initPositionInputUi();
 initZoneCenterInputUi();
