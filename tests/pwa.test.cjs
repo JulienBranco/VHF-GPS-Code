@@ -84,9 +84,18 @@ test('le service worker prépare tous les fichiers et ouvre l’application sans
   online = false;
   const app = await dispatch('fetch', new Request(origin + 'vhf_gps_code.html', { mode: 'navigate' }));
   assert.equal(app.body, 'vhf_gps_code.html');
+  const appWithQuery = await dispatch('fetch', new Request(origin + 'vhf_gps_code.html?utm_source=partage', { mode: 'navigate' }));
+  assert.equal(appWithQuery.body, 'vhf_gps_code.html');
   const home = await dispatch('fetch', new Request(origin, { mode: 'navigate' }));
   assert.equal(home.body, 'vhf_gps_code.html');
+  const homeWithQuery = await dispatch('fetch', new Request(origin + '?utm_source=partage', { mode: 'navigate' }));
+  assert.equal(homeWithQuery.body, 'vhf_gps_code.html');
+  const indexWithQuery = await dispatch('fetch', new Request(origin + 'index.html?source=icone', { mode: 'navigate' }));
+  assert.equal(indexWithQuery.body, 'vhf_gps_code.html');
   const icon = await dispatch('fetch', new Request(origin + 'icons/icon-192.png'));
   assert.equal(icon.body, 'icons/icon-192.png');
+  const iconWithQuery = await dispatch('fetch', new Request(origin + 'icons/icon-192.png?v=1'));
+  assert.equal(iconWithQuery.body, 'icons/icon-192.png');
   assert.equal(await dispatch('fetch', new Request(origin + 'autre.html', { mode: 'navigate' })), undefined);
+  assert.equal(await dispatch('fetch', new Request(origin + 'autre.html?utm_source=partage', { mode: 'navigate' })), undefined);
 });

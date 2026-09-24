@@ -19,7 +19,15 @@ Une PWA installée depuis HTTPS possède un espace de stockage distinct de celui
 
 ## Développement et mises à jour
 
+### Passage au protocole radio 6
+
+Depuis la version **3.28.61**, l'application utilise **PROTO 6** (COMPAT `4043F648`). Les catalogues prononcés à la radio ont changé : les signaux de détresse et les qualificatifs les plus évocateurs d'un accident ont été écartés, et les mots de retour ne sont plus des sujets de phrase. **PROTO 5 et PROTO 6 ne sont pas interopérables**, même avec la même session et la même zone. Avant une sortie, mettre à jour tous les téléphones qui échangent entre eux, puis comparer sur chacun le numéro PROTO, le COMPAT, l'empreinte de session et l'alias de zone. Ne pas reprendre une phrase générée par l'ancienne version. Les zones éphémères enregistrées sous un ancien protocole sont écartées et doivent être recréées ; les zones personnalisées fixes restent disponibles.
+
+Les catalogues gardent 200 sujets, 200 qualificatifs, 256 mots de retour et 1 024 mots d'alias/empreinte. L'autotest et le digest COMPAT doivent être recalculés si l'ordre ou le contenu de l'une de ces listes change.
+
 Tester sur cet ordinateur avec `node tools/dev-server.cjs`, puis ouvrir `http://localhost:8080/`. `localhost` permet de tester les service workers sans certificat HTTPS. Pour un essai hors ligne, charger la page une première fois, attendre « PRÊTE HORS RÉSEAU », puis couper le réseau dans les outils du navigateur et rouvrir l'application.
+
+Les liens vers l'application ou ses fichiers précachés restent utilisables hors réseau même avec des paramètres d'URL (`?utm_source=…`). Le contrôle automatique d'un code généré reste obligatoire ; son détail est masqué par défaut et peut être affiché dans **Informations techniques**.
 
 À chaque évolution, incrémenter **à la fois** `APP_VERSION` dans `vhf_gps_code.html` et `APP_VERSION` dans `sw.js`. Les tests vérifient cette concordance. Le nouveau cache doit être entièrement téléchargé avant d'être utilisé. Une mise à jour n'impose jamais de rechargement au cours d'un échange radio : une fois l'échange terminé, fermer complètement puis rouvrir l'application. S'il n'y a pas d'échange en cours, on peut le faire immédiatement. Une fois la nouvelle version annoncée comme téléchargée, sa réouverture ne requiert pas de réseau.
 

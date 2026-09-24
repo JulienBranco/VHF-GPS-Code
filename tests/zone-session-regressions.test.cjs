@@ -31,6 +31,7 @@ async function boot() {
       append(...children) { children.forEach(child => this.appendChild(child)); },
       querySelector: () => null, querySelectorAll: () => [],
       addEventListener: (name, fn) => events[name] = fn,
+      dispatchEvent: event => events[event.type]?.(event),
       setAttribute: noop, focus: noop, scrollIntoView: noop,
       showModal() { this.open = true; },
       close() { this.open = false; events.close?.(); },
@@ -67,7 +68,7 @@ async function boot() {
   for (let i = 0; i < 500 && run('protocolRuntimeState') === 'CHECKING'; i++) {
     await new Promise(resolve => setTimeout(resolve, 10));
   }
-  assert.equal(run('protocolRuntimeState'), 'OK');
+  assert.equal(run('protocolRuntimeState'), 'OK', run("$('protocolFatalDetail').textContent"));
   await run('installValidatedSecret(generateSessionSecret())');
   return { run, close: () => timers.forEach(clearTimeout) };
 }
@@ -78,10 +79,36 @@ async function check(t, source) {
   await app.run(`(async()=>{${source}})()`);
 }
 
-test('version et interopérabilité radio inchangée', t => check(t, `
+test('version et interopérabilité radio PROTO 6', t => check(t, `
   assert.match(APP_VERSION,/^[0-9]+[.][0-9]+[.][0-9]+$/);
-  assert.equal(PROTOCOL_ID,'VHF-GPS-PROTO-5');
-  assert.equal(await protocolCompatDigestHex(),'9AAAB172829EE5C14801F4A9165B1E373B7284BFAA01B26C1795FC551CD42305');
+  assert.equal(PROTOCOL_ID,'VHF-GPS-PROTO-6');
+  assert.equal(await protocolCompatDigestHex(),'4043F648E26823B18361AAC243BC490C70FDC8401484759322464B8C29B16B81');
+`));
+
+test('émission et décodage PROTO 6 dans chaque zone intégrée', t => check(t, `
+  const secret=generateSessionSecret();
+  for(const zone of BUILTIN_ZONES){
+    for(const [dLat,dLon] of [[0,0],[0.08,-0.08]]){
+      const lat=zone.lat+dLat,lon=zone.lon+dLon;
+      const encoded=await encodeCore(lat,lon,secret,zone);
+      const decoded=await decodeCore(encoded.phrase.words,encoded.phrase.connector,secret,zone);
+      assert.ok(haversineM(lat,lon,decoded.lat,decoded.lon)<75,zone.name);
+      assert.equal(decoded.ack,encoded.ack);
+      assert.equal(decoded.finalConfirm,encoded.finalConfirm);
+      assert.deepEqual(decoded.nacks,encoded.nacks);
+    }
+  }
+`));
+
+test('migration PROTO 6 : anciennes zones éphémères écartées, zones fixes conservées', t => check(t, `
+  localStorage.setItem('vhfGpsZonesV4Custom',JSON.stringify([
+    {id:'ancien-eph',name:'ANCIENNE',lat:46.4,lon:-3.1,anchorLat:46.5,anchorLon:-3,ephemeral:true,createdAt:Date.now(),protocolId:'VHF-GPS-PROTO-5'},
+    {id:'sans-proto',name:'SANS PROTO',lat:46.4,lon:-3.1,anchorLat:46.5,anchorLon:-3,ephemeral:true,createdAt:Date.now()},
+    {id:'zone-fixe',name:'FIXE',lat:46.4,lon:-3.1,ephemeral:false,builtin:false}
+  ]));
+  const loaded=loadZones();
+  assert.ok(loaded.some(zone=>zone.id==='zone-fixe'));
+  assert.ok(!loaded.some(zone=>zone.id==='ancien-eph'||zone.id==='sans-proto'));
 `));
 
 test('une ancienne empreinte ne remplace pas celle de la session active', t => check(t, `
@@ -382,6 +409,34 @@ test('émission normale : création éphémère et confirmation toujours fonctio
   await confirmActiveZoneAlias();
   assert.equal($('encodeBtn').disabled,false);
   assert.equal($('encodeBtn').classList.contains('encode-ready'),true);
+`));
+
+test('les détails du contrôle sont optionnels, le contrôle lui-même reste obligatoire', t => check(t, `
+  const zone=activeZone();
+  await confirmActiveZoneAlias();
+  setPositionInputMode('decimal',{persist:false});
+  $('lat').value=String(zone.lat);$('lon').value=String(zone.lon);handlePositionChanged();
+  assert.equal($('showDebugDetails').checked,false);
+
+  await encodeSelectedPosition();
+  assert.equal($('encodedBlock').classList.contains('hidden'),false);
+  assert.equal($('debugBlock').classList.contains('hidden'),true);
+  assert.ok($('debugSummary').textContent.includes('Aller/retour validé'));
+
+  $('showDebugDetails').checked=true;
+  $('showDebugDetails').dispatchEvent({type:'change'});
+  assert.equal(localStorage.getItem(DEBUG_DETAILS_STORAGE_KEY),'1');
+  assert.equal($('debugBlock').classList.contains('hidden'),false);
+  $('showDebugDetails').checked=false;
+  $('showDebugDetails').dispatchEvent({type:'change'});
+  assert.equal($('debugBlock').classList.contains('hidden'),true);
+
+  const original=decodeCore;
+  decodeCore=async (...args)=>({...await original(...args),index:-1});
+  await $('encodeBtn').onclick();
+  assert.match($('encodeStatus').textContent,/Contrôle automatique du code échoué/);
+  assert.equal($('encodedBlock').classList.contains('hidden'),true);
+  assert.equal($('senderAckBlock').classList.contains('hidden'),true);
 `));
 
 test('position confirmée : distance, relèvement vrai et saisie manuelle', t => check(t, `

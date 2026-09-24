@@ -2,7 +2,7 @@
 
 // À synchroniser avec APP_VERSION : un nouveau cache est préparé en entier
 // avant de remplacer l'ancien, sans recharger une session radio ouverte.
-const APP_VERSION = "3.28.60";
+const APP_VERSION = "3.28.62";
 const CACHE_PREFIX = "vhf-gps-code-app-";
 const CACHE_NAME = CACHE_PREFIX + APP_VERSION;
 const SCOPE = self.registration.scope;
@@ -44,9 +44,12 @@ self.addEventListener("fetch", event => {
   if (request.method !== "GET") return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+  // Les paramètres de suivi ou de partage ne changent pas le contenu local.
+  // On garde le chemin exact pour ne pas servir l'application à une autre page.
+  const cacheUrl = url.origin + url.pathname;
 
   if (request.mode === "navigate" &&
-      (url.href === APP_URL || url.href === INDEX_URL || url.href === ROOT_URL)) {
+      (cacheUrl === APP_URL || cacheUrl === INDEX_URL || cacheUrl === ROOT_URL)) {
     event.respondWith((async () => {
       const cache = await caches.open(CACHE_NAME);
       return (await cache.match(APP_URL)) || fetch(request);
@@ -54,10 +57,10 @@ self.addEventListener("fetch", event => {
     return;
   }
 
-  if (PRECACHE_SET.has(url.href)) {
+  if (PRECACHE_SET.has(cacheUrl)) {
     event.respondWith((async () => {
       const cache = await caches.open(CACHE_NAME);
-      return (await cache.match(url.href)) || fetch(request);
+      return (await cache.match(cacheUrl)) || fetch(request);
     })());
   }
 });
