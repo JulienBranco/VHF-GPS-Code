@@ -190,6 +190,7 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
   border:0;
   color:var(--focus-text)
 }
+#outingLocalTimes{margin:6px 0 0;padding:0 12px;font-size:.78rem;line-height:1.4}
 .session-compact-title{
   display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px
 }
@@ -457,18 +458,17 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
 :root[data-theme="day"] .wordbox.valid input{outline:3px solid #087532}
 :root[data-theme="day"] .wordbox.invalid input{outline:3px solid #a31621}
 
-.theme-switch{
-  display:flex;
-  justify-content:flex-end;
-  align-items:center;
-  gap:8px;
-  margin:4px 0 8px;
-}
-.theme-switch label{margin:0;font-size:.78rem}
+.app-topline{display:flex;align-items:flex-start;gap:8px}
+.app-topline h1{flex:1;min-width:0}
+.theme-switch{flex:none;margin:4px 0 0}
 .theme-switch select{
-  width:auto;
-  min-width:112px;
-  padding:7px 10px;
+  width:76px;
+  min-width:76px;
+  min-height:32px;
+  height:32px;
+  padding:1px 3px;
+  border-radius:7px;
+  font-size:.69rem;
   font-weight:800;
 }
 
@@ -2373,18 +2373,18 @@ button:focus-visible,
   <div id="protocolFatalDetail" style="font-weight:600;margin-top:4px"></div>
 </div>
 <main>
-  <h1>VHF GPS Code — <span id="appVersionHeading"></span> <span class="small">Compatibilité automatique</span></h1>
+  <div class="app-topline">
+    <h1>VHF GPS Code — <span id="appVersionHeading"></span> <span class="small">Compatibilité automatique</span></h1>
+    <div class="theme-switch">
+      <select id="themeMode" aria-label="Affichage : AUTO, JOUR ou NUIT" title="Affichage">
+        <option value="auto">AUTO</option>
+        <option value="day">JOUR</option>
+        <option value="night">NUIT</option>
+      </select>
+    </div>
+  </div>
   <button type="button" id="installAppBtn" class="install-app-btn hidden" aria-controls="installHelp" aria-expanded="false">Installer l’application</button>
   <div id="installHelp" class="install-help hidden" role="status"></div>
-
-  <div class="theme-switch">
-    <label for="themeMode">Affichage</label>
-    <select id="themeMode" aria-label="Mode d'affichage">
-      <option value="auto">AUTO</option>
-      <option value="day">JOUR</option>
-      <option value="night">NUIT</option>
-    </select>
-  </div>
 
   <div class="card session-card" id="sessionCard">
     <div class="session-compact-title">
@@ -2398,6 +2398,7 @@ button:focus-visible,
     </div>
 
     <div id="sessionCompactStatus" class="small">Aucune session active.</div>
+    <div id="outingLocalTimes" class="small hidden"></div>
     <div id="pwaStatus" class="pwa-status hidden" role="status" aria-live="polite"></div>
 
     <div id="fingerprintBlock" class="hidden">
@@ -2408,7 +2409,6 @@ button:focus-visible,
     <details id="outingSettings" class="outing-details">
       <summary><span class="outing-menu-label">🎣 Créer, partager ou installer une sortie</span><span class="outing-menu-chevron" aria-hidden="true">▾</span></summary>
       <div class="outing-body">
-        <div id="outingLocalTimes" class="small"></div>
         <div class="outing-actions">
           <button type="button" class="primary" id="createOutingBtn">PRÉPARER UNE NOUVELLE SORTIE</button>
           <button type="button" class="secondary hidden" id="copyOutingBtn">PARTAGER LA SORTIE ACTIVE</button>
@@ -2987,7 +2987,6 @@ button:focus-visible,
     <select id="outingBuiltinSelect"></select>
   </div>
   <div id="outingEphemeralFields" class="hidden">
-    <p class="small">Saisis une position de référence pour créer la zone. Elle ne remplit pas la position à transmettre dans ÉMETTRE.</p>
     <div class="outing-setup-choices" role="group" aria-label="Format de la position de référence">
       <button type="button" id="outingMarineMode">MARINE</button>
       <button type="button" id="outingDecimalMode">DÉCIMAL</button>
@@ -3096,7 +3095,7 @@ function initTheme(){
   }
 }
 
-const APP_VERSION="3.28.97";
+const APP_VERSION="3.28.101";
 const PROTOCOL_ID="VHF-GPS-PROTO-6";
 
 function protocolShortLabel(){
@@ -3955,7 +3954,7 @@ function sessionAgeText(){
   if(!created)return "Date de création inconnue.";
   const ageH=(Date.now()-created)/3600000;
   const date=new Date(created).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"});
-  return ageH>=24?`Créé le ${date} — session > 24 h : régénération recommandée.`:`Créé le ${date} — session récente.`;
+  return ageH>=24?`Créée le ${date} — session > 24 h : régénération recommandée.`:`Créée le ${date} — session récente.`;
 }
 
 function syncSavedSecret(secret){
@@ -6739,9 +6738,9 @@ function refreshOutingActions(){
   const created=sessionCreatedAt();
   const installed=localStorage.getItem(OUTING_ID_KEY)
     ?Number(localStorage.getItem(OUTING_INSTALLED_AT_KEY)||0):0;
-  $("outingLocalTimes").textContent=created
-    ?`Créée le ${outingDate(created)}${installed?` · installée sur ce téléphone le ${outingDate(installed)}`:""}.`
-    :"";
+  const times=$("outingLocalTimes"),showInstalled=!!created&&Number.isFinite(installed)&&installed>0;
+  times.textContent=showInstalled?`Sortie installée sur ce téléphone le ${outingDate(installed)}.`:"";
+  times.classList.toggle("hidden",!showInstalled);
 }
 
 function utf8Base64Url(text){

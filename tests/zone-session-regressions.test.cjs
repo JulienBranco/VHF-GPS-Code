@@ -715,7 +715,9 @@ test('sortie complète : création, texte copiable, contrôle et réimport sans 
   $('closeOutingSuccess').onclick();
   assert.equal($('outingSuccessDialog').open,false);
   assert.equal($('outingSettings').open,true);
-  assert.match($('sessionCompactStatus').textContent,/Session active/);
+  assert.match($('sessionCompactStatus').textContent,/Session active · Créée le/);
+  assert.match($('outingLocalTimes').textContent,/Sortie installée sur ce téléphone le/);
+  assert.equal($('outingLocalTimes').classList.contains('hidden'),false);
   const payload=await activeOutingPayload();
   const invitation=await formatOutingInvitation(payload);
   assert.match(invitation,/Envoyez cette invitation telle quelle/);
@@ -789,6 +791,7 @@ test('session manuelle : aucune date de sortie et modale de succès temporaire',
   assert.equal(localStorage.getItem(OUTING_ID_KEY),null);
   assert.equal(localStorage.getItem(OUTING_INSTALLED_AT_KEY),null);
   assert.doesNotMatch($('outingLocalTimes').textContent,/installée sur ce téléphone/);
+  assert.equal($('outingLocalTimes').classList.contains('hidden'),true);
 `));
 
 test('le bouton copie le message complet et garde le code ASCII', t => check(t, `
@@ -931,6 +934,9 @@ test('import par la modale : aucune activation avant le clic final', t => check(
   assert.match($('outingSuccessMessage').textContent,/Sortie installée/);
   assert.equal($('outingSettings').open,false);
   assert.equal(sessionScrolls,0);
+  assert.match($('sessionCompactStatus').textContent,/Session active · Créée le/);
+  assert.match($('outingLocalTimes').textContent,/Sortie installée sur ce téléphone le/);
+  assert.equal($('outingLocalTimes').classList.contains('hidden'),false);
   assert.match($('sendZoneConfirmBtn').textContent,/VALIDÉE AVEC LA SORTIE/);
   assert.equal($('outingImportText').value,'');
 `));
