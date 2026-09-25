@@ -106,6 +106,32 @@ test('version et interopérabilité radio PROTO 6', t => check(t, `
   assert.match(APP_VERSION,/^[0-9]+[.][0-9]+[.][0-9]+$/);
   assert.equal(PROTOCOL_ID,'VHF-GPS-PROTO-6');
   assert.equal(await protocolCompatDigestHex(),'4043F648E26823B18361AAC243BC490C70FDC8401484759322464B8C29B16B81');
+  await initProtocolCompat();
+  assert.equal($('compatBadge').textContent,'COMPAT 4043F648');
+`));
+
+test('état hors réseau visible seulement après cache et service worker actifs', t => check(t, `
+  globalThis.URL=class { constructor(path,scope){ this.href=scope+path; } };
+  globalThis.location={protocol:'file:',hostname:''};
+  await initPwa();
+  assert.match($('pwaStatus').textContent,/non vérifiable depuis ce fichier/);
+  location.protocol='https:';
+  location.hostname='example.test';
+  const registration={scope:'https://example.test/',active:{},waiting:null,addEventListener(){},update:async()=>{}};
+  navigator.serviceWorker={register:async()=>registration,ready:Promise.resolve(registration),addEventListener(){},controller:{}};
+  navigator.onLine=false;
+  globalThis.caches={match:async()=>({})};
+  window.caches=caches;
+  await initPwa();
+  assert.equal($('pwaStatus').textContent,'✓ PRÊTE HORS RÉSEAU');
+  assert.equal($('pwaStatus').classList.contains('ready'),true);
+  registration.waiting={};
+  await initPwa();
+  assert.match($('pwaStatus').textContent,/^✓ PRÊTE HORS RÉSEAU · Nouvelle version téléchargée/);
+  caches.match=async()=>null;
+  registration.waiting=null;
+  await initPwa();
+  assert.equal($('pwaStatus').textContent,'Préparation du mode hors réseau…');
 `));
 
 test('émission et décodage PROTO 6 dans chaque zone intégrée', t => check(t, `
@@ -340,7 +366,8 @@ test('création d’une zone personnalisée : annuler ne l’enregistre pas', t 
 test('création éphémère en émission : annuler garde la zone et ne sauvegarde rien', t => check(t, `
   const a=activeZone(),savedZone=localStorage.getItem(ACTIVE_ZONE_STORAGE_KEY);
   setPositionInputMode('decimal',{persist:false});
-  $('lat').value=String(a.lat);$('lon').value=String(a.lon);handlePositionChanged();
+  $('lat').value='46.75';$('lon').value='-24.50';handlePositionChanged();
+  assert.equal($('ephemeralZoneBtn').classList.contains('hidden'),false);
   $('encodedBlock').classList.remove('hidden');
   const pending=$('ephemeralZoneBtn').onclick();
   await testCancelZoneSwitch(pending);
@@ -521,9 +548,8 @@ test('émission normale : création éphémère et confirmation toujours fonctio
     assert.equal($('ephemeralAliasConfirmBtn').disabled,false);
     scrolls++;
   };
-  const start=activeZone();
   setPositionInputMode('decimal',{persist:false});
-  $('lat').value=String(start.lat);$('lon').value=String(start.lon);handlePositionChanged();
+  $('lat').value='46.75';$('lon').value='-24.50';handlePositionChanged();
   await testAcceptZoneSwitch($('ephemeralZoneBtn').onclick());
   assert.equal(scrolls,1);
   const z=activeZone();assert.equal(isAnchoredZone(z),true);
@@ -657,11 +683,30 @@ test('installation : confirmation directe disponible ou aide iPhone', t => check
 
 test('sortie complète : création, texte copiable, contrôle et réimport sans effet', t => check(t, `
   const previous=activeSecret();
+  let sessionScrolls=0;
+  $('sessionCard').scrollIntoView=options=>{
+    assert.equal(options.behavior,'smooth');assert.equal(options.block,'start');sessionScrolls++;
+  };
+  assert.equal(localStorage.getItem(OUTING_INSTALLED_AT_KEY),null);
+  for(const id of ['latDeg','latMin','lonDeg','lonMin','lat','lon'])$(id).value='12';
+  wordInputs[0].value='AUTRUCHE';
+  receiverConnector='ET';
   await testCreateBuiltinOuting();
   assert.notEqual(activeSecret(),previous);
   assert.ok(isZoneConfirmed(activeZone()));
   assert.equal(outingMatchesOriginalZone(activeZone()),true);
   assert.equal($('copyOutingBtn').classList.contains('hidden'),false);
+  for(const id of ['latDeg','latMin','lonDeg','lonMin','lat','lon'])assert.equal($(id).value,'');
+  assert.equal(wordInputs[0].value,'');
+  assert.equal(receiverConnector,'');
+  assert.match($('sendZoneConfirmBtn').textContent,/VALIDÉE AVEC LA SORTIE/);
+  assert.equal($('outingSuccessDialog').open,true);
+  assert.match($('outingSuccessMessage').textContent,/Sortie créée et active/);
+  assert.equal($('outingSettings').open,true);
+  assert.equal(sessionScrolls,0);
+  $('closeOutingSuccess').onclick();
+  assert.equal($('outingSuccessDialog').open,false);
+  assert.equal($('outingSettings').open,true);
   assert.match($('sessionCompactStatus').textContent,/Session active/);
   const payload=await activeOutingPayload();
   const invitation=await formatOutingInvitation(payload);
@@ -675,12 +720,67 @@ test('sortie complète : création, texte copiable, contrôle et réimport sans 
   assert.equal(prepared.data.zone.id,activeZone().id);
   const legacyLabels=invitation.replace('🔐 Alias de session','Alias de session').replace('📣 Alias de zone','Alias de zone');
   assert.equal((await inspectOutingInvitation(legacyLabels)).data.id,payload.id);
+  await assert.rejects(inspectOutingInvitation(invitation.replace('📍 Zone : '+activeZone().name,'📍 Zone : AUTRE')),/résumé lisible/);
+  await assert.rejects(inspectOutingInvitation(invitation.replace('🔧 PROTO 6','🔧 PROTO 5')),/résumé lisible/);
+  const changedDisplayDate=invitation.replace('🗓️ Créée le '+outingDate(payload.createdAt),'🗓️ Créée le 01/01 à 00:00');
+  assert.equal((await inspectOutingInvitation(changedDisplayDate)).data.createdAt,payload.createdAt);
+  const codeOnlyWithIntro='Zone : rendez-vous au port\\n'+OUTING_BEGIN+'\\n'+code+'\\n'+OUTING_END;
+  assert.equal((await inspectOutingInvitation(codeOnlyWithIntro)).data.id,payload.id);
   const installedAt=localStorage.getItem(OUTING_INSTALLED_AT_KEY);
+  $('lat').value='46.2';wordInputs[0].value='RENARD';
   assert.equal(await installOutingInvitation(prepared),'Cette sortie est déjà installée et active.');
+  assert.equal($('lat').value,'46.2');
+  assert.equal(wordInputs[0].value,'RENARD');
   assert.equal(localStorage.getItem(OUTING_INSTALLED_AT_KEY),installedAt);
   const badChar=code[12]==='A'?'B':'A';
   const tampered=invitation.replace(code,code.slice(0,12)+badChar+code.slice(13));
   await assert.rejects(inspectOutingInvitation(tampered),/intégrité/);
+`));
+
+test('zones compatibles : intégrée puis éphémère puis personnalisée, meilleure marge dans chaque catégorie', t => check(t, `
+  const p={lat:46.75,lon:-24.50};
+  zones.push(
+    {id:'custom-far',name:'CUSTOM',lat:p.lat,lon:p.lon,builtin:false},
+    {id:'eph-far',name:'EPH',lat:p.lat+0.1,lon:p.lon,anchorLat:46.8,anchorLon:-24.5,ephemeral:true,createdAt:Date.now()},
+    {id:'eph-far-best',name:'EPH BEST',lat:p.lat,lon:p.lon,anchorLat:46.75,anchorLon:-24.5,ephemeral:true,createdAt:Date.now()}
+  );
+  let ranked=compatibleZones(p.lat,p.lon,'none');
+  assert.deepEqual(ranked.map(x=>x.z.id),['eph-far-best','eph-far','custom-far']);
+  zones.push({id:'builtin-far',name:'CATALOGUE',lat:p.lat+0.2,lon:p.lon,builtin:true});
+  ranked=compatibleZones(p.lat,p.lon,'none');
+  assert.equal(ranked[0].z.id,'builtin-far');
+  assert.equal(ranked[1].z.id,'eph-far-best');
+`));
+
+test('création éphémère : masquée si une zone commune a de la marge, proposée près du bord ou avec seulement une zone locale', t => check(t, `
+  const z=activeZone(),allZones=zones;
+  zones=[z];
+  setPositionInputMode('decimal',{persist:false});
+  $('lat').value=String(z.lat);$('lon').value=String(z.lon);handlePositionChanged();
+  assert.equal($('ephemeralZoneBtn').classList.contains('hidden'),true);
+  $('lat').value=String(z.lat+(HALF_KM-10)/111.32);handlePositionChanged();
+  assert.equal($('ephemeralZoneBtn').classList.contains('hidden'),false);
+  zones=[...allZones,{id:'custom-only',name:'LOCALE',lat:46.75,lon:-24.5,builtin:false}];
+  $('lat').value='46.75';$('lon').value='-24.5';handlePositionChanged();
+  assert.equal($('ephemeralZoneBtn').classList.contains('hidden'),false);
+  assert.equal(compatibleZones(46.75,-24.5,z.id)[0].z.id,'custom-only');
+  zones.push({id:'eph-only',name:'EPHEMERE',lat:46.75,lon:-24.5,
+    anchorLat:46.75,anchorLon:-24.5,ephemeral:true,createdAt:Date.now()});
+  refreshEncodeState();
+  assert.equal($('ephemeralZoneBtn').classList.contains('hidden'),true);
+`));
+
+test('session manuelle : aucune date de sortie et modale de succès temporaire', t => check(t, `
+  await testCreateBuiltinOuting();
+  assert.ok(localStorage.getItem(OUTING_INSTALLED_AT_KEY));
+  showOutingSuccessDialog('Succès temporaire',1);
+  await new Promise(resolve=>setTimeout(resolve,10));
+  assert.equal($('outingSuccessDialog').open,false);
+  await installValidatedSecret(generateSessionSecret());
+  refreshOutingActions();
+  assert.equal(localStorage.getItem(OUTING_ID_KEY),null);
+  assert.equal(localStorage.getItem(OUTING_INSTALLED_AT_KEY),null);
+  assert.doesNotMatch($('outingLocalTimes').textContent,/installée sur ce téléphone/);
 `));
 
 test('le bouton copie le message complet et garde le code ASCII', t => check(t, `
@@ -795,6 +895,12 @@ test('import par la modale : aucune activation avant le clic final', t => check(
   const invitation=await formatOutingInvitation(await activeOutingPayload());
   await installValidatedSecret(generateSessionSecret());
   const before=activeSecret();
+  let sessionScrolls=0;
+  $('sessionCard').scrollIntoView=options=>{
+    assert.equal(options.behavior,'smooth');assert.equal(options.block,'start');sessionScrolls++;
+  };
+  for(const id of ['latDeg','latMin','lonDeg','lonMin','lat','lon'])$(id).value='23';
+  wordInputs[0].value='BALEINE';receiverConnector='OU';
   $('receiveOutingBtn').onclick();
   assert.equal($('outingImportDialog').open,true);
   assert.equal($('outingImportSummary').classList.contains('hidden'),true);
@@ -803,11 +909,21 @@ test('import par la modale : aucune activation avant le clic final', t => check(
   assert.equal($('outingImportDialog').open,true);
   assert.equal(activeSecret(),before);
   assert.equal($('outingImportSummary').classList.contains('hidden'),false);
+  assert.equal(sessionScrolls,0);
+  assert.equal($('outingImportVerified').classList.contains('hidden'),false);
   assert.match($('outingImportSummary').children[0].children[1].textContent,/\\d/);
   await $('confirmOutingImport').onclick();
   assert.equal($('outingImportDialog').open,false);
   assert.notEqual(activeSecret(),before);
   assert.ok(isZoneConfirmed(activeZone()));
+  for(const id of ['latDeg','latMin','lonDeg','lonMin','lat','lon'])assert.equal($(id).value,'');
+  assert.equal(wordInputs[0].value,'');
+  assert.equal(receiverConnector,'');
+  assert.equal($('outingSuccessDialog').open,true);
+  assert.match($('outingSuccessMessage').textContent,/Sortie installée/);
+  assert.equal($('outingSettings').open,false);
+  assert.equal(sessionScrolls,0);
+  assert.match($('sendZoneConfirmBtn').textContent,/VALIDÉE AVEC LA SORTIE/);
   assert.equal($('outingImportText').value,'');
 `));
 
@@ -824,6 +940,7 @@ test('réception : annuler ou modifier le texte n’installe rien', t => check(t
   $('outingImportText').dispatchEvent({type:'input'});
   assert.equal(pendingOutingImport,null);
   assert.equal($('outingImportSummary').classList.contains('hidden'),true);
+  assert.equal($('outingImportVerified').classList.contains('hidden'),true);
   await $('confirmOutingImport').onclick();
   assert.equal(activeSecret(),before);
   assert.equal(activeZoneId,zoneId);
@@ -998,8 +1115,8 @@ test('préparation éphémère : référence indépendante d’ÉMETTRE et centr
   assert.equal(activeZone().lat,expected.lat);
   assert.equal(activeZone().lon,expected.lon);
   assert.ok(zoneCheck(46.60,-3.30,activeZone()).nearest>=EPHEMERAL_EDGE_MARGIN_KM);
-  assert.equal($('lat').value,'1');
-  assert.equal($('lon').value,'2');
+  assert.equal($('lat').value,'');
+  assert.equal($('lon').value,'');
 `));
 
 test('préparation éphémère : modifier la référence invalide la vérification', t => check(t, `
@@ -1022,6 +1139,24 @@ test('préparation éphémère : modifier la référence invalide la vérificati
   await $('checkOutingCreate').onclick();
   await $('confirmOutingCreate').onclick();
   assert.equal(zoneCheck(46.61,-3.30,activeZone()).inside,true);
+`));
+
+test('réimport éphémère : un centre local incohérent est recalculé', t => check(t, `
+  $('createOutingBtn').onclick();
+  $('outingEphemeralChoice').onclick();
+  $('outingDecimalMode').onclick();
+  $('outingLat').value='46.60';$('outingLon').value='-3.30';
+  await $('checkOutingCreate').onclick();
+  await $('confirmOutingCreate').onclick();
+  const invitation=await formatOutingInvitation(await activeOutingPayload());
+  const z=activeZone(),expectedLat=z.lat,expectedLon=z.lon;
+  z.lat=canonicalCoord(z.lat+0.01);
+  saveZones();
+  const prepared=await inspectOutingInvitation(invitation);
+  assert.match(await installOutingInvitation(prepared),/Sortie installée/);
+  assert.equal(activeZone().lat,expectedLat);
+  assert.equal(activeZone().lon,expectedLon);
+  assert.equal(JSON.parse(localStorage.getItem('vhfGpsZonesV4Custom')).find(x=>x.id===z.id).lat,expectedLat);
 `));
 
 test('préparation éphémère : un ancien calcul ne produit pas de brouillon', t => check(t, `
@@ -1054,6 +1189,10 @@ test('préparation éphémère : un ancien calcul ne produit pas de brouillon', 
 test('un changement manuel de zone conserve la sortie mais exige une nouvelle confirmation', t => check(t, `
   await testCreateBuiltinOuting();
   const oldZone=activeZone(),oldId=localStorage.getItem(OUTING_ID_KEY);
+  assert.match($('sendZoneConfirmBtn').textContent,/VALIDÉE AVEC LA SORTIE/);
+  loadZoneConfirmations();
+  refreshZoneConfirmationUi();
+  assert.match($('sendZoneConfirmBtn').textContent,/VALIDÉE AVEC LA SORTIE/);
   const target=BUILTIN_ZONES.find(z=>z.id!==oldZone.id);
   setActiveZone(target.id,{refresh:false});
   assert.equal(localStorage.getItem(OUTING_ID_KEY),oldId);
@@ -1062,12 +1201,17 @@ test('un changement manuel de zone conserve la sortie mais exige une nouvelle co
   assert.equal($('copyOutingBtn').classList.contains('hidden'),true);
   await confirmActiveZoneAlias();
   assert.equal($('copyOutingBtn').classList.contains('hidden'),true);
+  assert.match($('sendZoneConfirmBtn').textContent,/COMPARÉ À LA RADIO/);
   await assert.rejects(activeOutingPayload(),/zone active ne correspond pas/);
   setActiveZone(oldZone.id,{refresh:false});
   assert.equal(isZoneConfirmed(oldZone),false);
   assert.equal($('copyOutingBtn').classList.contains('hidden'),true);
   await confirmActiveZoneAlias();
   assert.equal($('copyOutingBtn').classList.contains('hidden'),false);
+  assert.match($('sendZoneConfirmBtn').textContent,/COMPARÉ À LA RADIO/);
+  loadZoneConfirmations();
+  refreshZoneConfirmationUi();
+  assert.match($('sendZoneConfirmBtn').textContent,/COMPARÉ À LA RADIO/);
   assert.equal((await activeOutingPayload()).zone.id,oldZone.id);
   assert.ok(oldId);
 `));

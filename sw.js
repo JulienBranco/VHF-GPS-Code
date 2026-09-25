@@ -2,7 +2,7 @@
 
 // À synchroniser avec APP_VERSION : un nouveau cache est préparé en entier
 // avant de remplacer l'ancien, sans recharger une session radio ouverte.
-const APP_VERSION = "3.28.85";
+const APP_VERSION = "3.28.94";
 const CACHE_PREFIX = "vhf-gps-code-app-";
 const CACHE_NAME = CACHE_PREFIX + APP_VERSION;
 const SCOPE = self.registration.scope;

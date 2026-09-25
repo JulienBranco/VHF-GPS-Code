@@ -163,6 +163,7 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
   color:var(--focus-text);
   border:0;
   box-shadow:none;
+  scroll-margin-top:12px;
 }
 .session-card .small,
 .session-card p,
@@ -175,6 +176,7 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
 :root[data-theme="day"] .session-card .badge{
   background:var(--session-surface)
 }
+#sessionCard #pwaStatus{margin:10px 0 0}
 :root[data-theme="day"] #encodedWords.message{
   background:#ffffff
 }
@@ -188,6 +190,8 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
 .session-compact-title{
   display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px
 }
+.session-meta-badges{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
+@media(max-width:600px){.session-meta-badges{justify-content:flex-start}}
 .session-heading{display:inline-flex;align-items:center;gap:10px;white-space:nowrap}
 #sessionCard .session-step-number{
   background:var(--session-line);
@@ -437,6 +441,16 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
 :root[data-theme="day"] .status.ok{color:#075f27;background:#edf9f0;border-color:#075f27}
 :root[data-theme="day"] .status.warn{color:#704000;background:#fff7df;border-color:#704000}
 :root[data-theme="day"] .status.bad{color:#8e101b;background:#fff0f1;border-color:#8e101b}
+.status.gps-searching{
+  color:#d8f4ff;background:#10374a;border-color:#42b4d8;
+  box-shadow:inset 4px 0 0 #42b4d8;font-weight:850;line-height:1.45
+}
+:root[data-theme="day"] .status.gps-searching{
+  color:#064767;background:#e4f5fd;border-color:#087aa7;box-shadow:inset 4px 0 0 #087aa7
+}
+.status.gps-searching::before{content:"🛰️";display:inline-block;margin-right:.45em;animation:gps-search 1.6s ease-in-out infinite}
+@keyframes gps-search{50%{transform:rotate(-18deg) scale(1.15);opacity:.65}}
+@media(prefers-reduced-motion:reduce){.status.gps-searching::before{animation:none}}
 :root[data-theme="day"] .wordbox.valid input{outline:3px solid #087532}
 :root[data-theme="day"] .wordbox.invalid input{outline:3px solid #a31621}
 
@@ -1398,6 +1412,8 @@ select.custom-zone-active{
 .outing-summary{display:grid;gap:8px;margin:12px 0}
 .outing-summary>div{padding:9px 11px;border-radius:9px;background:var(--session-surface);overflow-wrap:anywhere}
 .outing-summary strong{display:block;margin-bottom:3px}
+.outing-verified-heading{margin:12px 0 4px;color:#b9ffd3;font-size:.78rem;font-weight:900;letter-spacing:.04em}
+:root[data-theme="day"] .outing-verified-heading{color:#075d2a}
 .outing-bound-preview{margin:14px 0 4px;color:var(--focus-text)}
 .outing-bound-preview .zone-bounds-title,.outing-bound-preview .zone-bound-cell strong{color:var(--session-muted)}
 .outing-bound-preview .zone-bound-grid{--bound-cell-w:min(27vw,96px)}
@@ -1415,6 +1431,11 @@ dialog.outing-setup-dialog{
   background:var(--session-bg);color:var(--focus-text);
   border:2px solid var(--session-line)
 }
+dialog.outing-success-dialog{width:min(420px,calc(100vw - 24px));border-color:#28a66c;text-align:center}
+.outing-success-dialog h2{color:#b9ffd3}
+.outing-success-dialog p{font-size:1.05rem;font-weight:750;line-height:1.45;overflow-wrap:anywhere}
+#closeOutingSuccess{background:#087849;border:2px solid #087849;color:#fff;min-width:140px}
+:root[data-theme="day"] .outing-success-dialog h2{color:#075d2a}
 :root[data-theme="day"] dialog.outing-setup-dialog{
   --setup-blue:#0759a8;
   --setup-blue-tint:#dceeff;
@@ -2327,8 +2348,6 @@ button:focus-visible,
 </div>
 <main>
   <h1>VHF GPS Code — <span id="appVersionHeading"></span> <span class="small">Compatibilité automatique</span></h1>
-  <p><span class="badge" id="protocolBadgeTop"></span> <span class="badge">4 mots + ET/OU</span> <span class="badge">250 × 250 km</span> <span class="badge">maille 100 m</span> <span class="badge">hors connexion</span></p>
-  <div id="pwaStatus" class="pwa-status hidden" role="status" aria-live="polite"></div>
   <button type="button" id="installAppBtn" class="install-app-btn hidden" aria-controls="installHelp" aria-expanded="false">Installer l’application</button>
   <div id="installHelp" class="install-help hidden" role="status"></div>
 
@@ -2344,13 +2363,16 @@ button:focus-visible,
   <div class="card session-card" id="sessionCard">
     <div class="session-compact-title">
       <span class="session-heading"><span class="step-number session-step-number" aria-hidden="true">S</span><strong>Session radio</strong></span>
-      <span>
+      <span class="session-meta-badges">
         <span class="badge" id="protocolBadgeSession"></span>
         <span class="badge" id="compatBadge">COMPAT …</span>
+        <span class="badge">250 × 250 km</span>
+        <span class="badge">maille 100 m</span>
       </span>
     </div>
 
     <div id="sessionCompactStatus" class="small">Aucune session active.</div>
+    <div id="pwaStatus" class="pwa-status hidden" role="status" aria-live="polite"></div>
 
     <div id="fingerprintBlock" class="hidden">
       <div class="small">Empreinte radio</div>
@@ -2358,7 +2380,7 @@ button:focus-visible,
     </div>
 
     <details id="outingSettings" class="outing-details">
-      <summary>Créer, partager ou installer une sortie</summary>
+      <summary>🎣 Créer, partager ou installer une sortie</summary>
       <div class="outing-body">
         <div id="outingLocalTimes" class="small"></div>
         <div class="outing-actions">
@@ -2370,7 +2392,7 @@ button:focus-visible,
     </details>
 
     <details id="sessionSettings" class="session-details">
-      <summary>Réglages de session</summary>
+      <summary>⚠️ Réglages de session avancés</summary>
 
       <div class="small" style="margin:6px 0 10px">
         Le secret est commun aux rôles ÉMETTRE et RECEVOIR. L'invitation complète ci-dessus partage aussi la zone. La saisie du secret seul reste disponible.
@@ -2497,7 +2519,7 @@ button:focus-visible,
       </div>
 
       <div class="action-stack">
-        <button class="secondary" id="ephemeralZoneBtn" disabled>CRÉER UNE ZONE ÉPHÉMÈRE AUTOUR DE CETTE POSITION</button>
+        <button class="secondary hidden" id="ephemeralZoneBtn" disabled>CRÉER UNE ZONE ÉPHÉMÈRE AUTOUR DE CETTE POSITION</button>
       </div>
 
       <div id="ephemeralBlock" class="card terrain-card ephemeral-focus hidden" style="margin-top:12px">
@@ -2886,7 +2908,7 @@ button:focus-visible,
     <summary>Installer et vérifier le mode hors réseau</summary>
     <div class="utility-body">
       <p>Avec du réseau, utilise le bouton « Installer l’application » en haut de la page. Sur Android, il peut ouvrir directement la confirmation ; sinon, utilise « Installer l’application » dans le menu du navigateur. Sur iPhone, le bouton explique le chemin Safari → Partager → « Sur l’écran d’accueil ».</p>
-      <p>Ouvre ensuite l’icône installée <strong>avec du réseau</strong> et attends « PRÊTE HORS RÉSEAU » en haut de l’écran. Sur iPhone, les données saisies dans Safari peuvent ne pas être reprises : vérifie la session et les zones dans l’application installée.</p>
+      <p>Ouvre ensuite l’icône installée <strong>avec du réseau</strong> et attends « PRÊTE HORS RÉSEAU » dans le bloc Session radio. Sur iPhone, les données saisies dans Safari peuvent ne pas être reprises : vérifie la session et les zones dans l’application installée.</p>
       <p>Avant de partir, passe en mode avion, ferme puis rouvre l’application depuis son icône. Vérifie la session, les zones et le GPS. Si le GPS ne répond pas, recopie la position du sondeur ou du traceur.</p>
       <p>Une mise à jour téléchargée n’interrompt pas l’application ouverte. Si tu n’es pas en plein échange radio, ferme complètement l’application puis rouvre-la pour l’activer.</p>
     </div>
@@ -2967,6 +2989,11 @@ button:focus-visible,
     <button type="button" class="primary hidden" id="confirmOutingCreate">CRÉER ET ACTIVER LA SORTIE</button>
   </div>
 </dialog>
+<dialog id="outingSuccessDialog" class="zone-delete-dialog outing-setup-dialog outing-success-dialog" aria-labelledby="outingSuccessTitle" aria-describedby="outingSuccessMessage">
+  <h2 id="outingSuccessTitle">✓ Sortie active</h2>
+  <p id="outingSuccessMessage"></p>
+  <button type="button" id="closeOutingSuccess">CONTINUER</button>
+</dialog>
 <dialog id="outingShareDialog" class="zone-delete-dialog outing-setup-dialog" aria-labelledby="outingShareTitle" aria-describedby="outingShareDescription">
   <h2 id="outingShareTitle">Partager la sortie active</h2>
   <p id="outingShareDescription">Relis le message, puis partage-le avec l’application de ton choix ou copie-le pour l’envoyer tel quel.</p>
@@ -2985,6 +3012,7 @@ button:focus-visible,
   <label for="outingImportText">Invitation reçue</label>
   <textarea id="outingImportText" class="outing-textarea" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="Colle ici le message reçu."></textarea>
   <div id="outingImportDialogError" class="status hidden" role="alert"></div>
+  <div id="outingImportVerified" class="outing-verified-heading hidden">✓ INFORMATIONS RECALCULÉES DEPUIS LE CODE</div>
   <div id="outingImportSummary" class="outing-summary hidden"></div>
   <div id="outingImportWarning" class="status hidden" role="alert"></div>
   <div class="zone-delete-actions">
@@ -3037,7 +3065,7 @@ function initTheme(){
   }
 }
 
-const APP_VERSION="3.28.85";
+const APP_VERSION="3.28.94";
 const PROTOCOL_ID="VHF-GPS-PROTO-6";
 
 function protocolShortLabel(){
@@ -3050,7 +3078,6 @@ function initVersionUi(){
   document.title=`VHF GPS Code ${app} — ${proto}`;
   const set=(id,text)=>{const e=$(id);if(e)e.textContent=text;};
   set("appVersionHeading",app);
-  set("protocolBadgeTop",proto);
   set("protocolBadgeSession",proto);
   set("protocolInfoTitle",`Protocole ${app} / ${proto} :`);
   set("catalogInfoTitle",`Catalogue ${app} audité`);
@@ -3115,6 +3142,7 @@ async function initPwa(){
   const local=location.hostname==="localhost"||location.hostname==="127.0.0.1";
   if(location.protocol!=="https:"&&!local){
     if(location.protocol==="http:")setPwaStatus("Installation hors réseau : adresse HTTPS requise.","problem");
+    else setPwaStatus("Mode hors réseau non vérifiable depuis ce fichier. Ouvre l’application installée.","problem");
     return;
   }
   if(!navigator.serviceWorker||!window.caches){
@@ -3131,18 +3159,19 @@ async function initPwa(){
     });
     const appUrl=new URL("vhf_gps_code.html",registration.scope).href;
     const showReady=async()=>{
+      const cached=await caches.match(appUrl);
+      const ready=!!cached&&!!(registration.active||navigator.serviceWorker.controller);
       if(registration.waiting&&navigator.serviceWorker.controller){
-        setPwaStatus("Nouvelle version téléchargée. Si tu n’es pas en plein échange radio, ferme complètement l’application puis rouvre-la pour l’activer.","update");
+        setPwaStatus(`${ready?"✓ PRÊTE HORS RÉSEAU · ":""}Nouvelle version téléchargée. Si tu n’es pas en plein échange radio, ferme complètement l’application puis rouvre-la pour l’activer.`,"update");
         return;
       }
-      const cached=await caches.match(appUrl);
-      setPwaStatus(cached?"✓ PRÊTE HORS RÉSEAU":"Préparation du mode hors réseau…",cached?"ready":"pending");
+      setPwaStatus(ready?"✓ PRÊTE HORS RÉSEAU":"Préparation du mode hors réseau…",ready?"ready":"pending");
     };
     const watchInstall=worker=>{
       if(!worker)return;
       worker.addEventListener("statechange",()=>{
         if(worker.state==="installed"&&navigator.serviceWorker.controller){
-          setPwaStatus("Nouvelle version téléchargée. Si tu n’es pas en plein échange radio, ferme complètement l’application puis rouvre-la pour l’activer.","update");
+          showReady().catch(()=>setPwaStatus("Mode hors réseau non vérifié.","problem"));
         }else if(worker.state==="activated"){
           showReady().catch(()=>setPwaStatus("Mode hors réseau non vérifié.","problem"));
         }else if(worker.state==="redundant"&&!registration.active){
@@ -3810,6 +3839,7 @@ let outingShareRevision=0;
 let outingShareReady=null;
 let outingCheckBusy=false;
 let outingSetupRevision=0;
+let outingSuccessTimer=null;
 let outingZoneType="builtin";
 let outingPositionMode="marine";
 let pendingOutingCreation=null;
@@ -4162,7 +4192,10 @@ function setActiveZone(id,{invalidate=true,persist=true,refresh=true}={}){
     // Toute sélection d'une nouvelle zone impose une nouvelle comparaison
     // humaine de l'alias, même si cette zone avait déjà été confirmée
     // plus tôt pendant la session.
+    hideOutingSuccessDialog();
     confirmedZoneIds.delete(target.id);
+    manualConfirmedZoneIds.delete(target.id);
+    outingAutoConfirmedZoneId=null;
     saveZoneConfirmations();
     clearOutingShare();
 
@@ -4211,7 +4244,7 @@ $("zoneSwitchDialog").addEventListener("close",()=>{
   pendingZoneSwitch=null;
   if(pending)pending.resolve(false);
 });
-function clearPositionForZoneSelection(){
+function clearSenderPositionInputs(){
   // Les deux modes se synchronisent : vider aussi le mode masqué évite
   // qu'une ancienne position réapparaisse en changeant de format.
   senderGpsRevision++;
@@ -4227,7 +4260,7 @@ async function switchToExistingZone(id,{clearPosition=false}={}){
   if(!await confirmManualZoneChange(target.name))return false;
   if(!zones.includes(target))throw new Error("Cette zone n’est plus disponible. Recommence.");
   setActiveZone(target.id,{invalidate:true,persist:true,refresh:true});
-  if(clearPosition)clearPositionForZoneSelection();
+  if(clearPosition)clearSenderPositionInputs();
   refreshDecodeState();
   return true;
 }
@@ -4235,6 +4268,8 @@ async function switchToExistingZone(id,{clearPosition=false}={}){
 const ZONE_CONFIRM_STORAGE_KEY="vhfGpsZoneConfirmV2";
 
 const confirmedZoneIds=new Set();
+const manualConfirmedZoneIds=new Set();
+let outingAutoConfirmedZoneId=null;
 let ephemeralWorkflowRevision=0;
 let receivedZoneNoticeContext=null;
 let zoneDeletionNotice=null;
@@ -4247,6 +4282,8 @@ function confirmationSessionKey(){
 
 function loadZoneConfirmations(){
   confirmedZoneIds.clear();
+  manualConfirmedZoneIds.clear();
+  outingAutoConfirmedZoneId=null;
 
   const sessionKey=confirmationSessionKey();
   if(!sessionKey)return;
@@ -4263,6 +4300,12 @@ function loadZoneConfirmations(){
         confirmedZoneIds.add(id);
       }
     }
+    for(const id of Array.isArray(data.manualZoneIds)?data.manualZoneIds:[]){
+      if(confirmedZoneIds.has(id))manualConfirmedZoneIds.add(id);
+    }
+    if(data.outingId===localStorage.getItem(OUTING_ID_KEY)&&confirmedZoneIds.has(data.outingAutoConfirmedZoneId)){
+      outingAutoConfirmedZoneId=data.outingAutoConfirmedZoneId;
+    }
   }catch(_){
     localStorage.removeItem(ZONE_CONFIRM_STORAGE_KEY);
   }
@@ -4278,12 +4321,16 @@ function saveZoneConfirmations(){
 
   localStorage.setItem(
     ZONE_CONFIRM_STORAGE_KEY,
-    JSON.stringify({sessionKey,zoneIds:[...confirmedZoneIds]})
+    JSON.stringify({sessionKey,zoneIds:[...confirmedZoneIds],manualZoneIds:[...manualConfirmedZoneIds],
+      outingId:outingAutoConfirmedZoneId?localStorage.getItem(OUTING_ID_KEY):null,
+      outingAutoConfirmedZoneId})
   );
 }
 
 function clearZoneConfirmations(){
   confirmedZoneIds.clear();
+  manualConfirmedZoneIds.clear();
+  outingAutoConfirmedZoneId=null;
   localStorage.removeItem(ZONE_CONFIRM_STORAGE_KEY);
 }
 
@@ -4344,13 +4391,18 @@ function refreshEncodeState(){
   const best=z && p.ok && !inside?compatibleZones(p.lat,p.lon,z.id)[0]:null;
   const switchBtn=$("useCompatibleZoneBtn");
   switchBtn.disabled=!best || !protocolOk || !secretOk;
-  $("ephemeralZoneBtn").disabled=!(protocolOk && secretOk && p.ok);
+  const ephemeralBtn=$("ephemeralZoneBtn");
+  const offerEphemeral=protocolOk && secretOk && p.ok && shouldOfferEphemeralZone(p.lat,p.lon);
+  ephemeralBtn.classList.toggle("hidden",!offerEphemeral);
+  ephemeralBtn.disabled=!offerEphemeral;
 }
 
 function refreshZoneConfirmationUi(){
   const z=activeZone();
   const validSecret=validateSessionSecret(activeSecret()).ok;
   const confirmed=!!z && validSecret && isZoneConfirmed(z);
+  const outingConfirmed=confirmed&&outingAutoConfirmedZoneId===z.id&&outingMatchesOriginalZone(z);
+  const radioConfirmed=confirmed&&manualConfirmedZoneIds.has(z.id);
 
   if(receivedZoneNoticeContext && (
     receivedZoneNoticeContext.zoneId!==z?.id ||
@@ -4370,14 +4422,18 @@ function refreshZoneConfirmationUi(){
     block.classList.toggle("hidden",side==="send" && !!z && isAnchoredZone(z));
 
     state.className="protocol-state-pill "+(confirmed?"protocol-state-confirmed":"protocol-state-provisional");
-    state.textContent=confirmed?"● ALIAS ZONE CONFIRMÉ":"● ALIAS ZONE À CONFIRMER";
+    state.textContent=confirmed
+      ?outingConfirmed?"● ZONE VALIDÉE AVEC LA SORTIE":radioConfirmed?"● ALIAS ZONE COMPARÉ À LA RADIO":"● ALIAS ZONE CONFIRMÉ"
+      :"● ALIAS ZONE À CONFIRMER";
 
     btn.classList.remove("zone-confirm-pending","zone-confirm-done","zone-confirm-unavailable");
 
     if(confirmed){
       btn.classList.add("zone-confirm-done");
       btn.disabled=true;
-      btn.textContent="✓ ALIAS ZONE CONFIRMÉ — ZONE DÉBLOQUÉE";
+      btn.textContent=outingConfirmed
+        ?"✓ ZONE VALIDÉE AVEC LA SORTIE — PRÊTE"
+        :radioConfirmed?"✓ ALIAS ZONE COMPARÉ À LA RADIO — PRÊTE":"✓ ALIAS ZONE CONFIRMÉ — PRÊTE";
     }else if(validSecret && z){
       btn.classList.add("zone-confirm-pending");
       btn.disabled=false;
@@ -4398,6 +4454,8 @@ async function confirmActiveZoneAlias(){
   if(!validateSessionSecret(secret).ok)throw new Error("Valide d’abord le secret de session.");
 
   confirmedZoneIds.add(z.id);
+  manualConfirmedZoneIds.add(z.id);
+  if(outingAutoConfirmedZoneId===z.id)outingAutoConfirmedZoneId=null;
   saveZoneConfirmations();
   refreshZoneConfirmationUi();
   refreshOutingActions();
@@ -4434,6 +4492,8 @@ async function refreshEphemeralWorkflow(){
   }
 
   const confirmed=confirmedZoneIds.has(z.id);
+  const outingConfirmed=confirmed&&outingAutoConfirmedZoneId===z.id&&outingMatchesOriginalZone(z);
+  const radioConfirmed=confirmed&&manualConfirmedZoneIds.has(z.id);
   $("ephemeralReadyStep").classList.toggle("hidden",!confirmed);
   $("ephemeralAliasStep").classList.toggle("ephemeral-confirmed",confirmed);
 
@@ -4441,7 +4501,7 @@ async function refreshEphemeralWorkflow(){
   confirmBtn.classList.remove("ephemeral-confirm-pending","ephemeral-confirm-done","zone-confirm-pending","zone-confirm-done");
   confirmBtn.disabled=true;
   confirmBtn.textContent=confirmed
-    ?"✓ ALIAS ZONE CONFIRMÉ — ZONE DÉBLOQUÉE"
+    ?outingConfirmed?"✓ ZONE VALIDÉE AVEC LA SORTIE — PRÊTE":radioConfirmed?"✓ ALIAS ZONE COMPARÉ À LA RADIO — PRÊTE":"✓ ALIAS ZONE CONFIRMÉ — PRÊTE"
     :"⚠ OBLIGATOIRE — J’AI COMPARÉ L’ALIAS DE CETTE ZONE À LA RADIO";
   if(confirmed){
     confirmBtn.classList.add("ephemeral-confirm-done");
@@ -4739,6 +4799,29 @@ function escapeHtml(s){
   })[c]);
 }
 function hideStatus(id){$(id).className="status hidden";}
+function hideOutingSuccessDialog(){
+  if(outingSuccessTimer!==null)clearTimeout(outingSuccessTimer);
+  outingSuccessTimer=null;
+  const dialog=$("outingSuccessDialog");
+  if(dialog.open)dialog.close();
+}
+function showOutingSuccessDialog(message,durationMs=5000){
+  hideOutingSuccessDialog();
+  $("outingSuccessMessage").textContent=message;
+  const dialog=$("outingSuccessDialog");
+  dialog.showModal();
+  outingSuccessTimer=setTimeout(()=>{
+    outingSuccessTimer=null;
+    if(dialog.open)dialog.close();
+  },durationMs);
+}
+$("closeOutingSuccess").onclick=hideOutingSuccessDialog;
+$("outingSuccessDialog").addEventListener("close",()=>{
+  if(!$("outingSuccessDialog").open&&outingSuccessTimer!==null){
+    clearTimeout(outingSuccessTimer);
+    outingSuccessTimer=null;
+  }
+});
 
 let receiverReminderRevision=0;
 
@@ -4815,8 +4898,26 @@ function publicAnchorDistanceKm(lat,lon,anchorLat,anchorLon){
   return Math.hypot((lon-anchorLon)*b,(lat-anchorLat)*a);
 }
 
+const ZONE_COMFORT_MARGIN_KM=20;
+function compatibleZonePriority(z){
+  return z.builtin?0:isAnchoredZone(z)?1:2;
+}
 function compatibleZones(lat,lon,currentId){
-  return zones.filter(z=>z.id!==currentId && isRecentEphemeral(z)).map(z=>({z,c:zoneCheck(lat,lon,z)})).filter(o=>o.c.inside).sort((a,b)=>b.c.nearest-a.c.nearest);
+  return zones.filter(z=>z.id!==currentId && isRecentEphemeral(z))
+    .map(z=>({z,c:zoneCheck(lat,lon,z)}))
+    .filter(o=>o.c.inside)
+    .sort((a,b)=>compatibleZonePriority(a.z)-compatibleZonePriority(b.z) ||
+      b.c.nearest-a.c.nearest || compareZoneNames(a.z,b.z) || a.z.id.localeCompare(b.z.id));
+}
+function shouldOfferEphemeralZone(lat,lon){
+  // Une zone intégrée ou éphémère déjà disponible avec une marge confortable
+  // évite une création supplémentaire. Une zone personnalisée peut rester
+  // propre à ce téléphone : elle n'empêche pas de préparer une zone partageable.
+  return !zones.some(z=>{
+    if(!isRecentEphemeral(z)||(!z.builtin&&!isAnchoredZone(z)))return false;
+    const c=zoneCheck(lat,lon,z);
+    return c.inside&&c.nearest>=ZONE_COMFORT_MARGIN_KM;
+  });
 }
 
 function checkDrift(){
@@ -4842,7 +4943,7 @@ function checkDrift(){
     }
     return false;
   }
-  const nearEdge=c.nearest<20;
+  const nearEdge=c.nearest<ZONE_COMFORT_MARGIN_KM;
   setDriftStatus(`✅ POSITION ENCODABLE DANS CETTE ZONE — ${nearEdge?"attention, marge faible":"marge"} au bord le plus proche : ${fmt(c.nearest)} km.`,nearEdge?"warn":"ok");
   $("driftStatus").classList.add("drift-encodable");
   $("driftStatus").classList.toggle("drift-edge",nearEdge);
@@ -5420,7 +5521,7 @@ $("relativeGpsBtn").onclick=()=>{
     return;
   }
   const revision=++relativePositionRevision,target=currentDecodedResult;
-  setStatus("relativeGpsStatus","Acquisition GPS en cours…","warn");
+  setStatus("relativeGpsStatus","Recherche de ta position GPS…","warn gps-searching");
   navigator.geolocation.getCurrentPosition(
     fix=>{
       if(revision!==relativePositionRevision||target!==currentDecodedResult||!relativePositionReady())return;
@@ -5780,6 +5881,10 @@ $("ephemeralZoneBtn").onclick=async()=>{
       throw new Error(p.empty?"Saisis d’abord la position réelle du bateau ou utilise le GPS.":p.error);
     }
     const {lat,lon}=p;
+    if(!shouldOfferEphemeralZone(lat,lon)){
+      refreshEncodeState();
+      return;
+    }
 
     const picked=await createEphemeralZoneCandidate(lat,lon,secret);
     assertZoneSessionCurrent(secret,sessionRevision);
@@ -6264,7 +6369,7 @@ async function runDecode(automatic=false){
 
 $("decodeBtn").onclick=()=>runDecode(false);
 
-function clearReceivedMessage(){
+function clearReceivedMessage({focus=true}={}){
   // Effacement manuel explicite : on repart réellement sur une nouvelle phrase.
   consumedFinalAttemptKeys.clear();
   invalidateDecodedResult();
@@ -6283,10 +6388,17 @@ function clearReceivedMessage(){
   hideReceiverReply();
   refreshDecodeState();
 
-  wordInputs[0].focus();
-  try{
-    wordInputs[0].scrollIntoView({behavior:"smooth",block:"center"});
-  }catch(_){}
+  if(focus){
+    wordInputs[0].focus();
+    try{
+      wordInputs[0].scrollIntoView({behavior:"smooth",block:"center"});
+    }catch(_){}
+  }
+}
+
+function clearExchangeInputsForNewOuting(){
+  clearSenderPositionInputs();
+  clearReceivedMessage({focus:false});
 }
 
 function retryFinalRadioConfirmation(){
@@ -6346,6 +6458,7 @@ async function installValidatedSecret(secret,persist=true,createdAt=null){
   const v=validateOperationalSessionSecret(secret);if(!v.ok)throw new Error(v.msg);
   const previous=localStorage.getItem(SESSION_SECRET_KEY)||"",changed=previous!==v.canonical;
   if(changed){
+    hideOutingSuccessDialog();
     clearZoneConfirmations();
     consumedFinalAttemptKeys.clear();
 
@@ -6365,7 +6478,7 @@ async function installValidatedSecret(secret,persist=true,createdAt=null){
       purgeEphemeralZones();
       localStorage.removeItem(OUTING_ID_KEY);
       localStorage.removeItem(OUTING_ORIGIN_KEY);
-      localStorage.setItem(OUTING_INSTALLED_AT_KEY,String(Date.now()));
+      localStorage.removeItem(OUTING_INSTALLED_AT_KEY);
     }
     if(changed || !sessionCreatedAt() || createdAt!==null){
       localStorage.setItem(SESSION_CREATED_AT_KEY,String(createdAt??Date.now()));
@@ -6423,6 +6536,8 @@ function deactivateSessionWhileEditing(){
   validatedSessionSecret="";
   masterKeyCache={secret:"",key:null};
   confirmedZoneIds.clear();
+  manualConfirmedZoneIds.clear();
+  outingAutoConfirmedZoneId=null;
   clearOutingShare();
 
   // Dès que le secret est modifié, aucune ancienne transmission ne doit
@@ -6555,6 +6670,11 @@ function outingZoneDescriptor(z){
   if(isAnchoredZone(z))return{type:"ephemeral",lat:z.anchorLat,lon:z.anchorLon};
   throw new Error("Le partage des zones personnalisées fixes n'est pas encore disponible.");
 }
+function outingZoneVisibleLabel(zone){
+  return zone.type==="builtin"
+    ?BUILTIN_ZONES.find(z=>z.id===zone.id)?.name||"Zone intégrée"
+    :`${OUTING_EPHEMERAL_NAME} · ancre ${Number(zone.lat).toFixed(2)} / ${Number(zone.lon).toFixed(2)}`;
+}
 function saveOutingOrigin(id,z){
   localStorage.setItem(OUTING_ORIGIN_KEY,JSON.stringify({id,zoneId:z.id,fingerprint:zoneFingerprint(z)}));
 }
@@ -6576,7 +6696,8 @@ function refreshOutingActions(){
   $("copyOutingBtn").classList.toggle("hidden",!shareable);
   $("copyOutingBtn").disabled=!shareable||outingMutationBusy||outingCopyBusy;
   const created=sessionCreatedAt();
-  const installed=Number(localStorage.getItem(OUTING_INSTALLED_AT_KEY)||0);
+  const installed=localStorage.getItem(OUTING_ID_KEY)
+    ?Number(localStorage.getItem(OUTING_INSTALLED_AT_KEY)||0):0;
   $("outingLocalTimes").textContent=created
     ?`Créée le ${outingDate(created)}${installed?` · installée sur ce téléphone le ${outingDate(installed)}`:""}.`
     :"";
@@ -6627,10 +6748,8 @@ async function formatOutingInvitation(payload){
   const encoded=utf8Base64Url(JSON.stringify(payload));
   const prefix=`VHF1.${encoded}`;
   const token=`${prefix}.${await outingChecksum(prefix)}`;
-  const zone=payload.zone.type==="builtin"
-    ?BUILTIN_ZONES.find(z=>z.id===payload.zone.id)?.name||"Zone intégrée"
-    :`${OUTING_EPHEMERAL_NAME} · ancre ${Number(payload.zone.lat).toFixed(2)} / ${Number(payload.zone.lon).toFixed(2)}`;
-  return `🎣 Invitation pour une sortie VHF-GPS\n🗓️ Créée le ${outingDate(payload.createdAt)}\n📍 Zone : ${zone}\n🔧 ${protocolShortLabel()} · COMPAT ${payload.compat.slice(0,8)}\n🔐 Alias de session (empreinte radio) : ${payload.fingerprint}\n📣 Alias de zone : ${payload.alias}\n\n📲 Ouvre l'application installée, touche « Recevoir une invitation », puis colle ce message entier.\n⚠️ Envoyez cette invitation telle quelle. Ne modifiez pas le code. Ne la transférez qu'aux participants de la sortie.\n\n${OUTING_BEGIN}\n${token}\n${OUTING_END}`;
+  const zone=outingZoneVisibleLabel(payload.zone);
+  return `🎣 Invitation pour une sortie VHF-GPS\n🗓️ Créée le ${outingDate(payload.createdAt)}\n📍 Zone : ${zone}\n🔧 ${protocolShortLabel()} · COMPAT ${payload.compat.slice(0,8)}\n🔐 Alias de session (empreinte radio) : ${payload.fingerprint}\n📣 Alias de zone : ${payload.alias}\n\n📲 Ouvre l'application installée, touche « Recevoir une invitation », puis colle ce message entier.\n⚠️ Envoyez cette invitation telle quelle. Tous les participants doivent installer ce même message. Ne modifiez pas le code et ne le transférez qu'aux participants de la sortie.\n\n${OUTING_BEGIN}\n${token}\n${OUTING_END}`;
 }
 
 function extractOutingToken(input){
@@ -6686,14 +6805,21 @@ async function inspectOutingInvitation(input){
     throw new Error("Empreinte ou alias incohérent : invitation modifiée ou incompatible.");
   }
   const visible=String(input).split(OUTING_BEGIN)[0];
-  const lines=visible.split(/\r?\n/).reverse();
+  const headingAt=visible.lastIndexOf("Invitation pour une sortie VHF-GPS");
+  const lines=headingAt<0?[]:visible.slice(headingAt).split(/\r?\n/).reverse();
   const fingerprintLabel="Alias de session (empreinte radio) : ",aliasLabel="Alias de zone : ";
   const visibleFingerprint=lines.find(line=>line.startsWith(fingerprintLabel)||line.startsWith("🔐 "+fingerprintLabel));
   const visibleAlias=lines.find(line=>line.startsWith(aliasLabel)||line.startsWith("📣 "+aliasLabel));
   const fingerprintValue=visibleFingerprint?.replace(/^🔐 /u,"").slice(fingerprintLabel.length).trim();
   const aliasValue=visibleAlias?.replace(/^📣 /u,"").slice(aliasLabel.length).trim();
+  const visibleZone=lines.find(line=>line.startsWith("Zone : ")||line.startsWith("📍 Zone : "));
+  const zoneValue=visibleZone?.replace(/^📍 /u,"").slice("Zone : ".length).trim();
+  const visibleCompat=lines.find(line=>line.startsWith("PROTO")||line.startsWith("🔧 PROTO"));
+  const compatValue=visibleCompat?.replace(/^🔧 /u,"").trim();
   if((visibleFingerprint&&fingerprintValue!==fingerprint)||
-     (visibleAlias&&aliasValue!==alias.text)){
+     (visibleAlias&&aliasValue!==alias.text)||
+     (visibleZone&&zoneValue!==outingZoneVisibleLabel(data.zone))||
+     (visibleCompat&&compatValue!==`${protocolShortLabel()} · COMPAT ${data.compat.slice(0,8)}`)){
     throw new Error("Le résumé lisible ne correspond pas au code d'invitation. Demande un nouveau message complet.");
   }
   return{data,zone,fingerprint,alias:alias.text};
@@ -6725,6 +6851,7 @@ function showOutingImportSummary(prepared){
   if(notices.length)setStatus("outingImportWarning",notices.join(" "),"warn");
   else warning.classList.add("hidden");
   hideStatus("outingImportDialogError");
+  $("outingImportVerified").classList.remove("hidden");
   summary.classList.remove("hidden");
 }
 
@@ -6733,7 +6860,7 @@ async function installOutingInvitation(prepared){
   const same=localStorage.getItem(OUTING_ID_KEY)===data.id&&activeSecret()===data.secret&&
     zoneFingerprint(activeZone())===zoneFingerprint(zone)&&isZoneConfirmed(activeZone())&&
     outingMatchesOriginalZone(activeZone())&&
-    (data.zone.type!=="ephemeral"||isOutingEphemeral(activeZone()));
+    (data.zone.type!=="ephemeral"||(isOutingEphemeral(activeZone())&&sameZoneCenter(activeZone(),zone)));
   if(same)return"Cette sortie est déjà installée et active.";
   const oldId=localStorage.getItem(OUTING_ID_KEY);
   const installed=await installValidatedSecret(data.secret,true,data.createdAt);
@@ -6746,7 +6873,9 @@ async function installOutingInvitation(prepared){
       target={...zone,id:`eph-${Date.now()}-${secureRandomIndex(1000000)}`,
         name:OUTING_EPHEMERAL_NAME,outingId:data.id,builtin:false,createdAt:Date.now()};
       zones.push(target);saveZones();
-    }else if(target.outingId!==data.id||target.name!==OUTING_EPHEMERAL_NAME){
+    }else if(target.outingId!==data.id||target.name!==OUTING_EPHEMERAL_NAME||!sameZoneCenter(target,zone)){
+      target.lat=zone.lat;
+      target.lon=zone.lon;
       target.outingId=data.id;
       target.name=OUTING_EPHEMERAL_NAME;
       delete target.importedOuting;
@@ -6755,9 +6884,11 @@ async function installOutingInvitation(prepared){
   }
   setActiveZone(target.id,{invalidate:true,persist:true,refresh:false});
   confirmedZoneIds.add(target.id);
-  saveZoneConfirmations();
+  manualConfirmedZoneIds.delete(target.id);
+  outingAutoConfirmedZoneId=target.id;
   localStorage.setItem(OUTING_ID_KEY,data.id);
   saveOutingOrigin(data.id,target);
+  saveZoneConfirmations();
   if(oldId!==data.id||!Number(localStorage.getItem(OUTING_INSTALLED_AT_KEY)||0)){
     localStorage.setItem(OUTING_INSTALLED_AT_KEY,String(Date.now()));
   }
@@ -6765,6 +6896,7 @@ async function installOutingInvitation(prepared){
   if(activeSecret()!==data.secret||activeZone()?.id!==target.id){
     throw new Error("La session ou la zone a changé pendant l'installation. Vérifie l'état actif.");
   }
+  clearExchangeInputsForNewOuting();
   refreshZoneConfirmationUi();
   refreshEncodeState();refreshDecodeState();refreshOutingActions();
   $("sessionSettings").open=false;
@@ -6974,17 +7106,22 @@ async function commitOutingSetup(){
     }
     setActiveZone(target.id,{invalidate:true,persist:true,refresh:false});
     confirmedZoneIds.add(target.id);
-    saveZoneConfirmations();
+    manualConfirmedZoneIds.delete(target.id);
+    outingAutoConfirmedZoneId=target.id;
     localStorage.setItem(OUTING_ID_KEY,draft.id);
     saveOutingOrigin(draft.id,target);
+    saveZoneConfirmations();
     localStorage.setItem(OUTING_INSTALLED_AT_KEY,String(Date.now()));
     await populateZones(target.id);
     if(activeSecret()!==draft.secret||activeZone()?.id!==target.id){
       throw new Error("La session ou la zone a changé pendant la création. Vérifie l'état actif.");
     }
+    clearExchangeInputsForNewOuting();
     refreshZoneConfirmationUi();refreshEncodeState();refreshDecodeState();refreshOutingActions();
     $("sessionSettings").open=false;
     $("outingCreateDialog").close();
+    $("outingSettings").open=true;
+    showOutingSuccessDialog(`Sortie créée et active · ${target.name}.`);
   }catch(e){setStatus("outingCreateError",e.message||String(e),"bad");}
   finally{
     outingMutationBusy=false;
@@ -7012,7 +7149,7 @@ $("outingGpsBtn").onclick=()=>{
   pendingOutingCreation=null;
   $("outingCreateSummary").classList.add("hidden");
   $("confirmOutingCreate").classList.add("hidden");
-  setStatus("outingGpsStatus","Acquisition GPS en cours…","warn");
+  setStatus("outingGpsStatus","Recherche de la position GPS de référence…","warn gps-searching");
   navigator.geolocation.getCurrentPosition(
     fix=>{
       if(revision!==outingSetupRevision||!$("outingCreateDialog").open||outingMutationBusy)return;
@@ -7155,6 +7292,7 @@ function invalidateOutingImportReview(){
   $("checkOutingBtn").classList.remove("hidden");
   $("confirmOutingImport").classList.add("hidden");
   $("outingImportSummary").classList.add("hidden");
+  $("outingImportVerified").classList.add("hidden");
   hideStatus("outingImportWarning");
   hideStatus("outingImportDialogError");
 }
@@ -7204,8 +7342,10 @@ $("confirmOutingImport").onclick=async()=>{
   outingMutationBusy=true;refreshOutingActions();
   for(const id of ["outingImportText","checkOutingBtn","confirmOutingImport","cancelOutingImport"])$(id).disabled=true;
   try{
-    await installOutingInvitation(prepared);
+    const result=await installOutingInvitation(prepared);
     dialog.close();
+    $("outingSettings").open=false;
+    showOutingSuccessDialog(`${result} Zone active : ${activeZone()?.name||"—"}.`);
   }catch(e){
     invalidateOutingImportReview();
     setStatus("outingImportDialogError",e.message||String(e),"bad");
@@ -7291,7 +7431,7 @@ for(const id of ["lat","lon"]){
 $("gpsBtn").onclick=()=>{
   if(!navigator.geolocation)return setDriftStatus("GPS navigateur indisponible.","bad");
   const revision=++senderGpsRevision,sessionRevision=activeSessionRevision;
-  setDriftStatus("Acquisition GPS en cours…","warn");
+  setDriftStatus("Recherche de ta position GPS…","warn gps-searching");
   navigator.geolocation.getCurrentPosition(
     p=>{
       if(revision!==senderGpsRevision||sessionRevision!==activeSessionRevision)return;
@@ -7316,7 +7456,7 @@ $("gpsBtn").onclick=()=>{
 $("centerGpsBtn").onclick=()=>{
   if(!navigator.geolocation)return setStatus("zoneStatus","GPS navigateur indisponible.","bad");
   const revision=++centerGpsRevision;
-  setStatus("zoneStatus","Acquisition GPS du centre en cours…","warn");
+  setStatus("zoneStatus","Recherche de la position GPS du centre…","warn gps-searching");
   navigator.geolocation.getCurrentPosition(
     p=>{
       if(revision!==centerGpsRevision)return;
@@ -7507,6 +7647,8 @@ function deleteCustomZone(id){
   if(z.builtin)throw new Error("Une zone intégrée ne peut pas être supprimée.");
   if(isOutingEphemeral(z))throw new Error("Cette zone éphémère de sortie est conservée jusqu'à la prochaine session.");
   confirmedZoneIds.delete(z.id);
+  manualConfirmedZoneIds.delete(z.id);
+  if(outingAutoConfirmedZoneId===z.id)outingAutoConfirmedZoneId=null;
   saveZoneConfirmations();
   const wasActive=activeZoneId===z.id;
   zones=zones.filter(x=>x.id!==z.id);
@@ -7527,7 +7669,11 @@ function deleteAllEphemeralZones(){
   if(!removed.length)throw new Error("Aucune zone éphémère à supprimer.");
   ephemeralDeletionRevision++;
   const wasActive=removed.some(z=>z.id===activeZoneId);
-  for(const z of removed)confirmedZoneIds.delete(z.id);
+  for(const z of removed){
+    confirmedZoneIds.delete(z.id);
+    manualConfirmedZoneIds.delete(z.id);
+    if(outingAutoConfirmedZoneId===z.id)outingAutoConfirmedZoneId=null;
+  }
   saveZoneConfirmations();
   zones=zones.filter(z=>!z.ephemeral||isOutingEphemeral(z));
   saveZones();
