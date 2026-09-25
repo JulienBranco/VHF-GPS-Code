@@ -56,12 +56,15 @@ input:focus,select:focus{border-color:var(--accent)}
 .pwa-status{display:inline-block;margin:0 0 8px;padding:6px 10px;border-radius:9px;font-size:.78rem;font-weight:850}
 .pwa-status.pending{color:var(--warn);background:rgba(217,119,6,.12)}
 .pwa-status.ready{color:var(--ok);background:rgba(34,197,94,.12)}
-.pwa-status.update{color:var(--warn);background:rgba(217,119,6,.12)}
+.pwa-status.update{
+  display:block;padding:12px 14px;border:2px solid #e3ad3d;
+  color:#ffe3a2;background:#41301a;font-size:.93rem;line-height:1.45
+}
 .pwa-status.problem{color:var(--bad);background:rgba(200,55,55,.12)}
 .install-app-btn{display:block;margin:0 0 14px;padding:10px 13px;background:rgba(98,221,183,.14);color:var(--text);border-color:var(--accent);font-size:.9rem}
 .install-help{margin:0 0 14px;padding:12px 14px;border-radius:10px;background:rgba(98,221,183,.08);color:var(--text);line-height:1.45;font-size:.9rem}
-:root[data-theme="day"] .pwa-status.pending,
-:root[data-theme="day"] .pwa-status.update{color:#704000;background:#fff4d7}
+:root[data-theme="day"] .pwa-status.pending{color:#704000;background:#fff4d7}
+:root[data-theme="day"] .pwa-status.update{color:#704000;background:#fff4d7;border-color:#b77912}
 :root[data-theme="day"] .pwa-status.ready{color:#075f27;background:#e7f8eb}
 :root[data-theme="day"] .pwa-status.problem{color:#8e101b;background:#fff0f1}
 .status{margin-top:12px;padding:12px;border-radius:11px;border:1px solid transparent}
@@ -1399,8 +1402,23 @@ select.custom-zone-active{
 .session-actions button{width:auto;margin:0}
 .session-action-small{padding:8px 12px;min-height:38px;font-size:.78rem}
 .session-action-main{padding:9px 14px;min-height:40px;font-size:.82rem}
-.outing-details{margin-top:12px;padding-top:8px;border-top:1px solid color-mix(in srgb,var(--session-line) 35%,transparent)}
-.outing-details>summary{cursor:pointer;font-weight:800;color:var(--session-muted);padding:8px 2px}
+.outing-details{margin-top:14px}
+.outing-details>summary{
+  display:grid;grid-template-columns:minmax(0,1fr) 48px;gap:8px;
+  cursor:pointer;list-style:none;user-select:none
+}
+.outing-details>summary::-webkit-details-marker{display:none}
+.outing-details>summary::marker{content:""}
+.outing-details>summary:focus-visible{outline:3px solid var(--session-line);outline-offset:3px;border-radius:11px}
+.outing-menu-label,.outing-menu-chevron{
+  display:flex;align-items:center;justify-content:center;box-sizing:border-box;
+  min-height:52px;border:2px solid #5ca5e9;border-radius:11px;
+  background:#0759a8;color:#fff;text-align:center;font-weight:900
+}
+.outing-menu-label{padding:10px 12px;font-size:.92rem;line-height:1.25}
+.outing-menu-chevron{font-size:1.45rem;transition:transform .18s ease}
+.outing-details[open] .outing-menu-chevron{transform:rotate(180deg)}
+@media(prefers-reduced-motion:reduce){.outing-menu-chevron{transition:none}}
 .outing-body{display:grid;gap:10px;margin-top:8px}
 .outing-body p{margin:0;line-height:1.45}
 .outing-actions{display:flex;flex-wrap:wrap;gap:8px}
@@ -1431,7 +1449,7 @@ dialog.outing-setup-dialog{
   background:var(--session-bg);color:var(--focus-text);
   border:2px solid var(--session-line)
 }
-dialog.outing-success-dialog{width:min(420px,calc(100vw - 24px));border-color:#28a66c;text-align:center}
+dialog.outing-success-dialog{width:min(360px,calc(100vw - 32px));border-color:#28a66c;text-align:center}
 .outing-success-dialog h2{color:#b9ffd3}
 .outing-success-dialog p{font-size:1.05rem;font-weight:750;line-height:1.45;overflow-wrap:anywhere}
 #closeOutingSuccess{background:#087849;border:2px solid #087849;color:#fff;min-width:140px}
@@ -1484,7 +1502,7 @@ dialog.outing-success-dialog{width:min(420px,calc(100vw - 24px));border-color:#2
 .outing-setup-coordinate-grid input,.outing-setup-coordinate-grid select{margin-top:4px}
 .outing-setup-review{margin-top:14px}
 .outing-setup-review strong{display:block;margin-bottom:3px}
-@media(max-width:600px){dialog.outing-setup-dialog{width:100vw;max-width:none;max-height:100dvh;height:100dvh;margin:0;border-radius:0}.outing-setup-coordinate-grid{grid-template-columns:1fr 1fr 1fr}}
+@media(max-width:600px){dialog.outing-setup-dialog:not(.outing-success-dialog){width:100vw;max-width:none;max-height:100dvh;height:100dvh;margin:0;border-radius:0}.outing-setup-coordinate-grid{grid-template-columns:1fr 1fr 1fr}}
 .session-paste-help{
   margin-top:9px;
   padding:9px 11px;
@@ -1678,6 +1696,14 @@ dialog.outing-success-dialog{width:min(420px,calc(100vw - 24px));border-color:#2
   color:var(--text);
 }
 .zone-delete-dialog::backdrop{background:rgba(0,0,0,.65)}
+dialog.pwa-update-dialog{width:min(460px,calc(100vw - 24px));border:2px solid #e3ad3d;background:#2e281b;color:#fff5dd}
+.pwa-update-dialog h2{color:#ffda83;font-size:1.12rem;line-height:1.3}
+.pwa-update-dialog p{color:#fff0c8;font-size:.96rem;line-height:1.5}
+#pwaUpdateContinue{width:100%;min-height:48px;background:#e3ad3d;border-color:#e3ad3d;color:#221806}
+:root[data-theme="day"] dialog.pwa-update-dialog{background:#fffaf0;border-color:#b77912;color:#332300}
+:root[data-theme="day"] .pwa-update-dialog h2{color:#704000}
+:root[data-theme="day"] .pwa-update-dialog p{color:#493100}
+:root[data-theme="day"] #pwaUpdateContinue{background:#9a640c;border-color:#9a640c;color:#fff}
 .zone-delete-name{display:block;margin:12px 0;overflow-wrap:anywhere}
 .zone-delete-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
 .zone-delete-actions button{flex:1 1 140px;min-height:48px}
@@ -2380,7 +2406,7 @@ button:focus-visible,
     </div>
 
     <details id="outingSettings" class="outing-details">
-      <summary>🎣 Créer, partager ou installer une sortie</summary>
+      <summary><span class="outing-menu-label">🎣 Créer, partager ou installer une sortie</span><span class="outing-menu-chevron" aria-hidden="true">▾</span></summary>
       <div class="outing-body">
         <div id="outingLocalTimes" class="small"></div>
         <div class="outing-actions">
@@ -2910,7 +2936,7 @@ button:focus-visible,
       <p>Avec du réseau, utilise le bouton « Installer l’application » en haut de la page. Sur Android, il peut ouvrir directement la confirmation ; sinon, utilise « Installer l’application » dans le menu du navigateur. Sur iPhone, le bouton explique le chemin Safari → Partager → « Sur l’écran d’accueil ».</p>
       <p>Ouvre ensuite l’icône installée <strong>avec du réseau</strong> et attends « PRÊTE HORS RÉSEAU » dans le bloc Session radio. Sur iPhone, les données saisies dans Safari peuvent ne pas être reprises : vérifie la session et les zones dans l’application installée.</p>
       <p>Avant de partir, passe en mode avion, ferme puis rouvre l’application depuis son icône. Vérifie la session, les zones et le GPS. Si le GPS ne répond pas, recopie la position du sondeur ou du traceur.</p>
-      <p>Une mise à jour téléchargée n’interrompt pas l’application ouverte. Si tu n’es pas en plein échange radio, ferme complètement l’application puis rouvre-la pour l’activer.</p>
+      <p>Une mise à jour téléchargée n’interrompt pas l’application ouverte. Attends la fin de la sortie de pêche, puis ferme complètement et rouvre l’application avant de préparer la prochaine sortie.</p>
     </div>
   </details>
 
@@ -2943,6 +2969,11 @@ button:focus-visible,
     <button type="button" id="cancelZoneSwitch" autofocus>ANNULER</button>
     <button type="button" id="confirmZoneSwitch">ACTIVER CETTE ZONE</button>
   </div>
+</dialog>
+<dialog id="pwaUpdateDialog" class="zone-delete-dialog pwa-update-dialog" aria-labelledby="pwaUpdateTitle" aria-describedby="pwaUpdateMessage">
+  <h2 id="pwaUpdateTitle">⚠️ Nouvelle version téléchargée</h2>
+  <p id="pwaUpdateMessage"></p>
+  <button type="button" id="pwaUpdateContinue" autofocus>J’AI COMPRIS · GARDER CETTE VERSION</button>
 </dialog>
 <dialog id="outingCreateDialog" class="zone-delete-dialog outing-setup-dialog" aria-labelledby="outingCreateTitle" aria-describedby="outingCreateDescription">
   <h2 id="outingCreateTitle">Préparer une nouvelle sortie</h2>
@@ -3065,7 +3096,7 @@ function initTheme(){
   }
 }
 
-const APP_VERSION="3.28.94";
+const APP_VERSION="3.28.97";
 const PROTOCOL_ID="VHF-GPS-PROTO-6";
 
 function protocolShortLabel(){
@@ -3089,6 +3120,15 @@ function setPwaStatus(message,kind){
   el.textContent=message;
   el.className=`pwa-status ${kind}`;
 }
+const PWA_UPDATE_MESSAGE="Attends la fin de ta sortie de pêche pour l’activer. Fermer puis rouvrir l’application pendant la sortie peut interrompre un échange en cours et, si le protocole a changé, empêcher les échanges avec les téléphones encore sur l’ancienne version. Après la sortie, ferme complètement puis rouvre l’application avant de préparer la prochaine.";
+let pwaUpdateDialogShown=false;
+function showPwaUpdateDialog(){
+  if(pwaUpdateDialogShown)return;
+  $("pwaUpdateMessage").textContent=PWA_UPDATE_MESSAGE;
+  $("pwaUpdateDialog").showModal();
+  pwaUpdateDialogShown=true;
+}
+document.getElementById("pwaUpdateContinue").onclick=()=>document.getElementById("pwaUpdateDialog").close();
 
 let deferredInstallPrompt=null;
 let installEventCompleted=false;
@@ -3162,7 +3202,8 @@ async function initPwa(){
       const cached=await caches.match(appUrl);
       const ready=!!cached&&!!(registration.active||navigator.serviceWorker.controller);
       if(registration.waiting&&navigator.serviceWorker.controller){
-        setPwaStatus(`${ready?"✓ PRÊTE HORS RÉSEAU · ":""}Nouvelle version téléchargée. Si tu n’es pas en plein échange radio, ferme complètement l’application puis rouvre-la pour l’activer.`,"update");
+        setPwaStatus(`${ready?"✓ PRÊTE HORS RÉSEAU · ":""}⚠️ Nouvelle version téléchargée. ${PWA_UPDATE_MESSAGE}`,"update");
+        showPwaUpdateDialog();
         return;
       }
       setPwaStatus(ready?"✓ PRÊTE HORS RÉSEAU":"Préparation du mode hors réseau…",ready?"ready":"pending");

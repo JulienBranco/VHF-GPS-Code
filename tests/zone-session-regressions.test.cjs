@@ -127,7 +127,15 @@ test('état hors réseau visible seulement après cache et service worker actifs
   assert.equal($('pwaStatus').classList.contains('ready'),true);
   registration.waiting={};
   await initPwa();
-  assert.match($('pwaStatus').textContent,/^✓ PRÊTE HORS RÉSEAU · Nouvelle version téléchargée/);
+  assert.match($('pwaStatus').textContent,/^✓ PRÊTE HORS RÉSEAU · ⚠️ Nouvelle version téléchargée/);
+  assert.equal($('pwaUpdateDialog').open,true);
+  assert.match($('pwaUpdateMessage').textContent,/fin de ta sortie de pêche/);
+  assert.match($('pwaUpdateMessage').textContent,/si le protocole a changé/);
+  assert.equal($('pwaStatus').classList.contains('update'),true);
+  $('pwaUpdateContinue').onclick();
+  assert.equal($('pwaUpdateDialog').open,false);
+  await initPwa();
+  assert.equal($('pwaUpdateDialog').open,false);
   caches.match=async()=>null;
   registration.waiting=null;
   await initPwa();
