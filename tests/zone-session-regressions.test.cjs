@@ -32,7 +32,7 @@ async function boot() {
       querySelector: () => null, querySelectorAll: () => [],
       addEventListener: (name, fn) => events[name] = fn,
       dispatchEvent: event => events[event.type]?.(event),
-      setAttribute: noop, focus: noop, scrollIntoView: noop,
+      setAttribute: noop, focus: noop, select: noop, scrollIntoView: noop,
       showModal() { this.open = true; },
       close() { this.open = false; events.close?.(); },
     };
@@ -45,7 +45,7 @@ async function boot() {
     elements.set(match[1], el);
   }
   const context = vm.createContext({
-    assert, console, crypto: webcrypto, TextEncoder, TextDecoder, Uint8Array, Uint32Array,
+    assert, console, crypto: webcrypto, TextEncoder, TextDecoder, Uint8Array, Uint32Array, btoa, atob,
     document: {
       getElementById: id => { assert.ok(elements.has(id), `ID absent : ${id}`); return elements.get(id); },
       createElement: element, documentElement: { dataset: {} },
@@ -65,6 +65,29 @@ async function boot() {
   });
   const run = source => vm.runInContext(source, context);
   script.runInContext(context);
+  run(`async function testCreateBuiltinOuting(zoneId=BUILTIN_ZONES[0].id){
+    $('createOutingBtn').onclick();
+    $('outingBuiltinChoice').onclick();
+    $('outingBuiltinSelect').value=zoneId;
+    await $('checkOutingCreate').onclick();
+    assert.equal($('outingCreateSummary').classList.contains('hidden'),false);
+    await $('confirmOutingCreate').onclick();
+    assert.equal($('outingCreateDialog').open,false);
+  }`);
+  run(`async function testWaitZoneSwitch(){
+    for(let i=0;i<100&&!$('zoneSwitchDialog').open;i++)await new Promise(resolve=>setTimeout(resolve,5));
+    assert.equal($('zoneSwitchDialog').open,true);
+  }
+  async function testAcceptZoneSwitch(pending){
+    await testWaitZoneSwitch();
+    $('confirmZoneSwitch').onclick();
+    await pending;
+  }
+  async function testCancelZoneSwitch(pending){
+    await testWaitZoneSwitch();
+    $('cancelZoneSwitch').onclick();
+    await pending;
+  }`);
   for (let i = 0; i < 500 && run('protocolRuntimeState') === 'CHECKING'; i++) {
     await new Promise(resolve => setTimeout(resolve, 10));
   }
@@ -221,7 +244,7 @@ test('réception : retour vers une zone déjà confirmée exige une nouvelle com
   setActiveZone(b.id);await confirmActiveZoneAlias();
   setActiveZone(a.id);
   $('receivedZoneLat').value='46.75';$('receivedZoneLon').value='-24.50';
-  await $('addReceivedZoneBtn').onclick();
+  await testAcceptZoneSwitch($('addReceivedZoneBtn').onclick());
   assert.equal(activeZoneId,b.id);
   assert.equal(isZoneConfirmed(b),false);
   assert.equal($('recvZoneConfirmBtn').disabled,false);
@@ -244,6 +267,109 @@ test('affichage seul et sélection identique conservent la confirmation', t => c
   setActiveZone(b.id);await confirmActiveZoneAlias();setActiveZone(a.id);
   assert.equal(isZoneConfirmed(a),false);
   loadZoneConfirmations();assert.equal(isZoneConfirmed(a),false);
+`));
+
+test('sélecteurs de zone : annuler garde la position, confirmer la vide et impose le nouvel alias', t => check(t, `
+  const a=activeZone(),b=zones.find(z=>z.id!==a.id);
+  setActiveZone(b.id);await confirmActiveZoneAlias();
+  setActiveZone(a.id);await confirmActiveZoneAlias();
+  setPositionInputMode('decimal',{persist:false});
+  setDecimalPosition(a.lat,a.lon);
+  handlePositionChanged();
+  const oldLat=$('lat').value,oldLon=$('lon').value;
+  const oldLatDeg=$('latDeg').value,oldLonDeg=$('lonDeg').value;
+  $('encodedBlock').classList.remove('hidden');
+  const savedZone=localStorage.getItem(ACTIVE_ZONE_STORAGE_KEY);
+  sendZone.value=b.id;
+  const cancelled=sendZone.onchange();
+  assert.equal($('zoneSwitchTo').textContent,b.name);
+  assert.equal(sendZone.value,a.id);
+  await testCancelZoneSwitch(cancelled);
+  assert.equal(activeZoneId,a.id);
+  assert.equal(localStorage.getItem(ACTIVE_ZONE_STORAGE_KEY),savedZone);
+  assert.equal(isZoneConfirmed(a),true);
+  assert.equal($('encodedBlock').classList.contains('hidden'),false);
+  assert.equal($('lat').value,oldLat);assert.equal($('lon').value,oldLon);
+  assert.equal($('latDeg').value,oldLatDeg);assert.equal($('lonDeg').value,oldLonDeg);
+
+  recvZone.value=b.id;
+  await testAcceptZoneSwitch(recvZone.onchange());
+  assert.equal(activeZoneId,b.id);
+  assert.equal(sendZone.value,b.id);
+  assert.equal(isZoneConfirmed(b),false);
+  assert.equal($('encodedBlock').classList.contains('hidden'),true);
+  for(const id of ['latDeg','latMin','lonDeg','lonMin','lat','lon'])assert.equal($(id).value,'');
+  assert.equal($('latHem').value,b.lat>=0?'N':'S');
+  assert.equal($('lonHem').value,b.lon>=0?'E':'W');
+  assert.match($('positionCanonicalPreview').innerHTML,/Saisis les degrés/);
+  assert.match($('driftStatusText').textContent,/Entre une position/);
+  assert.match($('recvZoneConfirmBtn').textContent,/OBLIGATOIRE/);
+
+  setDecimalPosition(b.lat,b.lon);handlePositionChanged();
+  sendZone.value=a.id;
+  await testAcceptZoneSwitch(sendZone.onchange());
+  assert.equal(activeZoneId,a.id);
+  assert.equal($('lat').value,'');assert.equal($('latDeg').value,'');
+  assert.equal(isZoneConfirmed(a),false);
+`));
+
+test('création d’une zone reçue : annuler ne l’enregistre pas', t => check(t, `
+  const a=activeZone(),savedZone=localStorage.getItem(ACTIVE_ZONE_STORAGE_KEY);
+  $('receivedZoneLat').value='46.75';$('receivedZoneLon').value='-24.50';
+  const pending=$('addReceivedZoneBtn').onclick();
+  await testCancelZoneSwitch(pending);
+  assert.equal(activeZoneId,a.id);
+  assert.equal(localStorage.getItem(ACTIVE_ZONE_STORAGE_KEY),savedZone);
+  assert.equal(zones.some(z=>isAnchoredZone(z)),false);
+  assert.equal(JSON.parse(localStorage.getItem('vhfGpsZonesV4Custom')||'[]').length,0);
+  assert.equal($('receivedZoneLat').value,'46.75');
+`));
+
+test('création d’une zone personnalisée : annuler ne l’enregistre pas', t => check(t, `
+  const a=activeZone(),savedZone=localStorage.getItem(ACTIVE_ZONE_STORAGE_KEY);
+  setZoneCenterInputMode('decimal',{persist:false});
+  $('zoneName').value='ESSAI';$('zoneLat').value='46.8';$('zoneLon').value='-24.5';
+  const pending=$('saveZoneBtn').onclick();
+  await testCancelZoneSwitch(pending);
+  assert.equal(activeZoneId,a.id);
+  assert.equal(localStorage.getItem(ACTIVE_ZONE_STORAGE_KEY),savedZone);
+  assert.equal(zones.some(z=>z.name==='ESSAI'),false);
+  assert.equal(JSON.parse(localStorage.getItem('vhfGpsZonesV4Custom')||'[]').length,0);
+`));
+
+test('création éphémère en émission : annuler garde la zone et ne sauvegarde rien', t => check(t, `
+  const a=activeZone(),savedZone=localStorage.getItem(ACTIVE_ZONE_STORAGE_KEY);
+  setPositionInputMode('decimal',{persist:false});
+  $('lat').value=String(a.lat);$('lon').value=String(a.lon);handlePositionChanged();
+  $('encodedBlock').classList.remove('hidden');
+  const pending=$('ephemeralZoneBtn').onclick();
+  await testCancelZoneSwitch(pending);
+  assert.equal(activeZoneId,a.id);
+  assert.equal(localStorage.getItem(ACTIVE_ZONE_STORAGE_KEY),savedZone);
+  assert.equal(zones.some(z=>isAnchoredZone(z)),false);
+  assert.equal(JSON.parse(localStorage.getItem('vhfGpsZonesV4Custom')||'[]').length,0);
+  assert.equal($('encodedBlock').classList.contains('hidden'),false);
+`));
+
+test('suggestion de zone compatible : aucune bascule avant validation', t => check(t, `
+  const a=activeZone(),far=BUILTIN_ZONES.findLast(z=>!zoneCheck(z.lat,z.lon,a).inside);
+  assert.ok(far);
+  setPositionInputMode('decimal',{persist:false});
+  setDecimalPosition(far.lat,far.lon);handlePositionChanged();
+  const oldLat=$('lat').value,oldLon=$('lon').value;
+  refreshEncodeState();
+  assert.equal($('useCompatibleZoneBtn').disabled,false);
+  const target=compatibleZones(far.lat,far.lon,a.id)[0].z;
+  const savedZone=localStorage.getItem(ACTIVE_ZONE_STORAGE_KEY);
+  const cancelled=$('useCompatibleZoneBtn').onclick();
+  assert.equal($('zoneSwitchTo').textContent,target.name);
+  await testCancelZoneSwitch(cancelled);
+  assert.equal(activeZoneId,a.id);
+  assert.equal(localStorage.getItem(ACTIVE_ZONE_STORAGE_KEY),savedZone);
+  await testAcceptZoneSwitch($('useCompatibleZoneBtn').onclick());
+  assert.equal(activeZoneId,target.id);
+  assert.equal(isZoneConfirmed(target),false);
+  assert.equal($('lat').value,oldLat);assert.equal($('lon').value,oldLon);
 `));
 
 test('suppression : zone de repli à reconfirmer, zone non active sans effet sur la confirmation', t => check(t, `
@@ -379,7 +505,7 @@ test('émission interrompue pendant la recherche : aucune ancienne zone réintro
 
 test('réception normale : création persistante, sélection et confirmation humaine', t => check(t, `
   $('receivedZoneLat').value='46.75';$('receivedZoneLon').value='-24.50';
-  await $('addReceivedZoneBtn').onclick();
+  await testAcceptZoneSwitch($('addReceivedZoneBtn').onclick());
   const z=activeZone();assert.equal(z.anchorLat,46.75);assert.equal(z.anchorLon,-24.5);
   assert.equal(isZoneConfirmed(z),false);
   assert.equal(JSON.parse(localStorage.getItem('vhfGpsZonesV4Custom')).some(x=>x.id===z.id),true);
@@ -398,7 +524,7 @@ test('émission normale : création éphémère et confirmation toujours fonctio
   const start=activeZone();
   setPositionInputMode('decimal',{persist:false});
   $('lat').value=String(start.lat);$('lon').value=String(start.lon);handlePositionChanged();
-  await $('ephemeralZoneBtn').onclick();
+  await testAcceptZoneSwitch($('ephemeralZoneBtn').onclick());
   assert.equal(scrolls,1);
   const z=activeZone();assert.equal(isAnchoredZone(z),true);
   assert.equal(isZoneConfirmed(z),false);
@@ -527,4 +653,434 @@ test('installation : confirmation directe disponible ou aide iPhone', t => check
   refreshInstallButton();
   assert.equal($('installAppBtn').classList.contains('hidden'),true);
   assert.equal($('installHelp').classList.contains('hidden'),true);
+`));
+
+test('sortie complète : création, texte copiable, contrôle et réimport sans effet', t => check(t, `
+  const previous=activeSecret();
+  await testCreateBuiltinOuting();
+  assert.notEqual(activeSecret(),previous);
+  assert.ok(isZoneConfirmed(activeZone()));
+  assert.equal(outingMatchesOriginalZone(activeZone()),true);
+  assert.equal($('copyOutingBtn').classList.contains('hidden'),false);
+  assert.match($('sessionCompactStatus').textContent,/Session active/);
+  const payload=await activeOutingPayload();
+  const invitation=await formatOutingInvitation(payload);
+  assert.match(invitation,/Envoyez cette invitation telle quelle/);
+  assert.match(invitation,/^🎣 Invitation pour une sortie VHF-GPS/u);
+  for(const icon of ['🗓️','📍','🔧','🔐','📣','📲','⚠️'])assert.ok(invitation.includes(icon));
+  const code=invitation.split(OUTING_BEGIN)[1].split(OUTING_END)[0].trim();
+  assert.match(code,/^[A-Za-z0-9_.-]+$/);
+  const prepared=await inspectOutingInvitation('Bonjour les amis\\n'+invitation+'\\nA demain !');
+  assert.equal(prepared.data.secret,activeSecret());
+  assert.equal(prepared.data.zone.id,activeZone().id);
+  const legacyLabels=invitation.replace('🔐 Alias de session','Alias de session').replace('📣 Alias de zone','Alias de zone');
+  assert.equal((await inspectOutingInvitation(legacyLabels)).data.id,payload.id);
+  const installedAt=localStorage.getItem(OUTING_INSTALLED_AT_KEY);
+  assert.equal(await installOutingInvitation(prepared),'Cette sortie est déjà installée et active.');
+  assert.equal(localStorage.getItem(OUTING_INSTALLED_AT_KEY),installedAt);
+  const badChar=code[12]==='A'?'B':'A';
+  const tampered=invitation.replace(code,code.slice(0,12)+badChar+code.slice(13));
+  await assert.rejects(inspectOutingInvitation(tampered),/intégrité/);
+`));
+
+test('le bouton copie le message complet et garde le code ASCII', t => check(t, `
+  await testCreateBuiltinOuting();
+  const payload=await activeOutingPayload();
+  let copied='';
+  navigator.clipboard={writeText:async text=>{copied=text;}};
+  await $('copyOutingBtn').onclick();
+  assert.equal($('outingShareDialog').open,true);
+  assert.equal(copied,'');
+  assert.equal($('copyOutingMessageBtn').disabled,false);
+  await $('copyOutingMessageBtn').onclick();
+  assert.equal(copied,$('outingShareText').value);
+  assert.match(copied,/Invitation pour une sortie VHF-GPS/);
+  assert.match(copied,/Envoyez cette invitation telle quelle/);
+  assert.ok(copied.includes('Alias de session (empreinte radio) : '+payload.fingerprint));
+  assert.ok(copied.includes('Alias de zone : '+payload.alias));
+  const code=copied.split(OUTING_BEGIN)[1].split(OUTING_END)[0].trim();
+  assert.match(code,/^VHF1\\.[A-Za-z0-9_-]+\\.[A-F0-9]{16}$/);
+  await assert.rejects(
+    inspectOutingInvitation(copied.replace('Alias de zone : '+payload.alias,'Alias de zone : AUTRE')),
+    /résumé lisible/
+  );
+  assert.match($('outingShareStatus').textContent,/Invitation copiée/);
+  $('closeOutingShare').onclick();
+  assert.equal($('outingShareDialog').open,false);
+  assert.equal($('outingShareText').value,'');
+`));
+
+test('partage natif : message entier transmis au téléphone sans URL contenant le secret', t => check(t, `
+  await testCreateBuiltinOuting();
+  const calls=[];
+  navigator.canShare=data=>typeof data.text==='string';
+  navigator.share=data=>{calls.push(data);return Promise.resolve();};
+  await $('copyOutingBtn').onclick();
+  assert.equal($('nativeShareOutingBtn').classList.contains('hidden'),false);
+  assert.equal($('nativeShareOutingBtn').disabled,false);
+  const invitation=$('outingShareText').value;
+  const pending=$('nativeShareOutingBtn').onclick();
+  assert.equal(calls.length,1);
+  assert.equal(calls[0].text,invitation);
+  assert.deepEqual(Object.keys(calls[0]),['text']);
+  await pending;
+  assert.match($('outingShareStatus').textContent,/Vérifie le destinataire/);
+  assert.equal($('copyOutingMessageBtn').disabled,false);
+
+  navigator.share=()=>Promise.reject(Object.assign(new Error('annulé'),{name:'AbortError'}));
+  await $('nativeShareOutingBtn').onclick();
+  assert.match($('outingShareStatus').textContent,/Partage annulé/);
+  assert.equal($('outingShareText').value,invitation);
+  assert.equal($('copyOutingMessageBtn').disabled,false);
+`));
+
+test('sans partage natif, le bouton de partage est masqué et la copie reste disponible', t => check(t, `
+  await testCreateBuiltinOuting();
+  await $('copyOutingBtn').onclick();
+  assert.equal($('nativeShareOutingBtn').classList.contains('hidden'),true);
+  assert.equal($('copyOutingMessageBtn').disabled,false);
+`));
+
+test('partage : fermer pendant la préparation écarte le résultat tardif', t => check(t, `
+  await testCreateBuiltinOuting();
+  const original=activeOutingPayload;
+  let release;
+  activeOutingPayload=async()=>new Promise(resolve=>{release=()=>original().then(resolve);});
+  const preparing=$('copyOutingBtn').onclick();
+  assert.equal($('outingShareDialog').open,true);
+  assert.equal(typeof release,'function');
+  $('closeOutingShare').onclick();
+  release();
+  await preparing;
+  assert.equal($('outingShareDialog').open,false);
+  assert.equal($('outingShareText').value,'');
+  assert.equal(outingShareReady,null);
+  assert.equal($('copyOutingBtn').disabled,false);
+  activeOutingPayload=original;
+`));
+
+test('partage : une autre sortie sur la même zone écarte l’ancienne invitation en cours', t => check(t, `
+  await testCreateBuiltinOuting();
+  const payload=await activeOutingPayload();
+  const originalPayload=activeOutingPayload,originalFormat=formatOutingInvitation;
+  activeOutingPayload=async()=>payload;
+  let release;
+  formatOutingInvitation=()=>new Promise(resolve=>{release=()=>originalFormat(payload).then(resolve);});
+  const pending=$('copyOutingBtn').onclick();
+  await Promise.resolve();
+  assert.equal(typeof release,'function');
+  const newId=randomOutingId();
+  localStorage.setItem(OUTING_ID_KEY,newId);
+  saveOutingOrigin(newId,activeZone());
+  release();await pending;
+  assert.equal($('outingShareText').value,'');
+  assert.equal(outingShareReady,null);
+  assert.match($('outingShareStatus').textContent,/session ou la zone a changé/);
+  activeOutingPayload=originalPayload;formatOutingInvitation=originalFormat;
+`));
+
+test('partage : une copie refusée garde le message visible pour copie manuelle', t => check(t, `
+  await testCreateBuiltinOuting();
+  navigator.clipboard={writeText:async()=>{throw new Error('refus');}};
+  await $('copyOutingBtn').onclick();
+  await $('copyOutingMessageBtn').onclick();
+  assert.equal($('outingShareDialog').open,true);
+  assert.match($('outingShareStatus').textContent,/copie-la manuellement/);
+  assert.match($('outingShareText').value,/Invitation pour une sortie/);
+  assert.equal($('copyOutingMessageBtn').disabled,false);
+`));
+
+test('import par la modale : aucune activation avant le clic final', t => check(t, `
+  await testCreateBuiltinOuting();
+  const invitation=await formatOutingInvitation(await activeOutingPayload());
+  await installValidatedSecret(generateSessionSecret());
+  const before=activeSecret();
+  $('receiveOutingBtn').onclick();
+  assert.equal($('outingImportDialog').open,true);
+  assert.equal($('outingImportSummary').classList.contains('hidden'),true);
+  $('outingImportText').value='Bonjour\\n'+invitation+'\\nA demain';
+  await $('checkOutingBtn').onclick();
+  assert.equal($('outingImportDialog').open,true);
+  assert.equal(activeSecret(),before);
+  assert.equal($('outingImportSummary').classList.contains('hidden'),false);
+  assert.match($('outingImportSummary').children[0].children[1].textContent,/\\d/);
+  await $('confirmOutingImport').onclick();
+  assert.equal($('outingImportDialog').open,false);
+  assert.notEqual(activeSecret(),before);
+  assert.ok(isZoneConfirmed(activeZone()));
+  assert.equal($('outingImportText').value,'');
+`));
+
+test('réception : annuler ou modifier le texte n’installe rien', t => check(t, `
+  await testCreateBuiltinOuting();
+  const invitation=await formatOutingInvitation(await activeOutingPayload());
+  await installValidatedSecret(generateSessionSecret());
+  const before=activeSecret(),zoneId=activeZoneId;
+  $('receiveOutingBtn').onclick();
+  $('outingImportText').value=invitation;
+  await $('checkOutingBtn').onclick();
+  assert.ok(pendingOutingImport);
+  $('outingImportText').value+=' texte corrigé';
+  $('outingImportText').dispatchEvent({type:'input'});
+  assert.equal(pendingOutingImport,null);
+  assert.equal($('outingImportSummary').classList.contains('hidden'),true);
+  await $('confirmOutingImport').onclick();
+  assert.equal(activeSecret(),before);
+  assert.equal(activeZoneId,zoneId);
+  $('cancelOutingImport').onclick();
+  assert.equal($('outingImportDialog').open,false);
+  assert.equal($('outingImportText').value,'');
+  assert.equal(activeSecret(),before);
+`));
+
+test('réception : erreur et résultat asynchrone périmé restent dans la fenêtre', t => check(t, `
+  const before=activeSecret();
+  $('receiveOutingBtn').onclick();
+  $('outingImportText').value='message sans code';
+  await $('checkOutingBtn').onclick();
+  assert.match($('outingImportDialogError').textContent,/introuvable/);
+  assert.equal($('outingImportSummary').classList.contains('hidden'),true);
+  const original=inspectOutingInvitation;
+  let release;
+  inspectOutingInvitation=async()=>new Promise(resolve=>{release=()=>resolve({data:{},zone:{},fingerprint:'',alias:''});});
+  const pending=$('checkOutingBtn').onclick();
+  assert.equal(typeof release,'function');
+  $('cancelOutingImport').onclick();
+  release();
+  await pending;
+  assert.equal($('outingImportDialog').open,false);
+  assert.equal(pendingOutingImport,null);
+  assert.equal(activeSecret(),before);
+  inspectOutingInvitation=original;
+`));
+
+test('sortie complète : refus avant confirmation et restauration avec date d’origine', t => check(t, `
+  await testCreateBuiltinOuting();
+  const payload=await activeOutingPayload();
+  const invitation=await formatOutingInvitation(payload);
+  const other=generateSessionSecret();
+  await installValidatedSecret(other);
+  assert.notEqual(activeSecret(),payload.secret);
+  const prepared=await inspectOutingInvitation(invitation);
+  assert.equal(activeSecret(),other);
+  const result=await installOutingInvitation(prepared);
+  assert.match(result,/Sortie installée/);
+  assert.equal(activeSecret(),payload.secret);
+  assert.equal(sessionCreatedAt(),payload.createdAt);
+  assert.equal(localStorage.getItem(OUTING_ID_KEY),payload.id);
+  assert.ok(isZoneConfirmed(activeZone()));
+  const wrongCompat={...payload,compat:'0'.repeat(64)};
+  await assert.rejects(inspectOutingInvitation(await formatOutingInvitation(wrongCompat)),/COMPAT différent/);
+`));
+
+test('session manuelle : une zone éphémère confirmée ne devient pas une sortie complète à partager', t => check(t, `
+  await $('generateSecret').onclick();
+  const secret=activeSecret(),anchorLat=46.75,anchorLon=-3.25;
+  const original=await saveOrSelectEphemeralZone(anchorLat,anchorLon,secret);
+  setActiveZone(original.id,{refresh:false});
+  await confirmActiveZoneAlias();
+  assert.equal(localStorage.getItem(OUTING_ID_KEY),null);
+  assert.equal(outingMatchesOriginalZone(original),false);
+  assert.equal($('copyOutingBtn').classList.contains('hidden'),true);
+  await assert.rejects(activeOutingPayload(),/sortie créée ou importée/);
+`));
+
+test('zone éphémère de sortie : même libellé des deux côtés, suppression protégée et préparation anticipée', t => check(t, `
+  $('createOutingBtn').onclick();
+  $('outingEphemeralChoice').onclick();$('outingDecimalMode').onclick();
+  $('outingLat').value='46.60';$('outingLon').value='-3.30';
+  await $('checkOutingCreate').onclick();await $('confirmOutingCreate').onclick();
+  const creator=activeZone(),creatorName=creator.name;
+  assert.equal(creatorName,OUTING_EPHEMERAL_NAME);
+  assert.equal(zoneDisplayName(creator),'** '+OUTING_EPHEMERAL_NAME+' **');
+  assert.equal(isOutingEphemeral(creator),true);
+  assert.equal(outingMatchesOriginalZone(creator),true);
+  assert.equal($('copyOutingBtn').classList.contains('hidden'),false);
+  const legacy={...creator,name:'ÉPHÉMÈRE 12:30'};
+  delete legacy.outingId;
+  localStorage.setItem('vhfGpsZonesV4Custom',JSON.stringify([legacy]));
+  const migrated=loadZones().find(z=>z.id===creator.id);
+  assert.equal(migrated.name,OUTING_EPHEMERAL_NAME);
+  assert.equal(migrated.outingId,localStorage.getItem(OUTING_ID_KEY));
+  saveZones();
+  assert.equal($('sendDeleteZoneBtn').classList.contains('hidden'),true);
+  assert.equal($('recvDeleteZoneBtn').classList.contains('hidden'),true);
+  const payload=await activeOutingPayload(),invitation=await formatOutingInvitation(payload);
+  creator.createdAt=Date.now()-3*EPHEMERAL_TTL_MS;
+  saveZones();
+  assert.equal(isRecentEphemeral(creator),true);
+  assert.ok(loadZones().some(z=>z.id===creator.id));
+  setActiveZone(creator.id);
+  assert.equal(activeZone().id,creator.id);
+  requestZoneDeletion(creator.id,'manageZoneSelect');
+  assert.equal($('zoneDeleteDialog').open,false);
+  assert.match($('zoneStatus').textContent,/conservée/);
+  assert.throws(()=>deleteCustomZone(creator.id),/conservée/);
+  $('manageZoneSelect').value=creator.id;$('manageZoneSelect').onchange();
+  assert.equal($('deleteZoneBtn').disabled,true);
+  const ordinary=await saveOrSelectEphemeralZone(46.75,-24.5,activeSecret(),'ORDINAIRE');
+  await populateZones();
+  assert.match($('deleteEphemeralZonesBtn').textContent,/LA ZONE ÉPHÉMÈRE/);
+  $('deleteEphemeralZonesBtn').onclick();
+  assert.match($('zoneDeleteDescription').textContent,/zone éphémère de sortie sera conservée/);
+  $('confirmZoneDelete').onclick();
+  assert.ok(zones.some(z=>z.id===creator.id));
+  assert.ok(!zones.some(z=>z.id===ordinary.id));
+  assert.equal(activeZone().id,creator.id);
+  assert.equal($('deleteEphemeralZonesBtn').disabled,true);
+  await installValidatedSecret(generateSessionSecret());
+  assert.ok(!zones.some(z=>z.id===creator.id));
+  const prepared=await inspectOutingInvitation(invitation);
+  await installOutingInvitation(prepared);
+  assert.equal(activeZone().name,creatorName);
+  assert.equal(isOutingEphemeral(activeZone()),true);
+  assert.equal(outingMatchesOriginalZone(activeZone()),true);
+  assert.equal($('copyOutingBtn').classList.contains('hidden'),false);
+  assert.equal(zoneFingerprint(activeZone()),zoneFingerprint(creator));
+  activeZone().createdAt=Date.now()-3*EPHEMERAL_TTL_MS;
+  saveZones();
+  assert.ok(loadZones().some(z=>z.id===activeZoneId));
+`));
+
+test('préparation intégrée : catalogue unique, choix indépendant et annulation sans effet', t => check(t, `
+  const oldSecret=activeSecret(),oldZone=activeZone();
+  $('createOutingBtn').onclick();
+  assert.equal($('outingCreateDialog').open,true);
+  assert.equal($('outingBoundsPreview').classList.contains('hidden'),false);
+  assert.match($('outingBoundsPreview').innerHTML,/Limites encodables/);
+  assert.equal($('outingBuiltinSelect').options.length,BUILTIN_ZONES.length);
+  for(const z of BUILTIN_ZONES){
+    assert.ok(z.region,'Chaque zone intégrée doit indiquer sa façade maritime.');
+    assert.ok($('outingBuiltinSelect').options.some(option=>option.value===z.id));
+    assert.ok($('outingBuiltinSelect').options.some(option=>option.value===z.id&&option.textContent.startsWith(z.region+' · ')));
+  }
+  const selected=BUILTIN_ZONES.find(z=>z.id!==oldZone.id);
+  $('outingBuiltinSelect').value=selected.id;
+  $('outingBuiltinSelect').onchange();
+  assert.ok($('outingBoundsPreview').innerHTML.includes(formatDegMin(selected.lat,true)));
+  assert.equal(activeZone().id,oldZone.id);
+  await $('checkOutingCreate').onclick();
+  assert.equal(activeSecret(),oldSecret);
+  assert.equal(activeZone().id,oldZone.id);
+  $('cancelOutingCreate').onclick();
+  assert.equal($('outingBoundsPreview').classList.contains('hidden'),true);
+  assert.equal(activeSecret(),oldSecret);
+  assert.equal(activeZone().id,oldZone.id);
+  $('createOutingBtn').onclick();
+  $('outingBuiltinSelect').value=selected.id;
+  await $('checkOutingCreate').onclick();
+  await $('confirmOutingCreate').onclick();
+  assert.notEqual(activeSecret(),oldSecret);
+  assert.equal(activeZone().id,selected.id);
+  assert.ok(isZoneConfirmed(activeZone()));
+`));
+
+test('préparation éphémère : référence indépendante d’ÉMETTRE et centre recalculé', t => check(t, `
+  const oldSecret=activeSecret();
+  setPositionInputMode('decimal',{persist:false});
+  $('lat').value='1';$('lon').value='2';syncPositionFromDecimal();
+  $('createOutingBtn').onclick();
+  $('outingEphemeralChoice').onclick();
+  assert.equal($('outingBoundsPreview').classList.contains('hidden'),true);
+  $('outingDecimalMode').onclick();
+  $('outingLat').value='46.60';$('outingLon').value='-3.30';
+  await $('checkOutingCreate').onclick();
+  assert.equal(activeSecret(),oldSecret);
+  assert.equal($('outingCreateSummary').classList.contains('hidden'),false);
+  assert.equal($('outingBoundsPreview').classList.contains('hidden'),false);
+  assert.ok($('outingBoundsPreview').innerHTML.includes(formatDegMin(pendingOutingCreation.candidate.lat,true)));
+  assert.match($('outingBoundsPreview').innerHTML,/ne pas transmettre à la VHF/);
+  assert.match($('outingCreateSummary').children[1].children[1].textContent,/46°/);
+  await $('confirmOutingCreate').onclick();
+  assert.notEqual(activeSecret(),oldSecret);
+  assert.ok(isAnchoredZone(activeZone()));
+  const expected=await deriveSecretCenter(activeSecret(),activeZone().anchorLat,activeZone().anchorLon);
+  assert.equal(activeZone().lat,expected.lat);
+  assert.equal(activeZone().lon,expected.lon);
+  assert.ok(zoneCheck(46.60,-3.30,activeZone()).nearest>=EPHEMERAL_EDGE_MARGIN_KM);
+  assert.equal($('lat').value,'1');
+  assert.equal($('lon').value,'2');
+`));
+
+test('préparation éphémère : modifier la référence invalide la vérification', t => check(t, `
+  const secret=activeSecret(),zoneId=activeZoneId;
+  $('createOutingBtn').onclick();
+  $('outingEphemeralChoice').onclick();
+  $('outingDecimalMode').onclick();
+  $('outingLat').value='46.60';$('outingLon').value='-3.30';
+  await $('checkOutingCreate').onclick();
+  assert.ok(pendingOutingCreation);
+  assert.equal($('outingBoundsPreview').classList.contains('hidden'),false);
+  $('outingLat').value='46.61';
+  $('outingLat').dispatchEvent({type:'input'});
+  assert.equal(pendingOutingCreation,null);
+  assert.equal($('outingBoundsPreview').classList.contains('hidden'),true);
+  assert.equal($('confirmOutingCreate').classList.contains('hidden'),true);
+  await $('confirmOutingCreate').onclick();
+  assert.equal(activeSecret(),secret);
+  assert.equal(activeZoneId,zoneId);
+  await $('checkOutingCreate').onclick();
+  await $('confirmOutingCreate').onclick();
+  assert.equal(zoneCheck(46.61,-3.30,activeZone()).inside,true);
+`));
+
+test('préparation éphémère : un ancien calcul ne produit pas de brouillon', t => check(t, `
+  const secret=activeSecret(),zoneId=activeZoneId;
+  $('createOutingBtn').onclick();
+  $('outingEphemeralChoice').onclick();
+  $('outingDecimalMode').onclick();
+  $('outingLat').value='46.60';$('outingLon').value='-3.30';
+  const original=createEphemeralZoneCandidate;
+  let release;
+  createEphemeralZoneCandidate=async (...args)=>{
+    await new Promise(resolve=>release=resolve);
+    return original(...args);
+  };
+  const review=$('checkOutingCreate').onclick();
+  assert.equal(typeof release,'function');
+  $('outingLat').value='46.61';
+  $('outingLat').dispatchEvent({type:'input'});
+  release();
+  await review;
+  assert.equal(pendingOutingCreation,null);
+  assert.equal($('outingCreateSummary').classList.contains('hidden'),true);
+  assert.equal(activeSecret(),secret);
+  assert.equal(activeZoneId,zoneId);
+  createEphemeralZoneCandidate=original;
+  await $('checkOutingCreate').onclick();
+  assert.ok(pendingOutingCreation);
+  assert.equal(activeSecret(),secret);
+`));
+test('un changement manuel de zone conserve la sortie mais exige une nouvelle confirmation', t => check(t, `
+  await testCreateBuiltinOuting();
+  const oldZone=activeZone(),oldId=localStorage.getItem(OUTING_ID_KEY);
+  const target=BUILTIN_ZONES.find(z=>z.id!==oldZone.id);
+  setActiveZone(target.id,{refresh:false});
+  assert.equal(localStorage.getItem(OUTING_ID_KEY),oldId);
+  assert.equal(isZoneConfirmed(target),false);
+  assert.equal($('copyOutingBtn').disabled,true);
+  assert.equal($('copyOutingBtn').classList.contains('hidden'),true);
+  await confirmActiveZoneAlias();
+  assert.equal($('copyOutingBtn').classList.contains('hidden'),true);
+  await assert.rejects(activeOutingPayload(),/zone active ne correspond pas/);
+  setActiveZone(oldZone.id,{refresh:false});
+  assert.equal(isZoneConfirmed(oldZone),false);
+  assert.equal($('copyOutingBtn').classList.contains('hidden'),true);
+  await confirmActiveZoneAlias();
+  assert.equal($('copyOutingBtn').classList.contains('hidden'),false);
+  assert.equal((await activeOutingPayload()).zone.id,oldZone.id);
+  assert.ok(oldId);
+`));
+
+test('ancienne sortie sans zone d’origine enregistrée : partage masqué jusqu’au réimport', t => check(t, `
+  await testCreateBuiltinOuting();
+  const invitation=await formatOutingInvitation(await activeOutingPayload());
+  localStorage.removeItem(OUTING_ORIGIN_KEY);
+  refreshOutingActions();
+  assert.equal($('copyOutingBtn').classList.contains('hidden'),true);
+  await assert.rejects(activeOutingPayload(),/réinstalle l'invitation/);
+  const prepared=await inspectOutingInvitation(invitation);
+  assert.match(await installOutingInvitation(prepared),/Sortie installée/);
+  assert.equal(outingMatchesOriginalZone(activeZone()),true);
+  assert.equal($('copyOutingBtn').classList.contains('hidden'),false);
 `));

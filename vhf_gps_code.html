@@ -1185,6 +1185,12 @@ select.ephemeral-zone-active{
   background:var(--custom-zone-line);
   color:var(--custom-zone-banner-text);
 }
+.zone-outing-badge{
+  display:inline-flex;align-items:center;margin-left:8px;padding:3px 8px;
+  border:1px solid var(--ephemeral-line);border-radius:999px;background:var(--ephemeral-bg);
+  color:var(--ephemeral-line);font-size:.72rem;font-weight:900;vertical-align:middle;
+}
+:root[data-theme="day"] .zone-outing-badge{color:var(--ephemeral-text)}
 select.custom-zone-active{
   border:3px solid var(--custom-zone-line)!important;
 }
@@ -1379,6 +1385,85 @@ select.custom-zone-active{
 .session-actions button{width:auto;margin:0}
 .session-action-small{padding:8px 12px;min-height:38px;font-size:.78rem}
 .session-action-main{padding:9px 14px;min-height:40px;font-size:.82rem}
+.outing-details{margin-top:12px;padding-top:8px;border-top:1px solid color-mix(in srgb,var(--session-line) 35%,transparent)}
+.outing-details>summary{cursor:pointer;font-weight:800;color:var(--session-muted);padding:8px 2px}
+.outing-body{display:grid;gap:10px;margin-top:8px}
+.outing-body p{margin:0;line-height:1.45}
+.outing-actions{display:flex;flex-wrap:wrap;gap:8px}
+.outing-actions button{flex:1 1 190px;min-height:46px;margin:0}
+#receiveOutingBtn{background:rgba(7,89,168,.22);border:2px solid #5ca5e9;color:#eaf5ff}
+:root[data-theme="day"] #receiveOutingBtn{background:#e4f1ff;border-color:#0759a8;color:#0759a8}
+.outing-btn-zone{display:block;margin-top:4px;font-size:.78rem;line-height:1.3;overflow-wrap:anywhere}
+.outing-textarea{width:100%;box-sizing:border-box;min-height:116px;resize:vertical;font-size:16px;line-height:1.4;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.outing-summary{display:grid;gap:8px;margin:12px 0}
+.outing-summary>div{padding:9px 11px;border-radius:9px;background:var(--session-surface);overflow-wrap:anywhere}
+.outing-summary strong{display:block;margin-bottom:3px}
+.outing-bound-preview{margin:14px 0 4px;color:var(--focus-text)}
+.outing-bound-preview .zone-bounds-title,.outing-bound-preview .zone-bound-cell strong{color:var(--session-muted)}
+.outing-bound-preview .zone-bound-grid{--bound-cell-w:min(27vw,96px)}
+.outing-bound-preview .zone-bound-cell{background:var(--session-surface);border-color:var(--session-line)}
+.outing-bound-preview .zone-bound-cell span{white-space:normal;overflow-wrap:anywhere}
+.outing-bound-preview .zone-bound-cell.center{background:transparent}
+.outing-bound-preview .small{margin:9px 0 0;color:var(--session-muted)}
+.outing-position-lines{white-space:pre-line}
+dialog.outing-setup-dialog{
+  --setup-blue:#2377bc;
+  --setup-blue-tint:#193c55;
+  --setup-blue-text:#d6efff;
+  width:min(640px,calc(100vw - 24px));max-height:calc(100dvh - 24px);
+  overflow:auto;box-sizing:border-box;
+  background:var(--session-bg);color:var(--focus-text);
+  border:2px solid var(--session-line)
+}
+:root[data-theme="day"] dialog.outing-setup-dialog{
+  --setup-blue:#0759a8;
+  --setup-blue-tint:#dceeff;
+  --setup-blue-text:#064780
+}
+.outing-setup-dialog p,.outing-setup-dialog .small,.outing-setup-dialog label{color:var(--session-muted)}
+#outingCreateDialog input,#outingCreateDialog select,#outingImportDialog textarea,#outingShareDialog textarea{
+  background:var(--session-surface);color:var(--focus-text);
+  border-color:var(--session-line)
+}
+#outingCreateDialog input:focus,#outingCreateDialog select:focus,#outingImportDialog textarea:focus,#outingShareDialog textarea:focus{border-color:var(--setup-blue)}
+#outingImportDialog textarea{min-height:160px;margin-top:6px}
+#outingShareDialog textarea{min-height:min(40dvh,320px);margin-top:6px}
+.outing-setup-dialog h2{margin-top:0}
+.outing-setup-field{display:grid;gap:7px;margin-top:14px}
+.outing-setup-field>label{font-weight:800}
+.outing-setup-field select,.outing-setup-field input{width:100%;box-sizing:border-box;min-height:44px;font-size:16px}
+.outing-setup-choices{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.outing-setup-choices button{margin:0;min-height:48px}
+#outingBuiltinChoice,#outingMarineMode,#outingDecimalMode,#outingGpsBtn{
+  background:var(--setup-blue-tint);border:2px solid var(--setup-blue);color:var(--setup-blue-text)
+}
+#outingEphemeralChoice{
+  background:var(--ephemeral-bg);border:2px solid var(--ephemeral-line);color:var(--ephemeral-text)
+}
+#outingBuiltinChoice.active,#outingMarineMode.active,#outingDecimalMode.active{
+  background:var(--setup-blue);color:#fff;box-shadow:0 0 0 2px var(--session-bg),0 0 0 4px var(--setup-blue)
+}
+#outingEphemeralChoice.active{
+  background:#7c4dcb;border-color:#7c4dcb;color:#fff;
+  box-shadow:0 0 0 2px var(--session-bg),0 0 0 4px #7c4dcb
+}
+#cancelOutingCreate,#cancelOutingImport,#closeOutingShare{
+  background:#b42332;border:2px solid #b42332;color:#fff
+}
+#checkOutingCreate,#confirmOutingCreate,#checkOutingBtn,#confirmOutingImport,#copyOutingMessageBtn{
+  background:var(--setup-blue);border:2px solid var(--setup-blue);color:#fff
+}
+#copyOutingMessageBtn:disabled{opacity:.55;cursor:not-allowed}
+#nativeShareOutingBtn{flex-basis:100%;background:#16835a;border:2px solid #16835a;color:#fff}
+:root[data-theme="day"] #nativeShareOutingBtn{background:#087849;border-color:#087849;color:#fff}
+#nativeShareOutingBtn:disabled{opacity:.55;cursor:not-allowed}
+.outing-setup-dialog button:focus-visible{outline:3px solid var(--session-line);outline-offset:3px}
+.outing-setup-coordinate-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.outing-setup-coordinate-grid label{font-size:.82rem;font-weight:700}
+.outing-setup-coordinate-grid input,.outing-setup-coordinate-grid select{margin-top:4px}
+.outing-setup-review{margin-top:14px}
+.outing-setup-review strong{display:block;margin-bottom:3px}
+@media(max-width:600px){dialog.outing-setup-dialog{width:100vw;max-width:none;max-height:100dvh;height:100dvh;margin:0;border-radius:0}.outing-setup-coordinate-grid{grid-template-columns:1fr 1fr 1fr}}
 .session-paste-help{
   margin-top:9px;
   padding:9px 11px;
@@ -1575,6 +1660,14 @@ select.custom-zone-active{
 .zone-delete-name{display:block;margin:12px 0;overflow-wrap:anywhere}
 .zone-delete-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
 .zone-delete-actions button{flex:1 1 140px;min-height:48px}
+.zone-switch-route{display:grid;gap:4px;margin:12px 0;padding:12px;border-left:4px solid #d97706;background:rgba(217,119,6,.10)}
+.zone-switch-route span{font-size:.68rem;font-weight:900;letter-spacing:.06em}
+.zone-switch-route strong{overflow-wrap:anywhere}
+.zone-switch-route .zone-switch-arrow{font-size:1.2rem;line-height:1;text-align:center}
+#zoneSwitchDetail{margin:8px 0;overflow-wrap:anywhere}
+#cancelZoneSwitch{background:#b42332;border-color:#b42332;color:#fff}
+#confirmZoneSwitch{background:#2377bc;border-color:#2377bc;color:#fff}
+:root[data-theme="day"] #confirmZoneSwitch{background:#0759a8;border-color:#0759a8;color:#fff}
 #sendDeleteZoneBtn,
 #recvDeleteZoneBtn,
 #deleteZoneBtn,
@@ -2264,11 +2357,23 @@ button:focus-visible,
       <div class="session-fingerprint" id="fingerprintWords"></div>
     </div>
 
+    <details id="outingSettings" class="outing-details">
+      <summary>Créer, partager ou installer une sortie</summary>
+      <div class="outing-body">
+        <div id="outingLocalTimes" class="small"></div>
+        <div class="outing-actions">
+          <button type="button" class="primary" id="createOutingBtn">PRÉPARER UNE NOUVELLE SORTIE</button>
+          <button type="button" class="secondary hidden" id="copyOutingBtn">PARTAGER LA SORTIE ACTIVE</button>
+          <button type="button" class="secondary" id="receiveOutingBtn">RECEVOIR UNE INVITATION</button>
+        </div>
+      </div>
+    </details>
+
     <details id="sessionSettings" class="session-details">
       <summary>Réglages de session</summary>
 
       <div class="small" style="margin:6px 0 10px">
-        Le secret est commun aux rôles ÉMETTRE et RECEVOIR. Partage-le par messagerie privée avant la sortie.
+        Le secret est commun aux rôles ÉMETTRE et RECEVOIR. L'invitation complète ci-dessus partage aussi la zone. La saisie du secret seul reste disponible.
       </div>
 
       <label for="sessionKey">Secret de session</label>
@@ -2284,8 +2389,8 @@ button:focus-visible,
       </div>
 
       <div id="sessionPasteHelp" class="session-paste-help">
-        <strong>Session reçue ?</strong> Appui long dans le champ puis <strong>Coller</strong>.
-        Dès que le secret est valide, il est enregistré et activé automatiquement.
+        <strong>Secret seul reçu ?</strong> Appui long dans le champ puis <strong>Coller</strong>.
+        Dès que le secret est valide, il est enregistré et activé automatiquement. Pour une invitation complète, utilise « Recevoir une invitation » plus haut.
       </div>
 
       <div id="sessionState" class="zone-summary session-state-compact">Aucune session active.</div>
@@ -2326,7 +2431,7 @@ button:focus-visible,
       <div id="sendZoneAlias" class="zone-alias-inline radio-block hidden"></div>
       <div class="zone-confirm-inline" id="sendZoneConfirmBlock">
         <div id="sendZoneConfirmState" class="protocol-state-pill protocol-state-provisional">● ALIAS ZONE À CONFIRMER</div>
-        <button class="secondary zone-confirm-btn" id="sendZoneConfirmBtn">J’AI COMPARÉ — L’ALIAS ZONE CORRESPOND</button>
+        <button class="secondary zone-confirm-btn" id="sendZoneConfirmBtn">⚠ OBLIGATOIRE — J’AI COMPARÉ L’ALIAS DE CETTE ZONE À LA RADIO</button>
       </div>
       <button type="button" class="smallbtn zone-delete-trigger hidden" id="sendDeleteZoneBtn">🗑 Supprimer cette zone</button>
       <div id="sendZoneActionStatus" class="status hidden" role="status"></div>
@@ -2422,7 +2527,7 @@ button:focus-visible,
             <div class="small" style="margin-top:8px;text-align:center">
               Le récepteur saisit l'ancre puis annonce l'alias obtenu. Compare-le avec celui affiché ici, puis confirme manuellement la zone.
             </div>
-            <button class="primary" id="ephemeralAliasConfirmBtn" disabled>J’AI COMPARÉ — L’ALIAS ZONE CORRESPOND</button>
+            <button class="primary" id="ephemeralAliasConfirmBtn" disabled>⚠ OBLIGATOIRE — J’AI COMPARÉ L’ALIAS DE CETTE ZONE À LA RADIO</button>
             <div id="ephemeralConfirmStatus" class="status hidden"></div>
           </div>
 
@@ -2513,7 +2618,7 @@ button:focus-visible,
       <div class="zone-confirm-inline" id="recvZoneConfirmBlock">
         <div id="recvZoneConfirmState" class="protocol-state-pill protocol-state-provisional">● ALIAS ZONE À CONFIRMER</div>
         <div id="receivedZoneNotice" class="status hidden" role="status"></div>
-        <button class="secondary zone-confirm-btn" id="recvZoneConfirmBtn">J’AI COMPARÉ — L’ALIAS ZONE CORRESPOND</button>
+        <button class="secondary zone-confirm-btn" id="recvZoneConfirmBtn">⚠ OBLIGATOIRE — J’AI COMPARÉ L’ALIAS DE CETTE ZONE À LA RADIO</button>
       </div>
       <button type="button" class="smallbtn zone-delete-trigger hidden" id="recvDeleteZoneBtn">🗑 Supprimer cette zone</button>
       <div id="recvZoneActionStatus" class="status hidden" role="status"></div>
@@ -2803,6 +2908,91 @@ button:focus-visible,
     <button type="button" id="confirmZoneDelete">Supprimer la zone</button>
   </div>
 </dialog>
+<dialog id="zoneSwitchDialog" class="zone-delete-dialog" aria-labelledby="zoneSwitchTitle" aria-describedby="zoneSwitchDescription">
+  <h2 id="zoneSwitchTitle">Changer de zone ?</h2>
+  <div class="zone-switch-route">
+    <span>ZONE ACTUELLE</span><strong id="zoneSwitchFrom"></strong>
+    <span class="zone-switch-arrow" aria-hidden="true">↓</span>
+    <span>NOUVELLE ZONE</span><strong id="zoneSwitchTo"></strong>
+  </div>
+  <p id="zoneSwitchDetail" class="small hidden"></p>
+  <p id="zoneSwitchDescription">Ce changement annule les résultats préparés et impose une nouvelle confirmation de l’alias zone à la radio. Annuler conserve la zone actuelle.</p>
+  <div class="zone-delete-actions">
+    <button type="button" id="cancelZoneSwitch" autofocus>ANNULER</button>
+    <button type="button" id="confirmZoneSwitch">ACTIVER CETTE ZONE</button>
+  </div>
+</dialog>
+<dialog id="outingCreateDialog" class="zone-delete-dialog outing-setup-dialog" aria-labelledby="outingCreateTitle" aria-describedby="outingCreateDescription">
+  <h2 id="outingCreateTitle">Préparer une nouvelle sortie</h2>
+  <p id="outingCreateDescription">Choisis ici la zone de la sortie. Rien ne change sur ce téléphone avant la confirmation finale.</p>
+  <div class="outing-setup-choices" role="group" aria-label="Type de zone">
+    <button type="button" id="outingBuiltinChoice">ZONE INTÉGRÉE</button>
+    <button type="button" id="outingEphemeralChoice">ZONE ÉPHÉMÈRE</button>
+  </div>
+  <div id="outingBuiltinFields" class="outing-setup-field">
+    <label for="outingBuiltinSelect">Zone intégrée du catalogue</label>
+    <select id="outingBuiltinSelect"></select>
+  </div>
+  <div id="outingEphemeralFields" class="hidden">
+    <p class="small">Saisis une position de référence pour créer la zone. Elle ne remplit pas la position à transmettre dans ÉMETTRE.</p>
+    <div class="outing-setup-choices" role="group" aria-label="Format de la position de référence">
+      <button type="button" id="outingMarineMode">MARINE</button>
+      <button type="button" id="outingDecimalMode">DÉCIMAL</button>
+    </div>
+    <div id="outingMarineFields" class="outing-setup-field">
+      <div class="outing-setup-coordinate-grid">
+        <label for="outingLatDeg">Latitude · °<input id="outingLatDeg" inputmode="numeric" autocomplete="off"></label>
+        <label for="outingLatMin">Minutes<input id="outingLatMin" inputmode="decimal" autocomplete="off"></label>
+        <label for="outingLatHem">N/S<select id="outingLatHem"><option value="N">N</option><option value="S">S</option></select></label>
+      </div>
+      <div class="outing-setup-coordinate-grid">
+        <label for="outingLonDeg">Longitude · °<input id="outingLonDeg" inputmode="numeric" autocomplete="off"></label>
+        <label for="outingLonMin">Minutes<input id="outingLonMin" inputmode="decimal" autocomplete="off"></label>
+        <label for="outingLonHem">E/W<select id="outingLonHem"><option value="E">E</option><option value="W">W</option></select></label>
+      </div>
+    </div>
+    <div id="outingDecimalFields" class="outing-setup-field hidden">
+      <label for="outingLat">Latitude décimale<input id="outingLat" inputmode="decimal" autocomplete="off" placeholder="46.25000"></label>
+      <label for="outingLon">Longitude décimale<input id="outingLon" inputmode="decimal" autocomplete="off" placeholder="-2.08000"></label>
+    </div>
+    <button type="button" class="secondary" id="outingGpsBtn">🛰️ Utiliser le GPS du téléphone</button>
+    <div id="outingGpsStatus" class="status hidden" role="status"></div>
+  </div>
+  <div id="outingBoundsPreview" class="outing-bound-preview hidden" role="group" aria-label="Limites encodables de la zone choisie"></div>
+  <div id="outingCreateError" class="status hidden" role="alert"></div>
+  <div id="outingCreateSummary" class="outing-summary outing-setup-review hidden"></div>
+  <div class="zone-delete-actions">
+    <button type="button" id="cancelOutingCreate">ANNULER</button>
+    <button type="button" class="secondary" id="checkOutingCreate">VÉRIFIER LA SORTIE</button>
+    <button type="button" class="primary hidden" id="confirmOutingCreate">CRÉER ET ACTIVER LA SORTIE</button>
+  </div>
+</dialog>
+<dialog id="outingShareDialog" class="zone-delete-dialog outing-setup-dialog" aria-labelledby="outingShareTitle" aria-describedby="outingShareDescription">
+  <h2 id="outingShareTitle">Partager la sortie active</h2>
+  <p id="outingShareDescription">Relis le message, puis partage-le avec l’application de ton choix ou copie-le pour l’envoyer tel quel.</p>
+  <label for="outingShareText">Message à partager</label>
+  <textarea id="outingShareText" class="outing-textarea" readonly spellcheck="false"></textarea>
+  <div id="outingShareStatus" class="status hidden" role="status"></div>
+  <div class="zone-delete-actions">
+    <button type="button" id="nativeShareOutingBtn" class="hidden" disabled>📲 PARTAGER AVEC UNE APPLICATION</button>
+    <button type="button" id="closeOutingShare">FERMER</button>
+    <button type="button" class="primary" id="copyOutingMessageBtn" disabled>COPIER LE MESSAGE</button>
+  </div>
+</dialog>
+<dialog id="outingImportDialog" class="zone-delete-dialog outing-setup-dialog" aria-labelledby="outingImportTitle" aria-describedby="outingImportDescription outingImportSummary">
+  <h2 id="outingImportTitle">Recevoir une invitation</h2>
+  <p id="outingImportDescription">Colle le message entier reçu, même s’il contient du texte avant ou après l’invitation. La sortie active ne changera qu’après ta confirmation.</p>
+  <label for="outingImportText">Invitation reçue</label>
+  <textarea id="outingImportText" class="outing-textarea" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="Colle ici le message reçu."></textarea>
+  <div id="outingImportDialogError" class="status hidden" role="alert"></div>
+  <div id="outingImportSummary" class="outing-summary hidden"></div>
+  <div id="outingImportWarning" class="status hidden" role="alert"></div>
+  <div class="zone-delete-actions">
+    <button type="button" id="cancelOutingImport">ANNULER</button>
+    <button type="button" class="secondary" id="checkOutingBtn">VÉRIFIER L'INVITATION</button>
+    <button type="button" class="primary hidden" id="confirmOutingImport">CONFIRMER ET INSTALLER LA SORTIE</button>
+  </div>
+</dialog>
 
 <script>
 "use strict";
@@ -2847,7 +3037,7 @@ function initTheme(){
   }
 }
 
-const APP_VERSION="3.28.62";
+const APP_VERSION="3.28.85";
 const PROTOCOL_ID="VHF-GPS-PROTO-6";
 
 function protocolShortLabel(){
@@ -2984,6 +3174,7 @@ const EPHEMERAL_EDGE_MARGIN_KM=50;
 const EPHEMERAL_SECRET_OFFSET_MAX_KM=100;
 const EPHEMERAL_ANCHOR_SEARCH_KM=200;
 const EPHEMERAL_TTL_MS=48*60*60*1000;
+const OUTING_EPHEMERAL_NAME="ÉPHÉMÈRE DE SORTIE";
 
 const COMPAT_SPEC_VERSION="VHF-GPS-COMPAT-SPEC-3";
 const SESSION_FINGERPRINT_VERSION="SESSION-FINGERPRINT-V3";
@@ -3097,16 +3288,16 @@ const CODE_BASE=200;
 const DOMAIN=3200000000;
 const ACK_WORDS=["PANTOUFLE","CORNICHON","BOURRICOT","MOUSTACHE","CACAHUETE","BOULETTE","FRIPOUILLE","PATAPOUF","BOUFFON","TARTIFLETTE","BANANE","CHOUCROUTE","BISCOTTE","CAMEMBERT","SAUCISSE","AQUARELLE","MARMOTTE","ARMOIRE","DINOSAURE","BABIOLE","POIREAU","NAVET","PATATE","COURGETTE","CAROTTE","PIMENT","HARICOT","BROCOLI","CHAMPIGNON","RADIS","OIGNON","AIL","MAYONNAISE","KETCHUP","MOUTARDE","BECHAMEL","GRATIN","RACLETTE","FONDUE","CREPE","GAUFRE","CROISSANT","BRIOCHE","BAGUETTE","CROUTON","BISCUIT","BONBON","CARAMEL","CHOCOLAT","NOUGAT","GUIMAUVE","POPCORN","PISTACHE","PRALINE","CONFITURE","COMPOTE","MELON","PASTEQUE","KIWI","PAPAYE","MANGUE","ANANAS","ABRICOT","CERISE","FRAISE","MIRABELLE","MYRTILLE","FRAMBOISE","GROSEILLE","CITRON","ORANGE","PAMPLEMOUSSE","BALANÇOIRE","BIBERON","BOUTEILLE","KOALA","PANDA","BROUETTE","CALENDRIER","GIRAFE","BISON","CAMIONNETTE","CASTOR","LOUTRE","CANAPÉ","CARROUSEL","HIBOU","MONTGOLFIÈRE","HERON","CANARD","CYGNE","COQ","HÉRISSON","CHEMINÉE","CITROUILLE","PERROQUET","CHAMEAU","DROMADAIRE","LAMA","CLOCHETTE","CHEVRE","MOUTON","COCCINELLE","OURS","MARTEAU","TOURNEVIS","PINCE","TENAILLE","PELLE","PIOCHE","RATEAU","BALAI","SERPILLIERE","EPONGE","SAVON","SHAMPOING","PEIGNE","BROSSE","MIROIR","SERVIETTE","CASQUETTE","BONNET","SOMBRERO","BERET","QUENELLE","CHAUSSETTE","SANDALE","BASKET","BOTTINE","SLIP","CALECON","MAILLOT","PYJAMA","CRAVATE","BRETELLE","CEINTURE","TROMPETTE","TROMBONE","TUBA","BANJO","PIANO","GUITARE","VIOLON","TAMBOUR","MARACAS","SIFFLET","CLOCHE","CLARINETTE","SAXO","ACCORDEON","HARPE","FLUTE","FUSEE","SATELLITE","COMETE","ASTEROIDE","COSMOS","NEBULEUSE","JUPITER","SATURNE","MERCURE","VENUS","MARS","PLUTON","GALAXIE","METEORE","ECLIPSE","ORBITE","COLLERETTE","CORSAIRE","CONFETTI","MOUSSE","COUETTE","CRAYON","MATELOT","BARBU","TRIBORD","BABORD","PONTON","ANCRE","BOUEE","PHARE","QUAI","CORDAGE","HOMARD","DENTELLE","DESSERT","DRAGON","ÉCHARPE","ESCABEAU","FARANDOLE","FENÊTRE","FOUGÈRE","FRITEUSE","GRENADINE","HAMAC","HÉLICOPTÈRE","JONQUILLE","KANGOUROU","LANTERNE","LIBELLULE","LUCIOLE","MARGUERITE","NAPPERON","OLIVIER","PARAPLUIE","PIROUETTE","ROULOTTE","FARCEUR","COQUIN","CANAILLE","SALOPETTE","TORCHON","DODU","POILU","RIGOLO","LOUSTIC","ZIGOTO","ZOUAVE","GUIGNOL","CABOTIN","CHARLOT","LURON","FADA","TOTO","TUTU","MOUFETTE","JONGLAGE","MIMI","TAMBOURIN","TOBOGGAN","ZAZA","BIDULE","MACHIN","TRUC","BAZAR","BOUSIN","BROL","SCHMILBLICK","FOURBI","CHOSE","PATATRAS","BOUM","POUET","TSOINTSOIN","BADABOUM","PLOUF","CRAC","COUCOU","PENDULE","TAMARIN","BEDAINE","MOUSTIQUE","LIMACE","VIOLONCELLE","CRAPAUD"];
 const BUILTIN_ZONES = [
-  {id:"iroise-brest",name:"IROISE / BREST",lat:48.30000,lon:-5.20000,builtin:true},
-  {id:"lorient-groix",name:"LORIENT / GROIX",lat:47.65000,lon:-4.20000,builtin:true},
-  {id:"belle-ile-quiberon",name:"BELLE-ILE / QUIBERON",lat:47.35000,lon:-3.90000,builtin:true},
-  {id:"yeu-noirmoutier",name:"YEU / NOIRMOUTIER",lat:46.85000,lon:-3.00000,builtin:true},
-  {id:"sables",name:"LES SABLES / LARGE",lat:46.50000,lon:-2.85000,builtin:true},
-  {id:"rochebonne",name:"ROCHEBONNE",lat:46.217334,lon:-2.429111,builtin:true},
-  {id:"la-rochelle-re",name:"LA ROCHELLE / ILE DE RE",lat:46.15000,lon:-2.05000,builtin:true},
-  {id:"gironde-cordouan",name:"GIRONDE / CORDOUAN",lat:45.55000,lon:-2.20000,builtin:true},
-  {id:"arcachon",name:"ARCACHON / LARGE",lat:44.65000,lon:-2.10000,builtin:true},
-  {id:"bayonne-capbreton",name:"BAYONNE / CAPBRETON",lat:43.60000,lon:-2.15000,builtin:true}
+  {id:"iroise-brest",name:"IROISE / BREST",lat:48.30000,lon:-5.20000,region:"Atlantique",builtin:true},
+  {id:"lorient-groix",name:"LORIENT / GROIX",lat:47.65000,lon:-4.20000,region:"Atlantique",builtin:true},
+  {id:"belle-ile-quiberon",name:"BELLE-ILE / QUIBERON",lat:47.35000,lon:-3.90000,region:"Atlantique",builtin:true},
+  {id:"yeu-noirmoutier",name:"YEU / NOIRMOUTIER",lat:46.85000,lon:-3.00000,region:"Atlantique",builtin:true},
+  {id:"sables",name:"LES SABLES / LARGE",lat:46.50000,lon:-2.85000,region:"Atlantique",builtin:true},
+  {id:"rochebonne",name:"ROCHEBONNE",lat:46.217334,lon:-2.429111,region:"Atlantique",builtin:true},
+  {id:"la-rochelle-re",name:"LA ROCHELLE / ILE DE RE",lat:46.15000,lon:-2.05000,region:"Atlantique",builtin:true},
+  {id:"gironde-cordouan",name:"GIRONDE / CORDOUAN",lat:45.55000,lon:-2.20000,region:"Atlantique",builtin:true},
+  {id:"arcachon",name:"ARCACHON / LARGE",lat:44.65000,lon:-2.10000,region:"Atlantique",builtin:true},
+  {id:"bayonne-capbreton",name:"BAYONNE / CAPBRETON",lat:43.60000,lon:-2.15000,region:"Atlantique",builtin:true}
 ];
 const $=id=>document.getElementById(id);
 const DEBUG_DETAILS_STORAGE_KEY="vhfGpsDebugDetailsV1";
@@ -3607,6 +3798,21 @@ function initZoneCenterInputUi(){
 
 const SESSION_SECRET_KEY="vhfGpsSessionSecretV312";
 const SESSION_CREATED_AT_KEY="vhfGpsSessionCreatedAtV312";
+const OUTING_ID_KEY="vhfGpsOutingIdV1";
+const OUTING_INSTALLED_AT_KEY="vhfGpsOutingInstalledAtV1";
+const OUTING_ORIGIN_KEY="vhfGpsOutingOriginV1";
+let pendingOutingImport=null;
+let outingImportRevision=0;
+let outingActionRevision=0;
+let outingMutationBusy=false;
+let outingCopyBusy=false;
+let outingShareRevision=0;
+let outingShareReady=null;
+let outingCheckBusy=false;
+let outingSetupRevision=0;
+let outingZoneType="builtin";
+let outingPositionMode="marine";
+let pendingOutingCreation=null;
 const SECRET_ALPHABET="23456789ABCDEFGHJKMNPQRSTVWXYZ";
 const SECRET_RAW_LENGTH=28;
 const RESERVED_PROTOCOL_TEST_SECRET="2345678-9ABCDEF-GHJKMNP-QRSTVWX";
@@ -3684,7 +3890,10 @@ function sessionAgeText(){
 function syncSavedSecret(secret){
   const v=secret?validateOperationalSessionSecret(secret):{ok:false};
   const nextSecret=v.ok?v.canonical:"";
-  if(nextSecret!==validatedSessionSecret)activeSessionRevision++;
+  if(nextSecret!==validatedSessionSecret){
+    activeSessionRevision++;
+    clearOutingShare();
+  }
   validatedSessionSecret=nextSecret;
   $("sessionKey").value=validatedSessionSecret;
   masterKeyCache={secret:"",key:null};
@@ -3693,6 +3902,7 @@ function syncSavedSecret(secret){
     ?`Session active · ${sessionAgeText()}`
     :"Aucune session active — ouvre les réglages pour en créer ou en coller une.";
   refreshEncodeState();
+  if(typeof refreshOutingActions==="function")refreshOutingActions();
 }
 
 async function deriveMasterKey(secret){
@@ -3838,7 +4048,27 @@ function assertValidPublicAnchor(lat,lon){
 function zoneCenterKey(z){return `${canonicalCoord(z.lat).toFixed(5)}|${canonicalCoord(z.lon).toFixed(5)}`;}
 function sameZoneCenter(a,b){return zoneCenterKey(a)===zoneCenterKey(b);}
 function isAnchoredZone(z){return Number.isFinite(Number(z.anchorLat))&&Number.isFinite(Number(z.anchorLon));}
-function isRecentEphemeral(z){return !z.ephemeral || (Number(z.createdAt)>0 && Date.now()-Number(z.createdAt)<=EPHEMERAL_TTL_MS);}
+function isOutingEphemeral(z){
+  return !!z?.ephemeral && !!z.outingId && z.outingId===localStorage.getItem(OUTING_ID_KEY);
+}
+function isRecentEphemeral(z){
+  return !z.ephemeral || isOutingEphemeral(z) ||
+    (Number(z.createdAt)>0 && Date.now()-Number(z.createdAt)<=EPHEMERAL_TTL_MS);
+}
+function restoreOutingEphemeralLabel(z){
+  const outingId=localStorage.getItem(OUTING_ID_KEY);
+  if(!z.ephemeral || !outingId || !localStorage.getItem(SESSION_SECRET_KEY))return;
+  const installedAt=Number(localStorage.getItem(OUTING_INSTALLED_AT_KEY)||0);
+  // Migration des sorties préparées par une version antérieure : la zone créée
+  // localement n'avait pas encore de marqueur, contrairement à la zone importée.
+  const legacyCreator=z.id===localStorage.getItem("vhfGpsActiveZoneV1") &&
+    installedAt>0 && Math.abs(Number(z.createdAt)-installedAt)<60000;
+  if(z.outingId===outingId || (!z.outingId && (z.importedOuting || legacyCreator))){
+    z.outingId=outingId;
+    z.name=OUTING_EPHEMERAL_NAME;
+    delete z.importedOuting;
+  }
+}
 
 function loadZones(){
   let custom=[];
@@ -3859,8 +4089,9 @@ function loadZones(){
     if(!x||x.builtin)continue;
     // Le centre secret d'une zone éphémère dépend du protocole : une ancienne
     // zone ne doit jamais être réutilisée après un changement de PROTO.
-    if(x.ephemeral && (x.protocolId!==PROTOCOL_ID || !isAnchoredZone(x) || !isRecentEphemeral(x)))continue;
     const z={...x};
+    restoreOutingEphemeralLabel(z);
+    if(z.ephemeral && (z.protocolId!==PROTOCOL_ID || !isAnchoredZone(z) || !isRecentEphemeral(z)))continue;
     z.lat=canonicalCoord(z.lat);z.lon=canonicalCoord(z.lon);
     if(isAnchoredZone(z)){
       z.anchorLat=canonicalAnchorCoord(z.anchorLat);
@@ -3933,6 +4164,7 @@ function setActiveZone(id,{invalidate=true,persist=true,refresh=true}={}){
     // plus tôt pendant la session.
     confirmedZoneIds.delete(target.id);
     saveZoneConfirmations();
+    clearOutingShare();
 
     if(invalidate){
       invalidateEncodedResult();
@@ -3942,7 +4174,62 @@ function setActiveZone(id,{invalidate=true,persist=true,refresh=true}={}){
 
   if(refresh)populateZones();
   if(typeof refreshPositionHemisphereDefaults==="function")refreshPositionHemisphereDefaults();
+  if(typeof refreshOutingActions==="function")refreshOutingActions();
   return target;
+}
+
+let pendingZoneSwitch=null;
+async function confirmManualZoneChange(name,{creation=false,detail=""}={}){
+  if(pendingZoneSwitch)return false;
+  const revision=activeSessionRevision,previousZoneId=activeZoneId;
+  $("zoneSwitchTitle").textContent=creation?"Créer et activer cette zone ?":"Changer de zone ?";
+  $("zoneSwitchFrom").textContent=activeZone()?.name||"—";
+  $("zoneSwitchTo").textContent=name;
+  $("zoneSwitchDetail").textContent=detail;
+  $("zoneSwitchDetail").classList.toggle("hidden",!detail);
+  $("confirmZoneSwitch").textContent=creation?"CRÉER ET ACTIVER LA ZONE":"ACTIVER CETTE ZONE";
+  const accepted=await new Promise(resolve=>{
+    pendingZoneSwitch={resolve};
+    $("zoneSwitchDialog").showModal();
+  });
+  if(!accepted)return false;
+  if(activeSessionRevision!==revision||activeZoneId!==previousZoneId){
+    throw new Error("La session ou la zone active a changé pendant la confirmation. Recommence.");
+  }
+  return true;
+}
+$("cancelZoneSwitch").onclick=()=>$("zoneSwitchDialog").close();
+$("confirmZoneSwitch").onclick=()=>{
+  const pending=pendingZoneSwitch;
+  if(!pending)return;
+  pendingZoneSwitch=null;
+  $("zoneSwitchDialog").close();
+  pending.resolve(true);
+};
+$("zoneSwitchDialog").addEventListener("close",()=>{
+  const pending=pendingZoneSwitch;
+  pendingZoneSwitch=null;
+  if(pending)pending.resolve(false);
+});
+function clearPositionForZoneSelection(){
+  // Les deux modes se synchronisent : vider aussi le mode masqué évite
+  // qu'une ancienne position réapparaisse en changeant de format.
+  senderGpsRevision++;
+  for(const id of ["latDeg","latMin","lonDeg","lonMin","lat","lon"])$(id).value="";
+  refreshPositionHemisphereDefaults();
+  updatePositionCanonicalPreview(NaN,NaN);
+  handlePositionChanged();
+}
+async function switchToExistingZone(id,{clearPosition=false}={}){
+  const target=zones.find(z=>z.id===id);
+  if(!target)throw new Error("Cette zone n’est plus disponible.");
+  if(target.id===activeZoneId)return false;
+  if(!await confirmManualZoneChange(target.name))return false;
+  if(!zones.includes(target))throw new Error("Cette zone n’est plus disponible. Recommence.");
+  setActiveZone(target.id,{invalidate:true,persist:true,refresh:true});
+  if(clearPosition)clearPositionForZoneSelection();
+  refreshDecodeState();
+  return true;
 }
 
 const ZONE_CONFIRM_STORAGE_KEY="vhfGpsZoneConfirmV2";
@@ -4094,7 +4381,7 @@ function refreshZoneConfirmationUi(){
     }else if(validSecret && z){
       btn.classList.add("zone-confirm-pending");
       btn.disabled=false;
-      btn.textContent="CONFIRMER L’ALIAS ZONE — OBLIGATOIRE";
+      btn.textContent="⚠ OBLIGATOIRE — J’AI COMPARÉ L’ALIAS DE CETTE ZONE À LA RADIO";
     }else{
       btn.classList.add("zone-confirm-unavailable");
       btn.disabled=true;
@@ -4113,6 +4400,7 @@ async function confirmActiveZoneAlias(){
   confirmedZoneIds.add(z.id);
   saveZoneConfirmations();
   refreshZoneConfirmationUi();
+  refreshOutingActions();
   await refreshEphemeralWorkflow();
   refreshEncodeState();
   refreshDecodeState();
@@ -4154,7 +4442,7 @@ async function refreshEphemeralWorkflow(){
   confirmBtn.disabled=true;
   confirmBtn.textContent=confirmed
     ?"✓ ALIAS ZONE CONFIRMÉ — ZONE DÉBLOQUÉE"
-    :"CONFIRMER L’ALIAS ZONE — OBLIGATOIRE";
+    :"⚠ OBLIGATOIRE — J’AI COMPARÉ L’ALIAS DE CETTE ZONE À LA RADIO";
   if(confirmed){
     confirmBtn.classList.add("ephemeral-confirm-done");
   }else{
@@ -4194,12 +4482,25 @@ function zoneBounds(z){
   return{minLat:z.lat-HALF_KM/a,maxLat:z.lat+HALF_KM/a,minLon:z.lon-HALF_KM/b,maxLon:z.lon+HALF_KM/b};
 }
 
+function zoneBoundsCompass(z){
+  const b=zoneBounds(z);
+  return `<div class="zone-bounds-title">Limites encodables</div>`+
+    `<div class="zone-bound-grid">`+
+      `<div class="zone-bound-cell north"><strong>NORD</strong><span>${formatDegMin(b.maxLat,true)}</span></div>`+
+      `<div class="zone-bound-cell west"><strong>OUEST</strong><span>${formatDegMin(b.minLon,false)}</span></div>`+
+      `<div class="zone-bound-cell center"><strong>CENTRE</strong><span>${formatDegMin(z.lat,true)}<br>${formatDegMin(z.lon,false)}</span></div>`+
+      `<div class="zone-bound-cell east"><strong>EST</strong><span>${formatDegMin(b.maxLon,false)}</span></div>`+
+      `<div class="zone-bound-cell south"><strong>SUD</strong><span>${formatDegMin(b.minLat,true)}</span></div>`+
+    `</div>`;
+}
+
 function zoneSummary(z){
   const b=zoneBounds(z),name=escapeHtml(z.name);
 
   if(isAnchoredZone(z)){
     return `<div class="zone-ephemeral-banner">ZONE ÉPHÉMÈRE ACTIVE</div>`+
       `<strong>${name}</strong>`+
+      (isOutingEphemeral(z)?`<span class="zone-outing-badge">SORTIE</span>`:``)+
       `<div class="zone-marine-center ephemeral-anchor-panel">`+
         `<span class="zone-coord-label">Ancre publique · degrés décimaux</span>`+
         `${z.anchorLat.toFixed(2)} / ${z.anchorLon.toFixed(2)}`+
@@ -4214,14 +4515,7 @@ function zoneSummary(z){
           `Centre virtuel calculé localement à partir de l’ancre publique + du secret de session.`+
         `</div>`+
       `</div>`+
-      `<div class="zone-bounds-title">Limites encodables</div>`+
-      `<div class="zone-bound-grid">`+
-        `<div class="zone-bound-cell north"><strong>NORD</strong><span>${formatDegMin(b.maxLat,true)}</span></div>`+
-        `<div class="zone-bound-cell west"><strong>OUEST</strong><span>${formatDegMin(b.minLon,false)}</span></div>`+
-        `<div class="zone-bound-cell center"><strong>CENTRE</strong><span>${formatDegMin(z.lat,true)}<br>${formatDegMin(z.lon,false)}</span></div>`+
-        `<div class="zone-bound-cell east"><strong>EST</strong><span>${formatDegMin(b.maxLon,false)}</span></div>`+
-        `<div class="zone-bound-cell south"><strong>SUD</strong><span>${formatDegMin(b.minLat,true)}</span></div>`+
-      `</div>`+
+      zoneBoundsCompass(z)+
       `<div style="margin-top:7px">Carré : 250 × 250 km — 125 km sur chaque axe depuis le centre — maille : 100 m</div>`+
       `<details class="zone-decimal-details">`+
         `<summary>Coordonnées décimales du centre et des limites</summary>`+
@@ -4240,14 +4534,7 @@ function zoneSummary(z){
       `<span class="zone-coord-label">Centre · Marine</span>`+
       `${centerMarine}`+
     `</div>`+
-    `<div class="zone-bounds-title">Limites encodables</div>`+
-    `<div class="zone-bound-grid">`+
-      `<div class="zone-bound-cell north"><strong>NORD</strong><span>${formatDegMin(b.maxLat,true)}</span></div>`+
-      `<div class="zone-bound-cell west"><strong>OUEST</strong><span>${formatDegMin(b.minLon,false)}</span></div>`+
-      `<div class="zone-bound-cell center"><strong>CENTRE</strong><span>${formatDegMin(z.lat,true)}<br>${formatDegMin(z.lon,false)}</span></div>`+
-      `<div class="zone-bound-cell east"><strong>EST</strong><span>${formatDegMin(b.maxLon,false)}</span></div>`+
-      `<div class="zone-bound-cell south"><strong>SUD</strong><span>${formatDegMin(b.minLat,true)}</span></div>`+
-    `</div>`+
+    zoneBoundsCompass(z)+
     `<div style="margin-top:7px">Carré : 250 × 250 km — 125 km sur chaque axe depuis le centre — maille : 100 m</div>`+
     `<details class="zone-decimal-details">`+
       `<summary>Coordonnées décimales</summary>`+
@@ -4261,23 +4548,32 @@ function zoneSummary(z){
 
 function populateManageZones(preferredId=""){
   const sel=$("manageZoneSelect"),custom=zones.filter(z=>!z.builtin).sort(compareZoneNames);
-  const ephemeralCount=zones.filter(z=>z.ephemeral).length;
+  const ephemeralCount=zones.filter(z=>z.ephemeral&&!isOutingEphemeral(z)).length;
+  const protectedCount=zones.filter(isOutingEphemeral).length;
   const deleteEphemeralBtn=$("deleteEphemeralZonesBtn");
   deleteEphemeralBtn.disabled=!ephemeralCount;
   deleteEphemeralBtn.textContent=ephemeralCount
     ?`SUPPRIMER ${ephemeralCount===1?"LA ZONE ÉPHÉMÈRE":`LES ${ephemeralCount} ZONES ÉPHÉMÈRES`}`
-    :"AUCUNE ZONE ÉPHÉMÈRE À SUPPRIMER";
+    :protectedCount?"ZONE ÉPHÉMÈRE DE SORTIE CONSERVÉE":"AUCUNE ZONE ÉPHÉMÈRE À SUPPRIMER";
   const old=preferredId||sel.value;
   sel.innerHTML="";
   if(!custom.length){
-    const o=document.createElement("option");o.value="";o.textContent="Aucune zone personnalisée";sel.appendChild(o);return;
+    const o=document.createElement("option");o.value="";o.textContent="Aucune zone personnalisée";sel.appendChild(o);
+    updateManageZoneDeletionButton();return;
   }
   for(const z of custom){const o=document.createElement("option");o.value=z.id;o.textContent=zoneDisplayName(z);sel.appendChild(o);}
-  if(custom.some(z=>z.id===old))sel.value=old;
+  sel.value=custom.some(z=>z.id===old)?old:custom[0].id;
+  updateManageZoneDeletionButton();
+}
+function updateManageZoneDeletionButton(){
+  const z=zones.find(x=>x.id===$("manageZoneSelect").value);
+  const protectedZone=isOutingEphemeral(z),button=$("deleteZoneBtn");
+  button.disabled=!z||protectedZone;
+  button.textContent=protectedZone?"ZONE ÉPHÉMÈRE DE SORTIE CONSERVÉE":"SUPPRIMER CETTE ZONE";
 }
 
 function isCustomFixedZone(z){return !!z && !z.builtin && !z.ephemeral && !isAnchoredZone(z);}
-function zoneDisplayName(z){return isCustomFixedZone(z)?`** ${z.name} **`:z.name;}
+function zoneDisplayName(z){return z.builtin?z.name:`** ${z.name} **`;}
 function compareZoneNames(a,b){return a.name.localeCompare(b.name,"fr",{sensitivity:"base"});}
 
 function populateZoneSelect(sel,entries,selectedId){
@@ -4393,7 +4689,7 @@ function updateZoneSummaries(){
   syncZoneSelects();
   const z=activeZone();
   for(const side of ["send","recv"]){
-    $(side+"DeleteZoneBtn").classList.toggle("hidden",!z || !!z.builtin);
+    $(side+"DeleteZoneBtn").classList.toggle("hidden",!z || !!z.builtin || isOutingEphemeral(z));
     hideStatus(side+"ZoneActionStatus");
   }
   if(!z)return;
@@ -5390,17 +5686,24 @@ async function diagnoseFailure(words,connector,secret,z){
   return{type:"repeat",word:nacks.repeat};
 }
 
-$("useCompatibleZoneBtn").onclick=()=>{
+$("useCompatibleZoneBtn").onclick=async()=>{
   refreshEncodeState();
   if($("useCompatibleZoneBtn").disabled)return;
   const p=readActivePosition(),z=selectedZone(sendZone);
   const best=compatibleZones(p.lat,p.lon,z.id)[0];
   if(!best)return;
-  setActiveZone(best.z.id,{invalidate:true,persist:true,refresh:true});
-  refreshDecodeState();
-  $("sendZone").focus({preventScroll:true});
-  const targetId=isAnchoredZone(best.z)?"ephemeralAliasStep":"sendZoneCard";
-  $(targetId).scrollIntoView({behavior:"smooth",block:"start"});
+  try{
+    if(!await confirmManualZoneChange(best.z.name,{detail:`Marge au bord : ${fmt(best.c.nearest)} km.`}))return;
+    const current=readActivePosition();
+    if(!zones.includes(best.z)||!current.ok||!zoneCheck(current.lat,current.lon,best.z).inside){
+      throw new Error("La position ou la zone compatible a changé. Vérifie de nouveau.");
+    }
+    setActiveZone(best.z.id,{invalidate:true,persist:true,refresh:true});
+    refreshDecodeState();
+    $("sendZone").focus({preventScroll:true});
+    const targetId=isAnchoredZone(best.z)?"ephemeralAliasStep":"sendZoneCard";
+    $(targetId).scrollIntoView({behavior:"smooth",block:"start"});
+  }catch(e){setStatus("encodeStatus",e.message||String(e),"bad");}
 };
 
 async function encodeSelectedPosition(){
@@ -5478,18 +5781,27 @@ $("ephemeralZoneBtn").onclick=async()=>{
     }
     const {lat,lon}=p;
 
-    invalidateEncodedResult();
-
     const picked=await createEphemeralZoneCandidate(lat,lon,secret);
     assertZoneSessionCurrent(secret,sessionRevision);
     assertEphemeralDeletionCurrent(deletionRevision);
-    const z=await saveOrSelectEphemeralZone(picked.z.anchorLat,picked.z.anchorLon,secret,ephemeralLocalLabel(),sessionRevision,deletionRevision);
+    const existing=zones.find(z=>isAnchoredZone(z)&&z.anchorLat===picked.z.anchorLat&&z.anchorLon===picked.z.anchorLon);
+    if(existing?.id===activeZoneId){
+      setStatus("encodeStatus","Cette zone éphémère est déjà active.","warn");
+      return;
+    }
+    const name=existing?.name||ephemeralLocalLabel();
+    if(!await confirmManualZoneChange(name,{
+      creation:!existing,
+      detail:`Ancre publique : ${picked.z.anchorLat.toFixed(2)} / ${picked.z.anchorLon.toFixed(2)}.`
+    }))return;
     assertZoneSessionCurrent(secret,sessionRevision);
-
-    // Une nouvelle négociation radio doit être confirmée humainement,
-    // même si cette ancre existait déjà localement.
-    confirmedZoneIds.delete(z.id);
-    saveZoneConfirmations();
+    assertEphemeralDeletionCurrent(deletionRevision);
+    const latest=readActivePosition();
+    if(!latest.ok||latest.lat!==lat||latest.lon!==lon){
+      throw new Error("La position a changé pendant la confirmation. Recommence.");
+    }
+    const z=await saveOrSelectEphemeralZone(picked.z.anchorLat,picked.z.anchorLon,secret,name,sessionRevision,deletionRevision);
+    assertZoneSessionCurrent(secret,sessionRevision);
 
     setActiveZone(z.id,{invalidate:true,persist:true,refresh:false});
     await populateZones(z.id);
@@ -6030,7 +6342,7 @@ $("newReceptionAfterFailure").onclick=retryFinalRadioConfirmation;
 
 
 // Secret de session persistant.
-async function installValidatedSecret(secret,persist=true){
+async function installValidatedSecret(secret,persist=true,createdAt=null){
   const v=validateOperationalSessionSecret(secret);if(!v.ok)throw new Error(v.msg);
   const previous=localStorage.getItem(SESSION_SECRET_KEY)||"",changed=previous!==v.canonical;
   if(changed){
@@ -6049,8 +6361,15 @@ async function installValidatedSecret(secret,persist=true){
     );
   }
   if(persist){
-    if(changed){purgeEphemeralZones();localStorage.setItem(SESSION_CREATED_AT_KEY,String(Date.now()));}
-    else if(!sessionCreatedAt())localStorage.setItem(SESSION_CREATED_AT_KEY,String(Date.now()));
+    if(changed){
+      purgeEphemeralZones();
+      localStorage.removeItem(OUTING_ID_KEY);
+      localStorage.removeItem(OUTING_ORIGIN_KEY);
+      localStorage.setItem(OUTING_INSTALLED_AT_KEY,String(Date.now()));
+    }
+    if(changed || !sessionCreatedAt() || createdAt!==null){
+      localStorage.setItem(SESSION_CREATED_AT_KEY,String(createdAt??Date.now()));
+    }
     localStorage.setItem(SESSION_SECRET_KEY,v.canonical);
   }
   syncSavedSecret(v.canonical);
@@ -6104,6 +6423,7 @@ function deactivateSessionWhileEditing(){
   validatedSessionSecret="";
   masterKeyCache={secret:"",key:null};
   confirmedZoneIds.clear();
+  clearOutingShare();
 
   // Dès que le secret est modifié, aucune ancienne transmission ne doit
   // pouvoir être prise pour une transmission encore valable.
@@ -6196,6 +6516,706 @@ async function clipboardWrite(textToCopy){
   return ok;
 }
 
+const OUTING_BEGIN="----- DEBUT INVITATION VHF-GPS -----";
+const OUTING_END="----- FIN INVITATION VHF-GPS -----";
+function canShareOutingText(text){
+  if(typeof navigator.share!=="function")return false;
+  try{return typeof navigator.canShare!=="function"||navigator.canShare({text});}
+  catch{return false;}
+}
+function refreshOutingShareControls(){
+  const available=!!outingShareReady&&canShareOutingText(outingShareReady.text);
+  $("nativeShareOutingBtn").classList.toggle("hidden",!available);
+  $("nativeShareOutingBtn").disabled=!available||outingCopyBusy;
+  $("copyOutingMessageBtn").disabled=!outingShareReady||outingCopyBusy;
+}
+function clearOutingShare(){
+  outingShareRevision++;
+  outingShareReady=null;
+  outingCopyBusy=false;
+  $("outingShareText").value="";
+  refreshOutingShareControls();
+  if($("outingShareDialog").open){
+    setStatus("outingShareStatus","La session ou la zone active a changé. Ferme cette fenêtre et rouvre l'invitation.","warn");
+  }else hideStatus("outingShareStatus");
+}
+
+function randomOutingId(){
+  const bytes=new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return [...bytes].map(x=>x.toString(16).padStart(2,"0")).join("").toUpperCase();
+}
+
+function outingDate(ms){
+  return new Date(ms).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"});
+}
+
+function outingZoneDescriptor(z){
+  if(z.builtin)return{type:"builtin",id:z.id};
+  if(isAnchoredZone(z))return{type:"ephemeral",lat:z.anchorLat,lon:z.anchorLon};
+  throw new Error("Le partage des zones personnalisées fixes n'est pas encore disponible.");
+}
+function saveOutingOrigin(id,z){
+  localStorage.setItem(OUTING_ORIGIN_KEY,JSON.stringify({id,zoneId:z.id,fingerprint:zoneFingerprint(z)}));
+}
+function outingMatchesOriginalZone(z){
+  if(!z)return false;
+  try{
+    const origin=JSON.parse(localStorage.getItem(OUTING_ORIGIN_KEY)||"null");
+    return !!origin && origin.id===localStorage.getItem(OUTING_ID_KEY) &&
+      origin.zoneId===z.id && origin.fingerprint===zoneFingerprint(z);
+  }catch{return false;}
+}
+
+function refreshOutingActions(){
+  const z=activeZone(),supported=!!z&&(!!z.builtin||isAnchoredZone(z));
+  $("createOutingBtn").disabled=outingMutationBusy;
+  $("receiveOutingBtn").disabled=outingMutationBusy;
+  const shareable=supported&&validateOperationalSessionSecret(activeSecret()).ok&&
+    outingMatchesOriginalZone(z)&&isZoneConfirmed(z);
+  $("copyOutingBtn").classList.toggle("hidden",!shareable);
+  $("copyOutingBtn").disabled=!shareable||outingMutationBusy||outingCopyBusy;
+  const created=sessionCreatedAt();
+  const installed=Number(localStorage.getItem(OUTING_INSTALLED_AT_KEY)||0);
+  $("outingLocalTimes").textContent=created
+    ?`Créée le ${outingDate(created)}${installed?` · installée sur ce téléphone le ${outingDate(installed)}`:""}.`
+    :"";
+}
+
+function utf8Base64Url(text){
+  const bytes=new TextEncoder().encode(text);
+  let binary="";
+  for(const byte of bytes)binary+=String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"");
+}
+
+function base64UrlUtf8(value){
+  if(!/^[A-Za-z0-9_-]+$/.test(value))throw new Error("Code d'invitation invalide.");
+  const binary=atob(value.replace(/-/g,"+").replace(/_/g,"/").padEnd(Math.ceil(value.length/4)*4,"="));
+  return new TextDecoder("utf-8",{fatal:true}).decode(Uint8Array.from(binary,c=>c.charCodeAt(0)));
+}
+
+async function outingChecksum(code){
+  const bytes=new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(code)));
+  return [...bytes.slice(0,8)].map(x=>x.toString(16).padStart(2,"0")).join("").toUpperCase();
+}
+
+async function activeOutingPayload(){
+  assertProtocolReady();
+  const secret=activeSecret(),z=activeZone(),revision=activeSessionRevision,zoneId=z?.id;
+  if(!validateOperationalSessionSecret(secret).ok)throw new Error("Active d'abord une session valide.");
+  if(!z)throw new Error("Choisis d'abord une zone.");
+  const zone=outingZoneDescriptor(z);
+  if(!isZoneConfirmed(z))throw new Error("Confirme d'abord l'alias de la zone active.");
+  const id=localStorage.getItem(OUTING_ID_KEY);
+  if(!id||!outingMatchesOriginalZone(z)){
+    throw new Error("La zone active ne correspond pas à la sortie créée ou importée. Reviens à sa zone d'origine ou réinstalle l'invitation.");
+  }
+  const [compat,fp,alias]=await Promise.all([
+    protocolCompatDigestHex(),sessionFingerprint(secret),zoneAlias(secret,z)
+  ]);
+  if(activeSessionRevision!==revision||activeSecret()!==secret||activeZone()?.id!==zoneId||
+      localStorage.getItem(OUTING_ID_KEY)!==id||!outingMatchesOriginalZone(z)||!isZoneConfirmed(z)){
+    throw new Error("La session ou la zone a changé pendant la préparation. Recommence.");
+  }
+  const createdAt=sessionCreatedAt()||Date.now();
+  return{v:1,proto:PROTOCOL_ID,compat,secret,createdAt,id,zone,
+    fingerprint:`${fp.words.join(" · ")} | ${fp.nato}`,alias:alias.text};
+}
+
+async function formatOutingInvitation(payload){
+  const encoded=utf8Base64Url(JSON.stringify(payload));
+  const prefix=`VHF1.${encoded}`;
+  const token=`${prefix}.${await outingChecksum(prefix)}`;
+  const zone=payload.zone.type==="builtin"
+    ?BUILTIN_ZONES.find(z=>z.id===payload.zone.id)?.name||"Zone intégrée"
+    :`${OUTING_EPHEMERAL_NAME} · ancre ${Number(payload.zone.lat).toFixed(2)} / ${Number(payload.zone.lon).toFixed(2)}`;
+  return `🎣 Invitation pour une sortie VHF-GPS\n🗓️ Créée le ${outingDate(payload.createdAt)}\n📍 Zone : ${zone}\n🔧 ${protocolShortLabel()} · COMPAT ${payload.compat.slice(0,8)}\n🔐 Alias de session (empreinte radio) : ${payload.fingerprint}\n📣 Alias de zone : ${payload.alias}\n\n📲 Ouvre l'application installée, touche « Recevoir une invitation », puis colle ce message entier.\n⚠️ Envoyez cette invitation telle quelle. Ne modifiez pas le code. Ne la transférez qu'aux participants de la sortie.\n\n${OUTING_BEGIN}\n${token}\n${OUTING_END}`;
+}
+
+function extractOutingToken(input){
+  const text=String(input||"");
+  if(text.length>12000)throw new Error("Message trop long pour une invitation.");
+  const start=text.indexOf(OUTING_BEGIN);
+  const end=start>=0?text.indexOf(OUTING_END,start+OUTING_BEGIN.length):-1;
+  if(start<0||end<0||end<=start){
+    const direct=text.trim();
+    if(/^VHF1\.[A-Za-z0-9_-]+\.[A-Fa-f0-9]{16}$/.test(direct))return direct;
+    throw new Error("Bloc d'invitation introuvable. Colle le message complet.");
+  }
+  if(text.indexOf(OUTING_BEGIN,start+OUTING_BEGIN.length)>=0||text.indexOf(OUTING_END,end+OUTING_END.length)>=0){
+    throw new Error("Plusieurs invitations trouvées : colle un seul message.");
+  }
+  const token=text.slice(start+OUTING_BEGIN.length,end).replace(/\s+/g,"");
+  if(!/^VHF1\.[A-Za-z0-9_-]+\.[A-Fa-f0-9]{16}$/.test(token))throw new Error("Code d'invitation incomplet ou modifié.");
+  return token;
+}
+
+async function inspectOutingInvitation(input){
+  assertProtocolReady();
+  const token=extractOutingToken(input),parts=token.split(".");
+  if(await outingChecksum(`${parts[0]}.${parts[1]}`)!==parts[2].toUpperCase()){
+    throw new Error("Code modifié ou mal copié : contrôle d'intégrité incorrect.");
+  }
+  let data;
+  try{data=JSON.parse(base64UrlUtf8(parts[1]));}
+  catch{throw new Error("Contenu de l'invitation illisible.");}
+  if(!data||data.v!==1||data.proto!==PROTOCOL_ID){
+    throw new Error(`Protocole incompatible : cette application utilise ${protocolShortLabel()}. Mets les téléphones à jour avant la sortie.`);
+  }
+  const compat=await protocolCompatDigestHex();
+  if(data.compat!==compat)throw new Error("COMPAT différent : les deux applications ne peuvent pas échanger. Mets-les à jour.");
+  const v=validateOperationalSessionSecret(data.secret);
+  if(!v.ok||v.canonical!==data.secret)throw new Error("Secret invalide dans l'invitation.");
+  if(!Number.isSafeInteger(data.createdAt)||data.createdAt<Date.UTC(2020,0,1)||data.createdAt>Date.UTC(2200,0,1)){
+    throw new Error("Date de création invalide dans l'invitation.");
+  }
+  if(typeof data.id!=="string"||!/^([A-F0-9]{32})$/.test(data.id))throw new Error("Identifiant de sortie invalide.");
+  let zone;
+  if(data.zone?.type==="builtin"&&typeof data.zone.id==="string"){
+    zone=BUILTIN_ZONES.find(z=>z.id===data.zone.id);
+    if(!zone)throw new Error("Zone intégrée inconnue dans l'invitation.");
+  }else if(data.zone?.type==="ephemeral"){
+    assertValidPublicAnchor(data.zone.lat,data.zone.lon);
+    const center=await deriveSecretCenter(data.secret,data.zone.lat,data.zone.lon);
+    zone={id:"invitation-preview",name:OUTING_EPHEMERAL_NAME,...center,ephemeral:true,protocolId:PROTOCOL_ID};
+  }else throw new Error("Type de zone non pris en charge dans l'invitation.");
+  const [fp,alias]=await Promise.all([sessionFingerprint(data.secret),zoneAlias(data.secret,zone)]);
+  const fingerprint=`${fp.words.join(" · ")} | ${fp.nato}`;
+  if(data.fingerprint!==fingerprint||data.alias!==alias.text){
+    throw new Error("Empreinte ou alias incohérent : invitation modifiée ou incompatible.");
+  }
+  const visible=String(input).split(OUTING_BEGIN)[0];
+  const lines=visible.split(/\r?\n/).reverse();
+  const fingerprintLabel="Alias de session (empreinte radio) : ",aliasLabel="Alias de zone : ";
+  const visibleFingerprint=lines.find(line=>line.startsWith(fingerprintLabel)||line.startsWith("🔐 "+fingerprintLabel));
+  const visibleAlias=lines.find(line=>line.startsWith(aliasLabel)||line.startsWith("📣 "+aliasLabel));
+  const fingerprintValue=visibleFingerprint?.replace(/^🔐 /u,"").slice(fingerprintLabel.length).trim();
+  const aliasValue=visibleAlias?.replace(/^📣 /u,"").slice(aliasLabel.length).trim();
+  if((visibleFingerprint&&fingerprintValue!==fingerprint)||
+     (visibleAlias&&aliasValue!==alias.text)){
+    throw new Error("Le résumé lisible ne correspond pas au code d'invitation. Demande un nouveau message complet.");
+  }
+  return{data,zone,fingerprint,alias:alias.text};
+}
+
+function showOutingImportSummary(prepared){
+  const {data,zone,fingerprint,alias}=prepared;
+  const summary=$("outingImportSummary");
+  summary.innerHTML="";
+  const rows=[
+    ["Création de la sortie",outingDate(data.createdAt)],
+    ["Installation sur ce téléphone",localStorage.getItem(OUTING_ID_KEY)===data.id&&Number(localStorage.getItem(OUTING_INSTALLED_AT_KEY)||0)
+      ?outingDate(Number(localStorage.getItem(OUTING_INSTALLED_AT_KEY))):"Après confirmation"],
+    ["Compatibilité",`${protocolShortLabel()} · COMPAT ${data.compat.slice(0,8)}`],
+    ["Empreinte de session",fingerprint],
+    ["Zone",data.zone.type==="builtin"?zone.name:`${OUTING_EPHEMERAL_NAME} · ancre ${zone.anchorLat.toFixed(2)} / ${zone.anchorLon.toFixed(2)}`],
+    ["Alias de zone",alias]
+  ];
+  for(const [label,value] of rows){
+    const row=document.createElement("div"),heading=document.createElement("strong"),text=document.createElement("span");
+    heading.textContent=label;text.textContent=value;row.append(heading,text);summary.appendChild(row);
+  }
+  const replacing=!!activeSecret()&&(activeSecret()!==data.secret||zoneFingerprint(activeZone())!==zoneFingerprint(zone));
+  const warning=$("outingImportWarning");
+  const notices=[];
+  if(replacing)notices.push("Attention : cette sortie remplacera la session ou la zone actuellement active. Toute transmission préparée devra être recommencée.");
+  if(data.createdAt>Date.now()+3600000)notices.push("La date de création est dans le futur. Vérifie l'horloge des téléphones.");
+  if(Date.now()-data.createdAt>24*3600000)notices.push("Cette session a plus de 24 h : vérifie qu'il s'agit bien de la sortie en cours.");
+  if(notices.length)setStatus("outingImportWarning",notices.join(" "),"warn");
+  else warning.classList.add("hidden");
+  hideStatus("outingImportDialogError");
+  summary.classList.remove("hidden");
+}
+
+async function installOutingInvitation(prepared){
+  const {data,zone}=prepared;
+  const same=localStorage.getItem(OUTING_ID_KEY)===data.id&&activeSecret()===data.secret&&
+    zoneFingerprint(activeZone())===zoneFingerprint(zone)&&isZoneConfirmed(activeZone())&&
+    outingMatchesOriginalZone(activeZone())&&
+    (data.zone.type!=="ephemeral"||isOutingEphemeral(activeZone()));
+  if(same)return"Cette sortie est déjà installée et active.";
+  const oldId=localStorage.getItem(OUTING_ID_KEY);
+  const installed=await installValidatedSecret(data.secret,true,data.createdAt);
+  if(!installed)throw new Error("La session a changé pendant l'installation. Recommence.");
+  let target=zone;
+  if(data.zone.type==="ephemeral"){
+    target=zones.find(z=>z.ephemeral&&isAnchoredZone(z)&&
+      z.anchorLat===zone.anchorLat&&z.anchorLon===zone.anchorLon);
+    if(!target){
+      target={...zone,id:`eph-${Date.now()}-${secureRandomIndex(1000000)}`,
+        name:OUTING_EPHEMERAL_NAME,outingId:data.id,builtin:false,createdAt:Date.now()};
+      zones.push(target);saveZones();
+    }else if(target.outingId!==data.id||target.name!==OUTING_EPHEMERAL_NAME){
+      target.outingId=data.id;
+      target.name=OUTING_EPHEMERAL_NAME;
+      delete target.importedOuting;
+      saveZones();
+    }
+  }
+  setActiveZone(target.id,{invalidate:true,persist:true,refresh:false});
+  confirmedZoneIds.add(target.id);
+  saveZoneConfirmations();
+  localStorage.setItem(OUTING_ID_KEY,data.id);
+  saveOutingOrigin(data.id,target);
+  if(oldId!==data.id||!Number(localStorage.getItem(OUTING_INSTALLED_AT_KEY)||0)){
+    localStorage.setItem(OUTING_INSTALLED_AT_KEY,String(Date.now()));
+  }
+  await populateZones(target.id);
+  if(activeSecret()!==data.secret||activeZone()?.id!==target.id){
+    throw new Error("La session ou la zone a changé pendant l'installation. Vérifie l'état actif.");
+  }
+  refreshZoneConfirmationUi();
+  refreshEncodeState();refreshDecodeState();refreshOutingActions();
+  $("sessionSettings").open=false;
+  return"Sortie installée : session et alias de zone confirmés.";
+}
+
+function renderOutingBoundsPreview(zone=null){
+  const preview=$("outingBoundsPreview");
+  const selected=zone||(outingZoneType==="builtin"
+    ?BUILTIN_ZONES.find(z=>z.id===$("outingBuiltinSelect").value):null);
+  if(!selected){
+    preview.innerHTML="";
+    preview.classList.add("hidden");
+    return;
+  }
+  preview.innerHTML=zoneBoundsCompass(selected)+
+    (isAnchoredZone(selected)
+      ?`<p class="small">Centre virtuel de cette nouvelle session : ne pas transmettre à la VHF.</p>`
+      :`<p class="small">Aperçu de la zone choisie ; elle n’est pas encore activée.</p>`);
+  preview.classList.remove("hidden");
+}
+
+function outingSetupChanged(){
+  outingSetupRevision++;
+  outingCheckBusy=false;
+  $("checkOutingCreate").disabled=false;
+  pendingOutingCreation=null;
+  $("outingCreateSummary").classList.add("hidden");
+  $("confirmOutingCreate").classList.add("hidden");
+  $("checkOutingCreate").classList.remove("hidden");
+  hideStatus("outingCreateError");
+  renderOutingBoundsPreview();
+}
+
+function setOutingZoneType(type){
+  outingZoneType=type;
+  $("outingBuiltinFields").classList.toggle("hidden",type!=="builtin");
+  $("outingEphemeralFields").classList.toggle("hidden",type!=="ephemeral");
+  $("outingBuiltinChoice").classList.toggle("active",type==="builtin");
+  $("outingEphemeralChoice").classList.toggle("active",type==="ephemeral");
+  outingSetupChanged();
+}
+
+function readOutingReferencePosition(){
+  if(outingPositionMode==="marine"){
+    const lat=parseDdmAxis("outingLatDeg","outingLatMin","outingLatHem",true);
+    const lon=parseDdmAxis("outingLonDeg","outingLonMin","outingLonHem",false);
+    if(!lat.ok)return{ok:false,error:lat.error};
+    if(!lon.ok)return{ok:false,error:lon.error};
+    return{ok:true,lat:lat.value,lon:lon.value};
+  }
+  const lat=parseNum($("outingLat").value),lon=parseNum($("outingLon").value);
+  if(!Number.isFinite(lat)||lat<-89||lat>89||!Number.isFinite(lon)||lon<-180||lon>180){
+    return{ok:false,error:"Position de référence invalide : latitude -89 à 89, longitude -180 à 180."};
+  }
+  return{ok:true,lat,lon};
+}
+
+function setOutingReferencePosition(lat,lon){
+  const a=decimalAxisToDdm(lat,true),b=decimalAxisToDdm(lon,false);
+  if(!a||!b)return;
+  $("outingLat").value=String(lat);
+  $("outingLon").value=String(lon);
+  $("outingLatDeg").value=String(a.deg);
+  $("outingLatMin").value=a.min.toFixed(3);
+  $("outingLatHem").value=a.hem;
+  $("outingLonDeg").value=String(b.deg);
+  $("outingLonMin").value=b.min.toFixed(3);
+  $("outingLonHem").value=b.hem;
+  outingSetupChanged();
+}
+
+function setOutingPositionMode(mode){
+  const current=readOutingReferencePosition();
+  if(current.ok)setOutingReferencePosition(current.lat,current.lon);
+  outingPositionMode=mode;
+  $("outingMarineFields").classList.toggle("hidden",mode!=="marine");
+  $("outingDecimalFields").classList.toggle("hidden",mode!=="decimal");
+  $("outingMarineMode").classList.toggle("active",mode==="marine");
+  $("outingDecimalMode").classList.toggle("active",mode==="decimal");
+  outingSetupChanged();
+}
+
+function populateOutingBuiltinSelect(){
+  const select=$("outingBuiltinSelect");
+  select.innerHTML="";
+  for(const z of [...BUILTIN_ZONES].sort((a,b)=>
+    a.region.localeCompare(b.region,"fr")||compareZoneNames(a,b))){
+    const option=document.createElement("option");
+    option.value=z.id;
+    option.textContent=z.region+" · "+z.name;
+    select.appendChild(option);
+  }
+  const current=activeZone();
+  select.value=current?.builtin?current.id:BUILTIN_ZONES[0]?.id||"";
+}
+
+function openOutingSetup(){
+  if(outingMutationBusy)return;
+  populateOutingBuiltinSelect();
+  for(const id of ["outingLatDeg","outingLatMin","outingLonDeg","outingLonMin","outingLat","outingLon"])$(id).value="";
+  $("outingLatHem").value="N";
+  $("outingLonHem").value="W";
+  outingPositionMode="marine";
+  $("outingMarineFields").classList.remove("hidden");
+  $("outingDecimalFields").classList.add("hidden");
+  $("outingMarineMode").classList.add("active");
+  $("outingDecimalMode").classList.remove("active");
+  hideStatus("outingGpsStatus");
+  setOutingZoneType("builtin");
+  $("outingCreateDialog").showModal();
+}
+
+function appendOutingReview(label,value){
+  const row=document.createElement("div"),heading=document.createElement("strong"),content=document.createElement("span");
+  heading.textContent=label;
+  content.textContent=value;
+  row.append(heading,content);
+  $("outingCreateSummary").appendChild(row);
+}
+
+async function reviewOutingSetup(){
+  if(outingCheckBusy||outingMutationBusy)return;
+  const revision=++outingSetupRevision,sessionRevision=activeSessionRevision,zoneId=activeZoneId;
+  pendingOutingCreation=null;
+  $("outingCreateSummary").classList.add("hidden");
+  $("confirmOutingCreate").classList.add("hidden");
+  hideStatus("outingCreateError");
+  renderOutingBoundsPreview();
+  outingCheckBusy=true;
+  $("checkOutingCreate").disabled=true;
+  try{
+    assertProtocolReady();
+    const secret=generateSessionSecret(),createdAt=Date.now(),id=randomOutingId();
+    let candidate,position=null;
+    if(outingZoneType==="builtin"){
+      candidate=BUILTIN_ZONES.find(z=>z.id===$("outingBuiltinSelect").value);
+      if(!candidate)throw new Error("Choisis une zone intégrée du catalogue.");
+    }else{
+      position=readOutingReferencePosition();
+      if(!position.ok)throw new Error(position.error);
+      const picked=await createEphemeralZoneCandidate(position.lat,position.lon,secret);
+      candidate={...picked.z,id:"outing-preview",name:OUTING_EPHEMERAL_NAME,
+        builtin:false,ephemeral:true,protocolId:PROTOCOL_ID};
+    }
+    const [fingerprint,alias]=await Promise.all([sessionFingerprint(secret),zoneAlias(secret,candidate)]);
+    if(revision!==outingSetupRevision||!$("outingCreateDialog").open)return;
+    if(sessionRevision!==activeSessionRevision||zoneId!==activeZoneId){
+      throw new Error("La session ou la zone active a changé pendant la vérification. Recommence.");
+    }
+    const summary=$("outingCreateSummary");
+    summary.innerHTML="";
+    appendOutingReview("Zone choisie",candidate.name);
+    if(position)appendOutingReview("Position de référence",formatDegMin(position.lat,true)+" / "+formatDegMin(position.lon,false));
+    if(position)appendOutingReview("Ancre publique",candidate.anchorLat.toFixed(2)+" / "+candidate.anchorLon.toFixed(2));
+    appendOutingReview("Nouvelle empreinte radio",fingerprint.words.join(" · ")+" | "+fingerprint.nato);
+    appendOutingReview("Nouvel alias de zone",alias.text);
+    appendOutingReview("Compatibilité",protocolShortLabel()+" · COMPAT "+(await protocolCompatDigestHex()).slice(0,8));
+    if(revision!==outingSetupRevision||!$("outingCreateDialog").open)return;
+    pendingOutingCreation={revision,sessionRevision,zoneId,secret,createdAt,id,candidate,position};
+    renderOutingBoundsPreview(candidate);
+    summary.classList.remove("hidden");
+    $("checkOutingCreate").classList.add("hidden");
+    $("confirmOutingCreate").classList.remove("hidden");
+  }catch(e){
+    if(revision===outingSetupRevision)setStatus("outingCreateError",e.message||String(e),"bad");
+  }finally{
+    if(revision===outingSetupRevision){
+      outingCheckBusy=false;
+      $("checkOutingCreate").disabled=false;
+    }
+  }
+}
+
+function lockOutingSetup(locked){
+  for(const id of ["outingBuiltinChoice","outingEphemeralChoice","outingBuiltinSelect",
+    "outingMarineMode","outingDecimalMode","outingLatDeg","outingLatMin","outingLatHem",
+    "outingLonDeg","outingLonMin","outingLonHem","outingLat","outingLon","outingGpsBtn",
+    "checkOutingCreate","confirmOutingCreate","cancelOutingCreate"]){
+    $(id).disabled=locked;
+  }
+}
+
+async function commitOutingSetup(){
+  const draft=pendingOutingCreation;
+  if(!draft||outingMutationBusy)return;
+  if(draft.revision!==outingSetupRevision||draft.sessionRevision!==activeSessionRevision||draft.zoneId!==activeZoneId){
+    outingSetupChanged();
+    setStatus("outingCreateError","La préparation a changé. Vérifie de nouveau avant d'activer la sortie.","bad");
+    return;
+  }
+  const action=++outingActionRevision;
+  outingMutationBusy=true;
+  lockOutingSetup(true);
+  refreshOutingActions();
+  try{
+    const installed=await installValidatedSecret(draft.secret,true,draft.createdAt);
+    if(!installed||action!==outingActionRevision||activeSecret()!==draft.secret){
+      throw new Error("La session a changé pendant la création. Vérifie l'état actif.");
+    }
+    let target=draft.candidate;
+    if(draft.position){
+      target={...target,id:"eph-"+Date.now()+"-"+secureRandomIndex(1000000),
+        createdAt:Date.now(),outingId:draft.id};
+      zones.push(target);
+      saveZones();
+    }
+    setActiveZone(target.id,{invalidate:true,persist:true,refresh:false});
+    confirmedZoneIds.add(target.id);
+    saveZoneConfirmations();
+    localStorage.setItem(OUTING_ID_KEY,draft.id);
+    saveOutingOrigin(draft.id,target);
+    localStorage.setItem(OUTING_INSTALLED_AT_KEY,String(Date.now()));
+    await populateZones(target.id);
+    if(activeSecret()!==draft.secret||activeZone()?.id!==target.id){
+      throw new Error("La session ou la zone a changé pendant la création. Vérifie l'état actif.");
+    }
+    refreshZoneConfirmationUi();refreshEncodeState();refreshDecodeState();refreshOutingActions();
+    $("sessionSettings").open=false;
+    $("outingCreateDialog").close();
+  }catch(e){setStatus("outingCreateError",e.message||String(e),"bad");}
+  finally{
+    outingMutationBusy=false;
+    lockOutingSetup(false);
+    refreshOutingActions();
+  }
+}
+
+$("createOutingBtn").onclick=openOutingSetup;
+$("outingBuiltinChoice").onclick=()=>setOutingZoneType("builtin");
+$("outingEphemeralChoice").onclick=()=>setOutingZoneType("ephemeral");
+$("outingBuiltinSelect").onchange=outingSetupChanged;
+$("outingMarineMode").onclick=()=>setOutingPositionMode("marine");
+$("outingDecimalMode").onclick=()=>setOutingPositionMode("decimal");
+for(const id of ["outingLatDeg","outingLatMin","outingLonDeg","outingLonMin","outingLat","outingLon",
+  "outingLatHem","outingLonHem"]){
+  $(id).addEventListener(id.endsWith("Hem")?"change":"input",outingSetupChanged);
+}
+$("outingGpsBtn").onclick=()=>{
+  if(!navigator.geolocation){
+    setStatus("outingGpsStatus","GPS indisponible : saisis la position de référence.","bad");
+    return;
+  }
+  const revision=++outingSetupRevision;
+  pendingOutingCreation=null;
+  $("outingCreateSummary").classList.add("hidden");
+  $("confirmOutingCreate").classList.add("hidden");
+  setStatus("outingGpsStatus","Acquisition GPS en cours…","warn");
+  navigator.geolocation.getCurrentPosition(
+    fix=>{
+      if(revision!==outingSetupRevision||!$("outingCreateDialog").open||outingMutationBusy)return;
+      const lat=Number(fix.coords.latitude),lon=Number(fix.coords.longitude);
+      if(!Number.isFinite(lat)||lat<-89||lat>89||!Number.isFinite(lon)||lon<-180||lon>180){
+        setStatus("outingGpsStatus","Position GPS invalide. Saisis-la manuellement.","bad");return;
+      }
+      setOutingReferencePosition(lat,lon);
+      const accuracy=Number(fix.coords.accuracy);
+      setStatus("outingGpsStatus",Number.isFinite(accuracy)&&accuracy>100
+        ?"GPS récupéré, précision annoncée ±"+Math.round(accuracy)+" m. Vérifie la position."
+        :"Position GPS récupérée. Vérifie-la avant de créer la sortie.",
+        accuracy>100?"warn":"ok");
+    },
+    error=>{
+      if(revision===outingSetupRevision&&$("outingCreateDialog").open)
+        setStatus("outingGpsStatus","GPS : "+(error.message||"acquisition impossible"),"bad");
+    },
+    {enableHighAccuracy:true,timeout:60000,maximumAge:0}
+  );
+};
+$("checkOutingCreate").onclick=reviewOutingSetup;
+$("confirmOutingCreate").onclick=commitOutingSetup;
+$("cancelOutingCreate").onclick=()=>{if(!outingMutationBusy)$("outingCreateDialog").close();};
+$("outingCreateDialog").addEventListener("cancel",event=>{if(outingMutationBusy)event.preventDefault();});
+$("outingCreateDialog").addEventListener("close",()=>{
+  outingSetupRevision++;
+  outingCheckBusy=false;
+  $("checkOutingCreate").disabled=false;
+  pendingOutingCreation=null;
+  hideStatus("outingCreateError");
+  $("outingBoundsPreview").innerHTML="";
+  $("outingBoundsPreview").classList.add("hidden");
+});
+$("copyOutingBtn").onclick=async()=>{
+  if(outingCopyBusy||outingMutationBusy)return;
+  clearOutingShare();
+  $("outingShareDialog").showModal();
+  const revision=outingShareRevision,secret=activeSecret(),zoneId=activeZone()?.id,sessionRevision=activeSessionRevision;
+  outingCopyBusy=true;refreshOutingActions();
+  setStatus("outingShareStatus","Préparation de l'invitation…","warn");
+  try{
+    const payload=await activeOutingPayload();
+    const invitation=await formatOutingInvitation(payload);
+    if(revision!==outingShareRevision||!$("outingShareDialog").open)return;
+    if(activeSecret()!==secret||activeZone()?.id!==zoneId||activeSessionRevision!==sessionRevision||
+        localStorage.getItem(OUTING_ID_KEY)!==payload.id||!outingMatchesOriginalZone(activeZone())||
+        !isZoneConfirmed(activeZone())){
+      throw new Error("La session ou la zone a changé. Ferme cette fenêtre et recommence.");
+    }
+    outingShareReady={text:invitation,secret,zoneId,sessionRevision,outingId:payload.id};
+    $("outingShareText").value=invitation;
+    refreshOutingShareControls();
+    hideStatus("outingShareStatus");
+  }catch(e){
+    if(revision===outingShareRevision&&$("outingShareDialog").open){
+      setStatus("outingShareStatus",e.message||String(e),"bad");
+    }
+  }finally{
+    if(revision===outingShareRevision){
+      outingCopyBusy=false;
+      refreshOutingShareControls();
+      refreshOutingActions();
+    }
+  }
+};
+
+$("copyOutingMessageBtn").onclick=async()=>{
+  const draft=outingShareReady,revision=outingShareRevision;
+  if(!draft||outingCopyBusy||!$("outingShareDialog").open)return;
+  if(activeSecret()!==draft.secret||activeZone()?.id!==draft.zoneId||
+      activeSessionRevision!==draft.sessionRevision||localStorage.getItem(OUTING_ID_KEY)!==draft.outingId||
+      !outingMatchesOriginalZone(activeZone())||!isZoneConfirmed(activeZone())){
+    clearOutingShare();
+    return;
+  }
+  outingCopyBusy=true;refreshOutingActions();
+  refreshOutingShareControls();
+  try{
+    if(!navigator.clipboard?.writeText)throw new Error("Presse-papiers indisponible");
+    await navigator.clipboard.writeText(draft.text);
+    if(revision!==outingShareRevision||!$("outingShareDialog").open)return;
+    if(activeSecret()!==draft.secret||activeZone()?.id!==draft.zoneId||
+        activeSessionRevision!==draft.sessionRevision||localStorage.getItem(OUTING_ID_KEY)!==draft.outingId||
+        !outingMatchesOriginalZone(activeZone())||!isZoneConfirmed(activeZone())){
+      clearOutingShare();
+      return;
+    }
+    setStatus("outingShareStatus","Invitation copiée. Envoie le message tel quel aux participants.","ok");
+  }catch{
+    if(revision===outingShareRevision&&$("outingShareDialog").open){
+      $("outingShareText").focus({preventScroll:true});
+      $("outingShareText").select();
+      setStatus("outingShareStatus","Invitation sélectionnée : copie-la manuellement, puis envoie-la telle quelle.","warn");
+    }
+  }finally{
+    if(revision===outingShareRevision){
+      outingCopyBusy=false;
+      refreshOutingShareControls();
+      refreshOutingActions();
+    }
+  }
+};
+$("nativeShareOutingBtn").onclick=async()=>{
+  const draft=outingShareReady,revision=outingShareRevision;
+  if(!draft||outingCopyBusy||!$("outingShareDialog").open||!canShareOutingText(draft.text))return;
+  if(activeSecret()!==draft.secret||activeZone()?.id!==draft.zoneId||
+      activeSessionRevision!==draft.sessionRevision||localStorage.getItem(OUTING_ID_KEY)!==draft.outingId||
+      !outingMatchesOriginalZone(activeZone())||!isZoneConfirmed(activeZone())){
+    clearOutingShare();
+    return;
+  }
+  outingCopyBusy=true;refreshOutingActions();refreshOutingShareControls();
+  try{
+    // L'appel doit rester dans le clic utilisateur pour ouvrir le partage natif.
+    await navigator.share({text:draft.text});
+    if(revision!==outingShareRevision||!$("outingShareDialog").open)return;
+    setStatus("outingShareStatus","Partage lancé. Vérifie le destinataire et l’envoi dans l’application choisie.","ok");
+  }catch(e){
+    if(revision===outingShareRevision&&$("outingShareDialog").open){
+      setStatus("outingShareStatus",e?.name==="AbortError"
+        ?"Partage annulé. Le message reste disponible à copier."
+        :"Partage indisponible. Copie le message puis colle-le dans l’application de ton choix.","warn");
+    }
+  }finally{
+    if(revision===outingShareRevision){
+      outingCopyBusy=false;
+      refreshOutingShareControls();
+      refreshOutingActions();
+    }
+  }
+};
+$("closeOutingShare").onclick=()=>$("outingShareDialog").close();
+$("outingShareDialog").addEventListener("close",()=>{clearOutingShare();refreshOutingActions();});
+
+function invalidateOutingImportReview(){
+  outingImportRevision++;
+  pendingOutingImport=null;
+  $("checkOutingBtn").disabled=false;
+  $("checkOutingBtn").classList.remove("hidden");
+  $("confirmOutingImport").classList.add("hidden");
+  $("outingImportSummary").classList.add("hidden");
+  hideStatus("outingImportWarning");
+  hideStatus("outingImportDialogError");
+}
+
+$("receiveOutingBtn").onclick=()=>{
+  if(outingMutationBusy)return;
+  $("outingImportText").value="";
+  invalidateOutingImportReview();
+  $("outingImportDialog").showModal();
+};
+$("outingImportText").addEventListener("input",invalidateOutingImportReview);
+$("checkOutingBtn").onclick=async()=>{
+  if(outingMutationBusy||!$("outingImportDialog").open)return;
+  const button=$("checkOutingBtn"),sourceText=$("outingImportText").value;
+  const revision=++outingImportRevision;
+  button.disabled=true;
+  pendingOutingImport=null;
+  hideStatus("outingImportDialogError");
+  try{
+    const prepared=await inspectOutingInvitation(sourceText);
+    if(revision!==outingImportRevision||!$("outingImportDialog").open||$("outingImportText").value!==sourceText)return;
+    pendingOutingImport={...prepared,sourceText,sessionRevision:activeSessionRevision,zoneId:activeZoneId};
+    showOutingImportSummary(prepared);
+    button.classList.add("hidden");
+    $("confirmOutingImport").classList.remove("hidden");
+  }catch(e){
+    if(revision===outingImportRevision&&$("outingImportDialog").open){
+      setStatus("outingImportDialogError",e.message||String(e),"bad");
+    }
+  }finally{if(revision===outingImportRevision)button.disabled=false;}
+};
+$("cancelOutingImport").onclick=()=>{if(!outingMutationBusy)$("outingImportDialog").close();};
+$("outingImportDialog").addEventListener("cancel",event=>{if(outingMutationBusy)event.preventDefault();});
+$("outingImportDialog").addEventListener("close",()=>{
+  invalidateOutingImportReview();
+  $("outingImportText").value="";
+});
+$("confirmOutingImport").onclick=async()=>{
+  const prepared=pendingOutingImport,dialog=$("outingImportDialog");
+  if(!prepared||outingMutationBusy||!dialog.open)return;
+  if($("outingImportText").value!==prepared.sourceText||
+      activeSessionRevision!==prepared.sessionRevision||activeZoneId!==prepared.zoneId){
+    invalidateOutingImportReview();
+    setStatus("outingImportDialogError","Le message, la session ou la zone active a changé. Vérifie l'invitation de nouveau.","bad");
+    return;
+  }
+  outingMutationBusy=true;refreshOutingActions();
+  for(const id of ["outingImportText","checkOutingBtn","confirmOutingImport","cancelOutingImport"])$(id).disabled=true;
+  try{
+    await installOutingInvitation(prepared);
+    dialog.close();
+  }catch(e){
+    invalidateOutingImportReview();
+    setStatus("outingImportDialogError",e.message||String(e),"bad");
+  }finally{
+    for(const id of ["outingImportText","checkOutingBtn","confirmOutingImport","cancelOutingImport"])$(id).disabled=false;
+    outingMutationBusy=false;refreshOutingActions();
+  }
+};
+refreshOutingActions();
+
 $("protocolSelfTestBtn").onclick=runProtocolSelfTest;
 
 $("copySecret").onclick=async()=>{
@@ -6234,13 +7254,17 @@ $("sessionKey").addEventListener("paste",()=>{
 // Navigation / GPS / zones
 $("tabSend").onclick=()=>{$("sendPanel").classList.remove("hidden");$("receivePanel").classList.add("hidden");$("tabSend").classList.add("active");$("tabReceive").classList.remove("active");};
 $("tabReceive").onclick=()=>{$("sendPanel").classList.add("hidden");$("receivePanel").classList.remove("hidden");$("tabSend").classList.remove("active");$("tabReceive").classList.add("active");};
-sendZone.onchange=()=>{
-  setActiveZone(sendZone.value,{invalidate:true,persist:true,refresh:true});
-  refreshDecodeState();
+sendZone.onchange=async()=>{
+  const targetId=sendZone.value;
+  syncZoneSelects();
+  try{await switchToExistingZone(targetId,{clearPosition:true});}
+  catch(e){setStatus("sendZoneActionStatus",e.message||String(e),"bad");}
 };
-recvZone.onchange=()=>{
-  setActiveZone(recvZone.value,{invalidate:true,persist:true,refresh:true});
-  refreshDecodeState();
+recvZone.onchange=async()=>{
+  const targetId=recvZone.value;
+  syncZoneSelects();
+  try{await switchToExistingZone(targetId,{clearPosition:true});}
+  catch(e){setStatus("recvZoneActionStatus",e.message||String(e),"bad");}
 };
 
 $("positionModeMarine").onclick=()=>setPositionInputMode("marine");
@@ -6317,7 +7341,7 @@ $("centerGpsBtn").onclick=()=>{
     {enableHighAccuracy:true,timeout:60000,maximumAge:0}
   );
 };
-$("saveZoneBtn").onclick=()=>{
+$("saveZoneBtn").onclick=async()=>{
   try{
     const name=String($("zoneName").value??"").trim().toUpperCase();
     const p=readActiveZoneCenter();
@@ -6327,9 +7351,22 @@ $("saveZoneBtn").onclick=()=>{
     if(!Number.isFinite(lat)||!Number.isFinite(lon))throw new Error("Centre invalide.");
     const existing=zones.find(z=>!isAnchoredZone(z)&&sameZoneCenter(z,{lat,lon}));
     if(existing){
-      setActiveZone(existing.id,{invalidate:true,persist:true,refresh:true});
+      if(existing.id===activeZoneId){
+        setStatus("zoneStatus",`Ce centre existe déjà sous le libellé « ${existing.name} ». Cette zone est déjà active.`,"warn");
+        return;
+      }
+      if(!await switchToExistingZone(existing.id))return;
       setStatus("zoneStatus",`Ce centre existe déjà sous le libellé « ${existing.name} ». Zone active sélectionnée.`,"warn");
       return;
+    }
+    if(!await confirmManualZoneChange(name,{creation:true,detail:`Centre : ${lat.toFixed(5)} / ${lon.toFixed(5)}.`}))return;
+    if(zones.some(z=>!isAnchoredZone(z)&&sameZoneCenter(z,{lat,lon}))){
+      throw new Error("Ce centre a été ajouté pendant la confirmation. Recommence.");
+    }
+    const current=readActiveZoneCenter();
+    if(!current.ok||String($("zoneName").value??"").trim().toUpperCase()!==name||
+       canonicalCoord(current.lat)!==lat||canonicalCoord(current.lon)!==lon){
+      throw new Error("Le nom ou le centre a changé pendant la confirmation. Recommence.");
     }
     const id="z-"+Date.now();
     zones.push({id,name,lat,lon,builtin:false});
@@ -6352,10 +7389,29 @@ $("addReceivedZoneBtn").onclick=async()=>{
     assertValidPublicAnchor(rawAnchorLat,rawAnchorLon);
     const anchorLat=canonicalAnchorCoord(rawAnchorLat),anchorLon=canonicalAnchorCoord(rawAnchorLon);
     const localName=ephemeralLocalLabel(String($("receivedZoneName").value??"").trim().toUpperCase()||"ZONE REÇUE");
-    let z=zones.find(x=>isAnchoredZone(x)&&x.anchorLat===anchorLat&&x.anchorLon===anchorLon),created=false;
-    if(!z){z=await saveOrSelectEphemeralZone(anchorLat,anchorLon,secret,localName,sessionRevision,deletionRevision);created=true;}
+    let z=zones.find(x=>isAnchoredZone(x)&&x.anchorLat===anchorLat&&x.anchorLon===anchorLon),created=!z;
+    if(!z){
+      const center=await deriveSecretCenter(secret,anchorLat,anchorLon);
+      z={name:localName,lat:center.lat,lon:center.lon,anchorLat,anchorLon};
+    }
     assertZoneSessionCurrent(secret,sessionRevision);
     assertEphemeralDeletionCurrent(deletionRevision);
+    if(z.id===activeZoneId){
+      setStatus("receivedZoneStatus","Cette zone éphémère est déjà active.","warn");
+      return;
+    }
+    if(!await confirmManualZoneChange(z.name,{
+      creation:created,
+      detail:`Ancre publique : ${anchorLat.toFixed(2)} / ${anchorLon.toFixed(2)}.`
+    }))return;
+    assertZoneSessionCurrent(secret,sessionRevision);
+    assertEphemeralDeletionCurrent(deletionRevision);
+    if(canonicalAnchorCoord(parseNum($("receivedZoneLat").value))!==anchorLat||
+       canonicalAnchorCoord(parseNum($("receivedZoneLon").value))!==anchorLon){
+      throw new Error("L’ancre publique a changé pendant la confirmation. Recommence.");
+    }
+    if(!created&&!zones.includes(z))throw new Error("Cette zone n’est plus disponible. Recommence.");
+    if(created)z=await saveOrSelectEphemeralZone(anchorLat,anchorLon,secret,localName,sessionRevision,deletionRevision);
     setActiveZone(z.id,{invalidate:true,persist:true,refresh:false});
     populateZones(z.id);
     refreshDecodeState();
@@ -6413,6 +7469,10 @@ function requestZoneDeletion(id,focusId){
     setStatus("zoneStatus","Aucune zone personnalisée sélectionnée.","warn");
     return;
   }
+  if(isOutingEphemeral(z)){
+    setStatus("zoneStatus","Cette zone éphémère de sortie est conservée jusqu'à la prochaine session.","warn");
+    return;
+  }
   pendingZoneDeletion={kind:"single",id:z.id,focusId};
   $("zoneDeleteTitle").textContent="Supprimer cette zone ?";
   $("zoneDeleteName").textContent=z.name;
@@ -6426,14 +7486,15 @@ function requestZoneDeletion(id,focusId){
 }
 
 function requestEphemeralZonesDeletion(){
-  const count=zones.filter(z=>z.ephemeral).length;
+  const count=zones.filter(z=>z.ephemeral&&!isOutingEphemeral(z)).length;
   if(!count)return;
   pendingZoneDeletion={kind:"ephemeral-all",focusId:"manageZoneSelect"};
   $("zoneDeleteTitle").textContent="Supprimer toutes les zones éphémères ?";
   $("zoneDeleteName").textContent=`${count} zone${count>1?"s":""} éphémère${count>1?"s":""}`;
-  $("zoneDeleteDescription").textContent=zones.some(z=>z.ephemeral && z.id===activeZoneId)
+  const protectedNote=zones.some(isOutingEphemeral)?" La zone éphémère de sortie sera conservée.":"";
+  $("zoneDeleteDescription").textContent=(zones.some(z=>z.ephemeral&&!isOutingEphemeral(z)&&z.id===activeZoneId)
     ?"Ces zones seront supprimées de cet appareil. Une zone intégrée deviendra active et son alias devra être reconfirmé."
-    :"Ces zones seront supprimées de cet appareil. Les zones intégrées et personnalisées fixes seront conservées.";
+    :"Ces zones seront supprimées de cet appareil. Les zones intégrées et personnalisées fixes seront conservées.")+protectedNote;
   hideStatus("zoneDeleteError");
   $("confirmZoneDelete").textContent="Supprimer les zones éphémères";
   $("zoneDeleteDialog").showModal();
@@ -6444,6 +7505,7 @@ function deleteCustomZone(id){
   const z=zones.find(x=>x.id===id);
   if(!z)throw new Error("Cette zone n’existe plus.");
   if(z.builtin)throw new Error("Une zone intégrée ne peut pas être supprimée.");
+  if(isOutingEphemeral(z))throw new Error("Cette zone éphémère de sortie est conservée jusqu'à la prochaine session.");
   confirmedZoneIds.delete(z.id);
   saveZoneConfirmations();
   const wasActive=activeZoneId===z.id;
@@ -6461,13 +7523,13 @@ function deleteCustomZone(id){
 }
 
 function deleteAllEphemeralZones(){
-  const removed=zones.filter(z=>z.ephemeral);
+  const removed=zones.filter(z=>z.ephemeral&&!isOutingEphemeral(z));
   if(!removed.length)throw new Error("Aucune zone éphémère à supprimer.");
   ephemeralDeletionRevision++;
   const wasActive=removed.some(z=>z.id===activeZoneId);
   for(const z of removed)confirmedZoneIds.delete(z.id);
   saveZoneConfirmations();
-  zones=zones.filter(z=>!z.ephemeral);
+  zones=zones.filter(z=>!z.ephemeral||isOutingEphemeral(z));
   saveZones();
 
   const fallback=wasActive
@@ -6481,6 +7543,7 @@ function deleteAllEphemeralZones(){
 $("sendDeleteZoneBtn").onclick=()=>requestZoneDeletion(activeZoneId,"sendZone");
 $("recvDeleteZoneBtn").onclick=()=>requestZoneDeletion(activeZoneId,"recvZone");
 $("deleteZoneBtn").onclick=()=>requestZoneDeletion($("manageZoneSelect").value,"manageZoneSelect");
+$("manageZoneSelect").onchange=updateManageZoneDeletionButton;
 $("deleteEphemeralZonesBtn").onclick=requestEphemeralZonesDeletion;
 $("cancelZoneDelete").onclick=()=>$("zoneDeleteDialog").close();
 $("zoneDeleteDialog").addEventListener("close",()=>{
