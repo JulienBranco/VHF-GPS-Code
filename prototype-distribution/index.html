@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#122a38"><meta name="apple-mobile-web-app-capable" content="yes">
+<title>VHF GPS — test des mises à jour</title>
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="style.css"><script type="module" src="boot.js"></script>
+</head>
+<body>
+<main>
+<div class="test-banner">PROTOTYPE · TEST UNIQUEMENT · NE PAS UTILISER À LA VHF</div>
+<header><p class="eyebrow">VHF GPS</p><h1>Une sortie qui reste prête.</h1><p>Ce test vérifie qu’une mise à jour ne remplace pas la version d’une sortie préparée.</p></header>
+<p id="status" role="status" aria-live="polite">Ouverture du prototype…</p>
+<section class="session">
+<div class="section-title"><span class="step">S</span><h2>Sortie d’essai</h2></div>
+<p id="empty">Aucune sortie préparée sur ce téléphone.</p>
+<div id="active-frame"></div>
+<p id="ready" class="ready" hidden>✓ Sortie d’essai prête hors connexion</p>
+<div class="actions"><button id="create" disabled>Préparer une sortie d’essai</button><button id="receive" class="secondary" disabled>Recevoir une invitation</button><button id="share" class="secondary" hidden>Partager la sortie</button></div>
+<p class="small">Une sortie déjà préparée s’ouvre avec sa propre version, même sans Internet.</p>
+</section>
+<details class="testing"><summary>Scénario de test</summary>
+<p>Pour simuler une publication sans refaire un envoi sur GitHub, choisis la version proposée aux <strong>nouvelles</strong> sorties. La sortie active conserve sa version.</p>
+<label for="scenario">Publication à vérifier en ligne</label>
+<select id="scenario"><option value="live">Publication réelle du prototype</option><option value="A">Simulation : version A</option><option value="B">Simulation : version B incompatible</option></select>
+<p id="scenario-state" class="small"></p>
+<p class="small">Les fichiers A et B sont réellement distincts et téléchargés depuis l’hébergement. Ce réglage simule seulement le changement de publication annoncée.</p>
+<a href="GUIDE.html">Ouvrir le guide de test Android</a>
+</details>
+<p class="small footer">Données du prototype indépendantes de l’application de pêche. Les codes affichés sont fictifs.</p>
+</main>
+<dialog id="receive-dialog"><form id="receive-form">
+<h2>Recevoir une invitation d’essai</h2><label for="invitation-input">Colle le message complet</label><textarea id="invitation-input" rows="8" required autocomplete="off" spellcheck="false"></textarea>
+<p id="receive-error" class="error" role="alert"></p>
+<div class="actions"><button type="submit">Vérifier l’invitation</button><button type="button" class="cancel" data-close="receive-dialog">Annuler</button></div>
+</form></dialog>
+<dialog id="review-dialog"><h2 id="review-title">Confirmer cette sortie d’essai</h2><div id="review-summary"></div>
+<p id="review-error" class="error" role="alert"></p>
+<div class="actions"><button id="confirm">Activer cette sortie</button><button class="cancel" data-close="review-dialog">Annuler</button></div></dialog>
+<dialog id="share-dialog"><h2>Partager la sortie d’essai</h2><p>Copie ce message pour un autre téléphone ou pour tester sa restauration.</p>
+<textarea id="invitation-output" rows="10" readonly spellcheck="false"></textarea><p id="copy-status" role="status"></p>
+<div class="actions"><button id="copy">Copier l’invitation</button><button id="native-share" class="secondary">Partager avec une application</button><button class="cancel" data-close="share-dialog">Fermer</button></div></dialog>
+</body></html>

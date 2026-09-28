@@ -1,0 +1,3 @@
+# Les empreintes portent sur les octets : mêmes fins de ligne sur Windows et GitHub.
+* text=auto eol=lf
+*.png binary
