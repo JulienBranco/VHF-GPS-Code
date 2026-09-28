@@ -1242,3 +1242,209 @@ test('ancienne sortie sans zone d’origine enregistrée : partage masqué jusqu
   assert.equal(outingMatchesOriginalZone(activeZone()),true);
   assert.equal($('copyOutingBtn').classList.contains('hidden'),false);
 `));
+
+
+for(const change of ['session','zone','position']){
+  test('encodage : un changement de '+change+' abandonne le calcul précédent',t=>check(t,
+    "const change="+JSON.stringify(change)+String.raw`
+    await testCreateBuiltinOuting();
+    setDecimalPosition(activeZone().lat,activeZone().lon);
+    const original=encodeCore;
+    let release;
+    encodeCore=async(...args)=>{await new Promise(resolve=>release=resolve);return original(...args);};
+    const pending=encodeSelectedPosition();
+    assert.equal(typeof release,'function');
+    if(change==='session')await installValidatedSecret(generateSessionSecret());
+    if(change==='zone')setActiveZone(BUILTIN_ZONES[1].id);
+    if(change==='position'){setDecimalPosition(activeZone().lat+0.01,activeZone().lon);handlePositionChanged();}
+    release();
+    assert.equal(await pending,null);
+    assert.equal($('encodedBlock').classList.contains('hidden'),true);
+    assert.equal($('senderAckBlock').classList.contains('hidden'),true);
+    assert.equal($('encodedWords').textContent,'');
+  `));
+}
+
+test('encodage : une erreur tardive ne masque pas la nouvelle transmission',t=>check(t,String.raw`
+  await testCreateBuiltinOuting();
+  setDecimalPosition(activeZone().lat,activeZone().lon);
+  const original=encodeCore;
+  let rejectOld;
+  encodeCore=()=>new Promise((resolve,reject)=>rejectOld=reject);
+  const pending=$('encodeBtn').onclick();
+  encodeCore=original;
+  setDecimalPosition(activeZone().lat+0.01,activeZone().lon);handlePositionChanged();
+  await $('encodeBtn').onclick();
+  const phrase=$('encodedWords').textContent;
+  assert.ok(phrase);
+  rejectOld(new Error('ancien calcul interrompu'));
+  await pending;
+  assert.equal($('encodedWords').textContent,phrase);
+  assert.equal($('encodedBlock').classList.contains('hidden'),false);
+  assert.equal($('encodeStatus').classList.contains('hidden'),true);
+`));
+
+test('encodage : une saisie pendant le contrôle inverse invalide aussi le résultat',t=>check(t,String.raw`
+  await testCreateBuiltinOuting();
+  setDecimalPosition(activeZone().lat,activeZone().lon);
+  const original=decodeCore;
+  let release;
+  decodeCore=async(...args)=>{await new Promise(resolve=>release=resolve);return original(...args);};
+  const pending=encodeSelectedPosition();
+  for(let i=0;i<100&&!release;i++)await new Promise(resolve=>setTimeout(resolve,5));
+  assert.equal(typeof release,'function');
+  handlePositionChanged();
+  release();
+  assert.equal(await pending,null);
+  assert.equal($('encodedBlock').classList.contains('hidden'),true);
+`));
+
+const failedOutingFixture=String.raw`
+  $('createOutingBtn').onclick();
+  $('outingEphemeralChoice').onclick();$('outingDecimalMode').onclick();
+  $('outingLat').value='46.60';$('outingLon').value='-3.30';
+  await $('checkOutingCreate').onclick();await $('confirmOutingCreate').onclick();
+  const oldSecret=activeSecret(),oldZoneId=activeZoneId;
+  const keys=[SESSION_SECRET_KEY,SESSION_CREATED_AT_KEY,OUTING_ID_KEY,OUTING_INSTALLED_AT_KEY,
+    OUTING_ORIGIN_KEY,ACTIVE_ZONE_STORAGE_KEY,ZONE_CONFIRM_STORAGE_KEY,'vhfGpsZonesV4Custom'];
+  const saved=keys.map(key=>[key,localStorage.getItem(key)]);
+  const oldFingerprint=$('fingerprintWords').textContent;
+  const payload=await activeOutingPayload(),newSecret=generateSessionSecret(),target=BUILTIN_ZONES[1];
+  const fp=await sessionFingerprint(newSecret),alias=await zoneAlias(newSecret,target);
+  const invitation=await formatOutingInvitation({...payload,id:randomOutingId(),secret:newSecret,
+    zone:{type:'builtin',id:target.id},fingerprint:fp.words.join(' · ')+' | '+fp.nato,alias:alias.text});
+  const prepared=await inspectOutingInvitation(invitation);
+  function assertPreviousOuting(){
+    assert.equal(activeSecret(),oldSecret);
+    assert.equal(activeZoneId,oldZoneId);
+    assert.ok(isZoneConfirmed(activeZone()));
+    assert.ok(isOutingEphemeral(activeZone()));
+    assert.equal($('fingerprintWords').textContent,oldFingerprint);
+    assert.equal($('copyOutingBtn').classList.contains('hidden'),false);
+    for(const [key,value] of saved)assert.equal(localStorage.getItem(key),value,key);
+    assert.equal($('encodedBlock').classList.contains('hidden'),true);
+  }
+`;
+
+test('import : une erreur de calcul restaure la sortie et sa zone éphémère',t=>check(t,failedOutingFixture+String.raw`
+  const original=showSessionFingerprint;
+  showSessionFingerprint=async()=>{throw new Error('échec simulé empreinte');};
+  await assert.rejects(installOutingInvitation(prepared),/échec simulé empreinte/);
+  showSessionFingerprint=original;
+  assertPreviousOuting();
+  assert.match(await installOutingInvitation(prepared),/Sortie installée/);
+  assert.equal(activeSecret(),newSecret);
+`));
+
+for(const keyName of ['ACTIVE_ZONE_STORAGE_KEY','OUTING_INSTALLED_AT_KEY']){
+  test('import : restauration après échec de stockage '+keyName,t=>check(t,
+    failedOutingFixture+'const failingKey='+keyName+';'+String.raw`
+    const original=localStorage.setItem;
+    let rejected=false;
+    localStorage.setItem=(key,value)=>{
+      if(key===failingKey&&!rejected){rejected=true;throw new Error('échec simulé stockage');}
+      original(key,value);
+    };
+    await assert.rejects(installOutingInvitation(prepared),/échec simulé stockage/);
+    localStorage.setItem=original;
+    assert.equal(rejected,true);
+    assertPreviousOuting();
+  `));
+}
+
+test('import : un rafraîchissement final échoué restaure la sortie précédente',t=>check(t,failedOutingFixture+String.raw`
+  const original=populateZones;
+  populateZones=(...args)=>{
+    if(activeSecret()===newSecret)throw new Error('échec simulé affichage');
+    return original(...args);
+  };
+  await assert.rejects(installOutingInvitation(prepared),/échec simulé affichage/);
+  populateZones=original;
+  assertPreviousOuting();
+`));
+
+test('import : un ancien échec ne restaure pas la sortie sur une session plus récente',t=>check(t,failedOutingFixture+String.raw`
+  const original=showSessionFingerprint;
+  let release;
+  showSessionFingerprint=secret=>secret===newSecret
+    ?new Promise((resolve,reject)=>release=()=>reject(new Error('ancien échec')))
+    :original(secret);
+  const pending=installOutingInvitation(prepared);
+  assert.equal(typeof release,'function');
+  const latest=generateSessionSecret();
+  await installValidatedSecret(latest);
+  release();
+  await assert.rejects(pending,/ancien échec/);
+  assert.equal(activeSecret(),latest);
+  assert.equal(localStorage.getItem(SESSION_SECRET_KEY),latest);
+  showSessionFingerprint=original;
+`));
+
+test('création : une installation échouée préserve la sortie précédente et autorise une nouvelle vérification',t=>check(t,failedOutingFixture+String.raw`
+  $('createOutingBtn').onclick();
+  await $('checkOutingCreate').onclick();
+  const original=showSessionFingerprint;
+  showSessionFingerprint=async()=>{throw new Error('échec simulé création');};
+  await $('confirmOutingCreate').onclick();
+  showSessionFingerprint=original;
+  assert.match($('outingCreateError').textContent,/échec simulé création/);
+  assert.equal($('outingCreateDialog').open,true);
+  assertPreviousOuting();
+  await $('checkOutingCreate').onclick();
+  await $('confirmOutingCreate').onclick();
+  assert.equal($('outingCreateDialog').open,false);
+  assert.notEqual(activeSecret(),oldSecret);
+`));
+
+
+test('import : un aller-retour de zone plus récent empêche une restauration périmée',t=>check(t,failedOutingFixture+String.raw`
+  const original=showSessionFingerprint;
+  let release;
+  showSessionFingerprint=secret=>secret===newSecret
+    ?new Promise((resolve,reject)=>release=()=>reject(new Error('ancien échec zone')))
+    :original(secret);
+  const pending=installOutingInvitation(prepared);
+  const current=activeZoneId;
+  const other=BUILTIN_ZONES.find(z=>z.id!==current);
+  setActiveZone(other.id,{refresh:false});
+  setActiveZone(current,{refresh:false});
+  release();
+  await assert.rejects(pending,/ancien échec zone/);
+  assert.equal(activeSecret(),newSecret);
+  assert.equal(activeZoneId,current);
+  showSessionFingerprint=original;
+`));
+
+test('import : une restauration impossible désactive les échanges',t=>check(t,failedOutingFixture+String.raw`
+  const original=localStorage.setItem;
+  let blocked=false;
+  localStorage.setItem=(key,value)=>{
+    if(key===OUTING_INSTALLED_AT_KEY)blocked=true;
+    if(blocked)throw new Error('stockage indisponible');
+    original(key,value);
+  };
+  await assert.rejects(installOutingInvitation(prepared),/restauration de la sortie a échoué/);
+  localStorage.setItem=original;
+  assert.equal(activeSecret(),'');
+  assert.equal(isZoneConfirmed(activeZone()),false);
+  assert.equal($('encodeBtn').disabled,true);
+  assert.equal($('fingerprintBlock').classList.contains('hidden'),true);
+  assert.equal($('encodedBlock').classList.contains('hidden'),true);
+`));
+
+test('création : une première installation échouée ne laisse aucune session active',t=>check(t,String.raw`
+  for(const key of [SESSION_SECRET_KEY,SESSION_CREATED_AT_KEY,OUTING_ID_KEY,OUTING_INSTALLED_AT_KEY,OUTING_ORIGIN_KEY]){
+    localStorage.removeItem(key);
+  }
+  syncSavedSecret('');hideSessionFingerprint();
+  $('createOutingBtn').onclick();await $('checkOutingCreate').onclick();
+  const original=showSessionFingerprint;
+  showSessionFingerprint=async()=>{throw new Error('première création interrompue');};
+  await $('confirmOutingCreate').onclick();
+  showSessionFingerprint=original;
+  assert.equal(activeSecret(),'');
+  assert.equal(localStorage.getItem(SESSION_SECRET_KEY),null);
+  assert.equal(localStorage.getItem(OUTING_ID_KEY),null);
+  assert.equal($('fingerprintBlock').classList.contains('hidden'),true);
+  assert.equal($('encodeBtn').disabled,true);
+`));

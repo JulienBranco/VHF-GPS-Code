@@ -3095,7 +3095,7 @@ function initTheme(){
   }
 }
 
-const APP_VERSION="3.28.101";
+const APP_VERSION="3.28.102";
 const PROTOCOL_ID="VHF-GPS-PROTO-6";
 
 function protocolShortLabel(){
@@ -4197,6 +4197,7 @@ const sendZone=$("sendZone"),recvZone=$("recvZone");
 const ACTIVE_ZONE_STORAGE_KEY="vhfGpsActiveZoneV1";
 
 let activeZoneId="";
+let activeZoneRevision=0;
 const storedActiveZoneId=localStorage.getItem(ACTIVE_ZONE_STORAGE_KEY)||"";
 if(zones.some(z=>z.id===storedActiveZoneId))activeZoneId=storedActiveZoneId;
 else if(zones.length)activeZoneId=zones[0].id;
@@ -4223,6 +4224,7 @@ function setActiveZone(id,{invalidate=true,persist=true,refresh=true}={}){
 
   const changed=activeZoneId!==target.id;
   activeZoneId=target.id;
+  if(changed)activeZoneRevision++;
 
   syncZoneSelects();
 
@@ -4378,7 +4380,9 @@ function isZoneConfirmed(z){
   return !!z && confirmedZoneIds.has(z.id);
 }
 
+let encodeRevision=0;
 function invalidateEncodedResult(){
+  encodeRevision++;
   hideStatus("encodeStatus");
   $("encodedBlock").classList.add("hidden");
   $("senderAckBlock").classList.add("hidden");
@@ -5589,8 +5593,8 @@ $("relativeGpsBtn").onclick=()=>{
 
 
 function returnRow(word,title,action){return `<div class="returnrow"><div class="returnword">${escapeHtml(displayWord(word))}</div><div class="returnaction"><strong>${escapeHtml(title)}</strong>${escapeHtml(action)}</div></div>`;}
-async function renderSenderReturns(e,z,phrase){
-  const w=e.phrase.words,alias=await zoneAlias(activeSecret(),z);
+function renderSenderReturns(e,z,phrase){
+  const w=e.phrase.words;
   $("senderExpectedAckWord").textContent=displayWord(e.ack);
   $("senderFinalConfirmWord").textContent=displayWord(e.finalConfirm);
   const rows=[
@@ -5849,57 +5853,66 @@ $("useCompatibleZoneBtn").onclick=async()=>{
 
 async function encodeSelectedPosition(){
   invalidateEncodedResult();
+  const revision=encodeRevision;
+  try{
 
-  const z=selectedZone(sendZone),secret=activeSecret();
-  if(!validateSessionSecret(secret).ok)throw new Error("Valide d’abord le secret de session en haut de la page.");
-  if(!isZoneConfirmed(z)){
-    throw new Error("Confirme d’abord l’alias de la zone active avec le correspondant.");
+    const z=selectedZone(sendZone),secret=activeSecret();
+    if(!validateSessionSecret(secret).ok)throw new Error("Valide d’abord le secret de session en haut de la page.");
+    if(!isZoneConfirmed(z)){
+      throw new Error("Confirme d’abord l’alias de la zone active avec le correspondant.");
+    }
+
+    const p=readActivePosition();
+    if(!p.ok)throw new Error(p.error);
+    const {lat,lon}=p;
+
+    if(!zoneCheck(lat,lon,z).inside){
+      checkDrift();
+      throw new Error("Encodage impossible dans cette zone.");
+    }
+
+    const e=await encodeCore(lat,lon,secret,z);
+    if(revision!==encodeRevision)return null;
+    const phrase=phraseText(e.phrase);
+    const d=await decodeCore(e.phrase.words,e.phrase.connector,secret,z);
+    if(revision!==encodeRevision)return null;
+    const err=haversineM(lat,lon,d.lat,d.lon);
+    const same=d.index===e.index&&d.receivedTag===e.tag&&
+      d.ack===e.ack&&d.finalConfirm===e.finalConfirm;
+    if(!same)throw new Error("Contrôle automatique du code échoué. Ne transmets pas cette phrase.");
+
+    $("encodedWords").textContent=phrase;
+    $("activeTransmissionTime").textContent="Préparée à "+new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+    $("encodedBlock").classList.remove("hidden");
+    renderSenderReturns(e,z,phrase);
+    $("senderAckBlock").classList.remove("hidden");
+
+    $("debugSummary").textContent=`✓ Aller/retour validé — même case #${e.index} — écart au centre de maille : ${err.toFixed(1)} m`;
+    $("debugSummary").className="status ok";
+    $("debugGrid").innerHTML=
+      `<div class="debugcell"><strong>Entrée GPS</strong>${lat.toFixed(6)} / ${lon.toFixed(6)}</div>`+
+      `<div class="debugcell"><strong>Grille</strong>X=${e.ix} · Y=${e.iy} · index=${e.index}</div>`+
+      `<div class="debugcell"><strong>Tag 9 bits</strong>${e.tag} / 511</div>`+
+      `<div class="debugcell"><strong>Code chiffré dans le domaine</strong>${e.cipher}</div>`+
+      `<div class="debugcell"><strong>Phrase</strong>${phrase}</div>`+
+      `<div class="debugcell"><strong>Retour décodé</strong>${d.lat.toFixed(6)}, ${d.lon.toFixed(6)}<br>`+
+      `${Math.abs(d.lat).toFixed(6)}° ${d.lat>=0?"N":"S"} / ${Math.abs(d.lon).toFixed(6)}° ${d.lon>=0?"E":"W"}</div>`+
+      `<div class="debugcell"><strong>ACK attendu / recalculé</strong>${e.ack} / ${d.ack}</div>`+
+      `<div class="debugcell"><strong>Confirmation finale</strong>${e.finalConfirm} / ${d.finalConfirm}</div>`;
+    debugDetailsReady=true;
+    refreshDebugDetails();
+
+    return {z,secret,lat,lon,e,phrase,d,err};
+  }catch(e){
+    if(revision!==encodeRevision)return null;
+    throw e;
   }
-
-  const p=readActivePosition();
-  if(!p.ok)throw new Error(p.error);
-  const {lat,lon}=p;
-
-  if(!zoneCheck(lat,lon,z).inside){
-    checkDrift();
-    throw new Error("Encodage impossible dans cette zone.");
-  }
-
-  const e=await encodeCore(lat,lon,secret,z);
-  const phrase=phraseText(e.phrase);
-  const d=await decodeCore(e.phrase.words,e.phrase.connector,secret,z);
-  const err=haversineM(lat,lon,d.lat,d.lon);
-  const same=d.index===e.index&&d.receivedTag===e.tag&&
-    d.ack===e.ack&&d.finalConfirm===e.finalConfirm;
-  if(!same)throw new Error("Contrôle automatique du code échoué. Ne transmets pas cette phrase.");
-
-  $("encodedWords").textContent=phrase;
-  $("activeTransmissionTime").textContent="Préparée à "+new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
-  $("encodedBlock").classList.remove("hidden");
-  await renderSenderReturns(e,z,phrase);
-  $("senderAckBlock").classList.remove("hidden");
-
-  $("debugSummary").textContent=`✓ Aller/retour validé — même case #${e.index} — écart au centre de maille : ${err.toFixed(1)} m`;
-  $("debugSummary").className="status ok";
-  $("debugGrid").innerHTML=
-    `<div class="debugcell"><strong>Entrée GPS</strong>${lat.toFixed(6)} / ${lon.toFixed(6)}</div>`+
-    `<div class="debugcell"><strong>Grille</strong>X=${e.ix} · Y=${e.iy} · index=${e.index}</div>`+
-    `<div class="debugcell"><strong>Tag 9 bits</strong>${e.tag} / 511</div>`+
-    `<div class="debugcell"><strong>Code chiffré dans le domaine</strong>${e.cipher}</div>`+
-    `<div class="debugcell"><strong>Phrase</strong>${phrase}</div>`+
-    `<div class="debugcell"><strong>Retour décodé</strong>${d.lat.toFixed(6)}, ${d.lon.toFixed(6)}<br>`+
-    `${Math.abs(d.lat).toFixed(6)}° ${d.lat>=0?"N":"S"} / ${Math.abs(d.lon).toFixed(6)}° ${d.lon>=0?"E":"W"}</div>`+
-    `<div class="debugcell"><strong>ACK attendu / recalculé</strong>${e.ack} / ${d.ack}</div>`+
-    `<div class="debugcell"><strong>Confirmation finale</strong>${e.finalConfirm} / ${d.finalConfirm}</div>`;
-  debugDetailsReady=true;
-  refreshDebugDetails();
-
-  return {z,secret,lat,lon,e,phrase,d,err};
 }
 
 $("encodeBtn").onclick=async()=>{
   try{
     const result=await encodeSelectedPosition();
+    if(!result)return;
     if(result.d.index===result.e.index && result.d.receivedTag===result.e.tag &&
        !$("sendPanel").classList.contains("hidden")){
       $("encodedBlock").scrollIntoView({behavior:"smooth",block:"start"});
@@ -6895,6 +6908,76 @@ function showOutingImportSummary(prepared){
   summary.classList.remove("hidden");
 }
 
+// Restauration compensatoire des erreurs pendant une installation en cours.
+// Les révisions restent croissantes : un ancien calcul ne peut pas redevenir valide.
+// Ce garde-fou ne remplace pas une transaction persistante face à un arrêt brutal.
+async function withOutingRollback(install){
+  const keys=[SESSION_SECRET_KEY,SESSION_CREATED_AT_KEY,OUTING_ID_KEY,
+    OUTING_INSTALLED_AT_KEY,OUTING_ORIGIN_KEY,ACTIVE_ZONE_STORAGE_KEY,
+    ZONE_CONFIRM_STORAGE_KEY,"vhfGpsZonesV4Custom"];
+  const saved={
+    storage:keys.map(key=>[key,localStorage.getItem(key)]),
+    secret:activeSecret(),zones:zones.map(z=>({...z})),zoneId:activeZoneId,
+    confirmed:[...confirmedZoneIds],manual:[...manualConfirmedZoneIds],
+    auto:outingAutoConfirmedZoneId,attempts:[...consumedFinalAttemptKeys],
+    fingerprint:$("fingerprintWords").textContent,
+    fingerprintHidden:$("fingerprintBlock").classList.contains("hidden")
+  };
+  const owner={
+    revision:activeSessionRevision,zoneRevision:activeZoneRevision,
+    capture(){this.revision=activeSessionRevision;this.zoneRevision=activeZoneRevision;},
+    current(){return this.revision===activeSessionRevision&&this.zoneRevision===activeZoneRevision;},
+    check(){if(!this.current())throw new Error("La session ou la zone a changé pendant l'installation. Recommence.");}
+  };
+  try{return await install(owner);}
+  catch(error){
+    // Une autre action a pris la main : ne jamais remettre une ancienne sortie dessus.
+    if(!owner.current())throw error;
+    let storageFailure=false;
+    for(const [key,value] of saved.storage){
+      try{
+        if(localStorage.getItem(key)!==value){
+          if(value===null)localStorage.removeItem(key);
+          else localStorage.setItem(key,value);
+        }
+      }catch{storageFailure=true;}
+    }
+    activeSessionRevision++;
+    zones=saved.zones;
+    activeZoneId=saved.zoneId;
+    activeZoneRevision++;
+    confirmedZoneIds.clear();saved.confirmed.forEach(id=>confirmedZoneIds.add(id));
+    manualConfirmedZoneIds.clear();saved.manual.forEach(id=>manualConfirmedZoneIds.add(id));
+    outingAutoConfirmedZoneId=saved.auto;
+    consumedFinalAttemptKeys.clear();saved.attempts.forEach(key=>consumedFinalAttemptKeys.add(key));
+    syncSavedSecret(storageFailure?"":saved.secret);
+    invalidateEncodedResult();invalidateDecodedResult();
+    if(storageFailure){
+      confirmedZoneIds.clear();manualConfirmedZoneIds.clear();outingAutoConfirmedZoneId=null;
+      hideSessionFingerprint();refreshZoneConfirmationUi();refreshDecodeState();
+      try{await populateZones(saved.zoneId);}catch{}
+      throw new Error("La restauration de la sortie a échoué. Réinstalle son invitation avant de reprendre.");
+    }
+    $("fingerprintWords").textContent=saved.fingerprint;
+    $("fingerprintBlock").classList.toggle("hidden",saved.fingerprintHidden);
+    owner.capture();
+    try{await populateZones(saved.zoneId);}
+    catch{
+      // Le stockage précédent est restauré, mais une panne de rendu/calcul persiste.
+      if(owner.current()){
+        syncSavedSecret("");hideSessionFingerprint();
+        refreshZoneAliases().catch(()=>{});refreshEphemeralWorkflow().catch(()=>{});
+        refreshZoneConfirmationUi();refreshDecodeState();
+      }
+      throw new Error("La sortie précédente est enregistrée, mais son affichage a échoué. Rouvre l'application avant de reprendre.");
+    }
+    if(owner.current()){
+      refreshZoneConfirmationUi();refreshEncodeState();refreshDecodeState();refreshOutingActions();
+    }
+    throw error;
+  }
+}
+
 async function installOutingInvitation(prepared){
   const {data,zone}=prepared;
   const same=localStorage.getItem(OUTING_ID_KEY)===data.id&&activeSecret()===data.secret&&
@@ -6902,45 +6985,52 @@ async function installOutingInvitation(prepared){
     outingMatchesOriginalZone(activeZone())&&
     (data.zone.type!=="ephemeral"||(isOutingEphemeral(activeZone())&&sameZoneCenter(activeZone(),zone)));
   if(same)return"Cette sortie est déjà installée et active.";
-  const oldId=localStorage.getItem(OUTING_ID_KEY);
-  const installed=await installValidatedSecret(data.secret,true,data.createdAt);
-  if(!installed)throw new Error("La session a changé pendant l'installation. Recommence.");
-  let target=zone;
-  if(data.zone.type==="ephemeral"){
-    target=zones.find(z=>z.ephemeral&&isAnchoredZone(z)&&
-      z.anchorLat===zone.anchorLat&&z.anchorLon===zone.anchorLon);
-    if(!target){
-      target={...zone,id:`eph-${Date.now()}-${secureRandomIndex(1000000)}`,
-        name:OUTING_EPHEMERAL_NAME,outingId:data.id,builtin:false,createdAt:Date.now()};
-      zones.push(target);saveZones();
-    }else if(target.outingId!==data.id||target.name!==OUTING_EPHEMERAL_NAME||!sameZoneCenter(target,zone)){
-      target.lat=zone.lat;
-      target.lon=zone.lon;
-      target.outingId=data.id;
-      target.name=OUTING_EPHEMERAL_NAME;
-      delete target.importedOuting;
-      saveZones();
+  return withOutingRollback(async owner=>{
+    const oldId=localStorage.getItem(OUTING_ID_KEY);
+    const installing=installValidatedSecret(data.secret,true,data.createdAt);
+    owner.capture();
+    const installed=await installing;
+    owner.check();
+    if(!installed)throw new Error("La session a changé pendant l'installation. Recommence.");
+    let target=zone;
+    if(data.zone.type==="ephemeral"){
+      target=zones.find(z=>z.ephemeral&&isAnchoredZone(z)&&
+        z.anchorLat===zone.anchorLat&&z.anchorLon===zone.anchorLon);
+      if(!target){
+        target={...zone,id:`eph-${Date.now()}-${secureRandomIndex(1000000)}`,
+          name:OUTING_EPHEMERAL_NAME,outingId:data.id,builtin:false,createdAt:Date.now()};
+        zones.push(target);saveZones();
+      }else if(target.outingId!==data.id||target.name!==OUTING_EPHEMERAL_NAME||!sameZoneCenter(target,zone)){
+        target.lat=zone.lat;
+        target.lon=zone.lon;
+        target.outingId=data.id;
+        target.name=OUTING_EPHEMERAL_NAME;
+        delete target.importedOuting;
+        saveZones();
+      }
     }
-  }
-  setActiveZone(target.id,{invalidate:true,persist:true,refresh:false});
-  confirmedZoneIds.add(target.id);
-  manualConfirmedZoneIds.delete(target.id);
-  outingAutoConfirmedZoneId=target.id;
-  localStorage.setItem(OUTING_ID_KEY,data.id);
-  saveOutingOrigin(data.id,target);
-  saveZoneConfirmations();
-  if(oldId!==data.id||!Number(localStorage.getItem(OUTING_INSTALLED_AT_KEY)||0)){
-    localStorage.setItem(OUTING_INSTALLED_AT_KEY,String(Date.now()));
-  }
-  await populateZones(target.id);
-  if(activeSecret()!==data.secret||activeZone()?.id!==target.id){
-    throw new Error("La session ou la zone a changé pendant l'installation. Vérifie l'état actif.");
-  }
-  clearExchangeInputsForNewOuting();
-  refreshZoneConfirmationUi();
-  refreshEncodeState();refreshDecodeState();refreshOutingActions();
-  $("sessionSettings").open=false;
-  return"Sortie installée : session et alias de zone confirmés.";
+    try{setActiveZone(target.id,{invalidate:true,persist:true,refresh:false});}
+    finally{owner.capture();}
+    confirmedZoneIds.add(target.id);
+    manualConfirmedZoneIds.delete(target.id);
+    outingAutoConfirmedZoneId=target.id;
+    localStorage.setItem(OUTING_ID_KEY,data.id);
+    saveOutingOrigin(data.id,target);
+    saveZoneConfirmations();
+    if(oldId!==data.id||!Number(localStorage.getItem(OUTING_INSTALLED_AT_KEY)||0)){
+      localStorage.setItem(OUTING_INSTALLED_AT_KEY,String(Date.now()));
+    }
+    await populateZones(target.id);
+    owner.check();
+    if(activeSecret()!==data.secret||activeZone()?.id!==target.id){
+      throw new Error("La session ou la zone a changé pendant l'installation. Vérifie l'état actif.");
+    }
+    clearExchangeInputsForNewOuting();
+    refreshZoneConfirmationUi();
+    refreshEncodeState();refreshDecodeState();refreshOutingActions();
+    $("sessionSettings").open=false;
+    return"Sortie installée : session et alias de zone confirmés.";
+  });
 }
 
 function renderOutingBoundsPreview(zone=null){
@@ -7133,31 +7223,39 @@ async function commitOutingSetup(){
   lockOutingSetup(true);
   refreshOutingActions();
   try{
-    const installed=await installValidatedSecret(draft.secret,true,draft.createdAt);
-    if(!installed||action!==outingActionRevision||activeSecret()!==draft.secret){
-      throw new Error("La session a changé pendant la création. Vérifie l'état actif.");
-    }
-    let target=draft.candidate;
-    if(draft.position){
-      target={...target,id:"eph-"+Date.now()+"-"+secureRandomIndex(1000000),
-        createdAt:Date.now(),outingId:draft.id};
-      zones.push(target);
-      saveZones();
-    }
-    setActiveZone(target.id,{invalidate:true,persist:true,refresh:false});
-    confirmedZoneIds.add(target.id);
-    manualConfirmedZoneIds.delete(target.id);
-    outingAutoConfirmedZoneId=target.id;
-    localStorage.setItem(OUTING_ID_KEY,draft.id);
-    saveOutingOrigin(draft.id,target);
-    saveZoneConfirmations();
-    localStorage.setItem(OUTING_INSTALLED_AT_KEY,String(Date.now()));
-    await populateZones(target.id);
-    if(activeSecret()!==draft.secret||activeZone()?.id!==target.id){
-      throw new Error("La session ou la zone a changé pendant la création. Vérifie l'état actif.");
-    }
-    clearExchangeInputsForNewOuting();
-    refreshZoneConfirmationUi();refreshEncodeState();refreshDecodeState();refreshOutingActions();
+    const target=await withOutingRollback(async owner=>{
+      const installing=installValidatedSecret(draft.secret,true,draft.createdAt);
+      owner.capture();
+      const installed=await installing;
+      owner.check();
+      if(!installed||action!==outingActionRevision||activeSecret()!==draft.secret){
+        throw new Error("La session a changé pendant la création. Vérifie l'état actif.");
+      }
+      let target=draft.candidate;
+      if(draft.position){
+        target={...target,id:"eph-"+Date.now()+"-"+secureRandomIndex(1000000),
+          createdAt:Date.now(),outingId:draft.id};
+        zones.push(target);
+        saveZones();
+      }
+      try{setActiveZone(target.id,{invalidate:true,persist:true,refresh:false});}
+      finally{owner.capture();}
+      confirmedZoneIds.add(target.id);
+      manualConfirmedZoneIds.delete(target.id);
+      outingAutoConfirmedZoneId=target.id;
+      localStorage.setItem(OUTING_ID_KEY,draft.id);
+      saveOutingOrigin(draft.id,target);
+      saveZoneConfirmations();
+      localStorage.setItem(OUTING_INSTALLED_AT_KEY,String(Date.now()));
+      await populateZones(target.id);
+      owner.check();
+      if(activeSecret()!==draft.secret||activeZone()?.id!==target.id){
+        throw new Error("La session ou la zone a changé pendant la création. Vérifie l'état actif.");
+      }
+      clearExchangeInputsForNewOuting();
+      refreshZoneConfirmationUi();refreshEncodeState();refreshDecodeState();refreshOutingActions();
+      return target;
+    });
     $("sessionSettings").open=false;
     $("outingCreateDialog").close();
     $("outingSettings").open=true;

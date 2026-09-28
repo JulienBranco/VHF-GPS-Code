@@ -19,6 +19,13 @@ Une PWA installée depuis HTTPS possède un espace de stockage distinct de celui
 
 ## Développement et mises à jour
 
+### Correctifs V3.28.102
+
+Un changement de session, de zone ou de coordonnées annule les encodages en cours, y compris pendant le contrôle inverse. Un résultat ou une erreur devenus obsolètes ne peuvent plus réafficher une ancienne transmission ni masquer la suivante.
+
+La création et l'import d'une sortie sauvegardent leur état précédent avant installation. Une erreur gérée restaure la session, les zones et les confirmations précédentes, sauf si une action plus récente a déjà pris la main. Si la restauration du stockage échoue elle-même, les échanges sont désactivés. Cette restauration compensatoire ne couvre pas un arrêt brutal de l'application entre deux écritures ; elle ne remplace pas une future transaction persistante. Les mécanismes de publication et de mise à jour PWA restent identiques ; PROTO 6 et COMPAT `4043F648` sont inchangés.
+
+
 ### Passage au protocole radio 6
 
 Depuis la version **3.28.61**, l'application utilise **PROTO 6** (COMPAT `4043F648`). Les catalogues prononcés à la radio ont changé : les signaux de détresse et les qualificatifs les plus évocateurs d'un accident ont été écartés, et les mots de retour ne sont plus des sujets de phrase. **PROTO 5 et PROTO 6 ne sont pas interopérables**, même avec la même session et la même zone. Avant une sortie, mettre à jour tous les téléphones qui échangent entre eux. Pour une préparation manuelle, comparer sur chacun le numéro PROTO, le COMPAT, l'empreinte de session et l'alias de zone ; l'import confirmé d'une invitation complète réalise ces contrôles dans sa modale. Ne pas reprendre une phrase générée par l'ancienne version. Les zones éphémères enregistrées sous un ancien protocole sont écartées et doivent être recréées ; les zones personnalisées fixes restent disponibles.
