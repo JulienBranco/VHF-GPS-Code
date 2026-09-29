@@ -1,65 +1,187 @@
-# VHF GPS Code — installation hors réseau
+# VHF GPS — distribution par publication
 
-L'application est autonome : le protocole radio et les calculs restent dans `vhf_gps_code.html`. La PWA ajoute un manifeste, des icônes et un service worker qui conserve l'ensemble des fichiers nécessaires sur le téléphone. Aucune connexion n'est nécessaire après une première installation réussie.
+La racine du dépôt contient désormais l’application distribuée V3.28.106,
+PROTO 6 / COMPAT 4043F648. L’interface et les invitations utilisent les libellés
+de l’application finale. Les anciennes sources à la racine ont été remplacées.
+Aucun commit ni push automatique.
 
-## Distribution
+## Publier
 
-Publier **ensemble** `index.html`, `vhf_gps_code.html`, `manifest.webmanifest`, `sw.js` et le dossier `icons/` à la racine d'une même adresse HTTPS stable. Les chemins sont relatifs et conviennent aussi à un sous-dossier, par exemple GitHub Pages. L'ouverture directe du fichier HTML reste possible, mais ne permet pas l'installation de la PWA.
+Le dépôt à sa racine contient l’application distribuable et ses icônes.
+La génération utilise uniquement les fichiers de ce dépôt.
+Adresse : https://julienbranco.github.io/VHF-GPS-Code/
+L’icône installée s’appelle VHF GPS. Le bouton Guide explique l’utilisation.
 
-Avant la sortie, ouvrir l'adresse avec du réseau, puis utiliser le bouton **« Installer l'application »** en haut de la page :
+La remise à zéro du 29 septembre conserve une seule publication et utilise une
+nouvelle base locale. Les invitations de l’ancienne application ne sont pas compatibles.
+Les anciennes icônes installées ne sont pas prises en charge : demander aux testeurs
+de les désinstaller et de réinstaller l’application depuis la nouvelle adresse avec du réseau.
+Le nouveau service worker supprime les anciens caches. Les anciennes données du navigateur
+ne sont pas effacées, mais ne sont pas reprises dans la nouvelle sortie.
+Après une première diffusion réelle, conserver les publications distribuées.
 
-- Android : si Chrome propose l'installation directe, confirmer sa fenêtre. Sinon, le bouton indique le chemin par le menu du navigateur.
-- iPhone : le bouton indique les gestes Safari → Partager → « Sur l'écran d'accueil » ; Safari ne permet pas à la page de lancer directement cette confirmation.
+## Où modifier quoi
 
-**Ouvrir ensuite l'icône installée avec du réseau** et attendre l'indication **« PRÊTE HORS RÉSEAU »** dans cette application. Sur iPhone, le stockage de la web app peut être séparé de celui de Safari : une indication « prête » dans Safari ne suffit pas pour garantir que l'icône installée ouvrira hors réseau.
+- sources/app.html : interface de l’application.
+- sources/engine.js : moteur actif (catalogues, crypto, zones, échange).
+- sources/app-adapter.js : démarrage, préparation/import et partage de sortie.
+- sources/runtime.js : sauvegarde, reprise et navigation en pleine page.
+- transition.js / transition.css : chargement commun et retour à la position de lecture.
+- install.js : bouton d’installation et instructions en repli dans les deux pages.
+- boot.js : ouverture de la bonne publication, création et réception initiales.
+- protocol.js, storage.js, release.js : invitation compacte, transactions, téléchargement.
+- releases/ : fichiers générés à publier. Ne pas les éditer à la main.
 
-Passer en mode avion, fermer l'application, puis la rouvrir depuis son icône. Vérifier la session, les zones et l'acquisition GPS sur **chaque modèle de téléphone utilisé**. Le GPS dispose de 60 secondes pour obtenir une position récente ; la saisie depuis le sondeur/traceur reste disponible.
+Le générateur copie ces sources et calcule leurs empreintes. Il ne découpe plus le HTML
+original, ne remplace plus localStorage et ne redéfinit plus les fonctions au démarrage.
+L’application distribuée possède explicitement appStorage et ses fonctions de démarrage.
+Les sources de ce dossier sont l’unique base de développement de l’application.
+Pendant les retouches, utiliser l’aperçu local ci-dessous. Générer et vérifier une publication seulement quand elle est prête à être diffusée.
 
-Une PWA installée depuis HTTPS possède un espace de stockage distinct de celui d'un fichier HTML ouvert localement. Sur iPhone, elle peut aussi être distincte de Safari. Les secrets et les zones personnalisées déjà saisis ailleurs ne sont donc pas transférés automatiquement. Les données du navigateur peuvent aussi être effacées par l'utilisateur ou par le système ; avant une sortie, vérifier qu'elles sont toujours présentes.
+## Aperçu local sans génération
 
-## Développement et mises à jour
+Lancer `node tools/live-server.cjs 8083` et ouvrir http://127.0.0.1:8083/.
+La première fois, préparer une sortie dans cet aperçu. Ensuite, garder la page de cette
+sortie ouverte : modifier un fichier de `sources/` et recharger suffit pour voir la
+nouvelle interface ou le nouveau moteur. La sortie locale reste disponible sur ce port.
+Aucun dossier `releases/`, manifeste ni catalogue n’est créé par cet aperçu.
 
-### Correctifs V3.28.102
+Le port 8083 possède son propre stockage de navigateur. Cet aperçu utilise un identifiant
+de publication fictif, sert les fichiers directement depuis les sources et n’est pas prévu
+pour vérifier le hors-ligne, la distribution ou partager une invitation réelle.
+Le bandeau « APERÇU LOCAL » le rappelle à l’écran. Avant diffusion, utiliser le générateur
+et les tests ci-dessous ; les invitations de l’aperçu ne doivent pas être envoyées.
 
-Un changement de session, de zone ou de coordonnées annule les encodages en cours, y compris pendant le contrôle inverse. Un résultat ou une erreur devenus obsolètes ne peuvent plus réafficher une ancienne transmission ni masquer la suivante.
+## Catalogue des publications
 
-La création et l'import d'une sortie sauvegardent leur état précédent avant installation. Une erreur gérée restaure la session, les zones et les confirmations précédentes, sauf si une action plus récente a déjà pris la main. Si la restauration du stockage échoue elle-même, les échanges sont désactivés. Cette restauration compensatoire ne couvre pas un arrêt brutal de l'application entre deux écritures ; elle ne remplace pas une future transaction persistante. Les mécanismes de publication et de mise à jour PWA restent identiques ; PROTO 6 et COMPAT `4043F648` sont inchangés.
+Ouvrir RELEASES.html (même par double-clic) pour voir la dernière publication,
+la version, le protocole et la date de chaque release. releases.json conserve
+les métadonnées. Le build les actualise automatiquement, sans commande supplémentaire.
+Les dates de création restent stables lors des reconstructions. Les publications plus anciennes
+affichent une date de référencement distincte, car leur date de création est inconnue.
+Conserver releases.json avec le projet ; ne pas modifier les dates à la main.
+Le catalogue ne supprime aucun fichier et ne sait pas quelles sorties sont encore utilisées.
 
+## Accueil
 
-### Passage au protocole radio 6
+L’adresse de base et l’icône installée ouvrent un accueil, sans redirection automatique.
+Le bouton Reprendre présente la zone active et la date de création, puis recharge
+la publication exacte de la sortie. Préparer une nouvelle sortie consulte latest.json
+en ligne ; Recevoir suit la publication de l’invitation. Annuler la saisie d’une invitation (bouton ou Échap) revient à cet accueil, sans
+reprendre automatiquement la sortie. Une création annulée revient à la sortie
+précédente et à sa position de lecture. Les sorties sans résumé affichent Sortie enregistrée ; leur date est lue depuis leur état.
 
-Depuis la version **3.28.61**, l'application utilise **PROTO 6** (COMPAT `4043F648`). Les catalogues prononcés à la radio ont changé : les signaux de détresse et les qualificatifs les plus évocateurs d'un accident ont été écartés, et les mots de retour ne sont plus des sujets de phrase. **PROTO 5 et PROTO 6 ne sont pas interopérables**, même avec la même session et la même zone. Avant une sortie, mettre à jour tous les téléphones qui échangent entre eux. Pour une préparation manuelle, comparer sur chacun le numéro PROTO, le COMPAT, l'empreinte de session et l'alias de zone ; l'import confirmé d'une invitation complète réalise ces contrôles dans sa modale. Ne pas reprendre une phrase générée par l'ancienne version. Les zones éphémères enregistrées sous un ancien protocole sont écartées et doivent être recréées ; les zones personnalisées fixes restent disponibles.
+Le lanceur propose Reprendre et un panneau Préparer ou recevoir une sortie.
+Dans l’application, deux boutons compacts sont placés en haut : Accueil revient
+au lanceur après sauvegarde ; Partager ouvre la modale dans la page actuelle,
+sans navigation et sans perdre les saisies ni les résultats radio. Le partage est
+visible uniquement si la session, la zone d’origine et sa confirmation le permettent.
+Les modales de création et de contrôle d’import restent dans leur publication.
 
-Les catalogues gardent 200 sujets, 200 qualificatifs, 256 mots de retour et 1 024 mots d'alias/empreinte. L'autotest et le digest COMPAT doivent être recalculés si l'ordre ou le contenu de l'une de ces listes change.
+## Conservation des versions
 
-Tester sur cet ordinateur avec `node tools/dev-server.cjs`, puis ouvrir `http://localhost:8080/`. `localhost` permet de tester les service workers sans certificat HTTPS. Pour un essai hors ligne, charger la page une première fois, attendre « PRÊTE HORS RÉSEAU », puis couper le réseau dans les outils du navigateur et rouvrir l'application.
+Une publication regroupe tous les fichiers utilisés par la sortie, y compris les modules
+de sauvegarde et de chargement de cette publication. Son identifiant est l’empreinte du
+manifeste. Le bandeau affiche aussi version et huit caractères de cet identifiant.
+Une sortie mémorise cet identifiant. Elle recharge les mêmes fichiers après fermeture,
+même si le lanceur a été mis à jour. Les empreintes de chaque fichier sont vérifiées.
 
-Les liens vers l'application ou ses fichiers précachés restent utilisables hors réseau même avec des paramètres d'URL (`?utm_source=…`). Le contrôle automatique d'un code généré reste obligatoire ; son détail est masqué par défaut et peut être affiché dans **Informations techniques**.
+Il n’y a plus d’iframe ni de dialogue entre deux pages ouvertes simultanément.
+Le lanceur navigue vers la page de la publication. La préparation reste temporaire dans
+sessionStorage jusqu’à la confirmation ; la sortie précédente reste durablement active.
+La transaction remplace ensemble la référence active, l’invitation et toutes ses données.
+Une fermeture avant confirmation ne remplace donc pas la sortie précédente.
 
-## Partager une sortie complète
+Les publications antérieures ont été purgées lors de la remise à zéro.
+Après diffusion d’une invitation, garder les fichiers de sa publication sur le serveur.
+Le générateur conserve les publications et refuse de modifier leurs fichiers existants.
+Il n’exécute aucune commande Git et ne demande aucune automatisation GitHub.
 
-La fenêtre **Préparer une nouvelle sortie** affiche la rose des limites encodables de la zone intégrée choisie, avant toute activation. Pour une zone éphémère, elle apparaît après **Vérifier la sortie**, une fois son centre virtuel calculé avec la nouvelle session. Modifier la zone ou la position de référence actualise ou masque cet aperçu ; la zone active du téléphone reste inchangée jusqu'à la confirmation finale.
+## Invitations et sauvegardes
 
-Après création ou import, une courte fenêtre de réussite apparaît et se ferme automatiquement ; elle peut aussi être fermée immédiatement. La date de création figure dans le résumé visible de Session radio ; la date d'installation sur ce téléphone apparaît juste dessous pour une sortie complète, même si le panneau de création/import est replié. L'interface distingue une zone validée avec la sortie d'un alias comparé manuellement à la radio ; revenir à la zone initiale après un changement manuel exige toujours une nouvelle comparaison. Une session créée avec le secret seul ne porte pas de date d'installation de sortie. À l'import, la zone et le PROTO/COMPAT lisibles dans le message sont contrôlés contre le code, puis les informations affichées dans la fenêtre sont recalculées depuis ce code. La date de création est affichée dans le fuseau du téléphone qui lit le message, donc la date du récapitulatif calculé fait foi.
+La modale de validation affiche le même message public que le champ de réception.
+Effacer puis recoller ce message permet de refaire ses contrôles. Une invitation
+différente doit repasser par l’accueil pour sélectionner sa propre publication ;
+elle ne peut pas remplacer silencieusement celle déjà en vérification.
 
-Après une création réussie, le panneau « 🎣 Créer, partager ou installer une sortie » reste ouvert pour accéder immédiatement au partage. Après un import réussi, il se referme. La confirmation apparaît dans une fenêtre verte sans défilement de la page ni ajout de contenu dans le bloc Session radio. Une simple vérification ou un échec n'ouvre pas cette fenêtre.
+Le code partagé contient l’identifiant de publication et le code de sortie du moteur,
+sans réencoder le message complet. Le résumé lisible figure une seule fois. Le contrôle
+d’intégrité lie ce résumé au code ; le moteur recalcule ensuite PROTO, COMPAT et alias.
+Ce contrôle détecte les altérations accidentelles ; il n’authentifie pas l’expéditeur.
+Une invitation contient le secret : la partager seulement avec les participants.
 
-Les informations PROTO, COMPAT, de taille de zone et de maille sont regroupées dans Session radio. La pastille statique « hors connexion » a été retirée : l'état « PRÊTE HORS RÉSEAU » apparaît dans ce bloc uniquement après vérification du cache et de l'activation du service worker. Il reste visible pendant qu'une mise à jour est téléchargée. Une ouverture directe du fichier HTML affiche que le mode hors réseau ne peut pas être vérifié dans ce contexte. Le digest COMPAT reste aussi consultable dans « Réglages de session avancés » et vérifié lors de l'import d'une invitation.
+Création et import attendent la transaction avant le message de succès.
+La confirmation d’alias à la radio prépare ses nouvelles données, bloque temporairement
+les interactions, attend la sauvegarde, puis rend la zone confirmée et utilisable.
+Un échec de sauvegarde bloque la page ; elle ne présente pas de fausse confirmation.
+Les autres réglages sont enregistrés dès la prochaine microtâche, sans délai de 40 ms.
+Leur écriture reste asynchrone : un arrêt avant son achèvement peut perdre le dernier réglage.
+Les échanges et les positions en cours ne sont pas restaurés.
 
-Après l'activation d'une nouvelle sortie, créée ou importée, les coordonnées saisies dans ÉMETTRE et les mots ainsi que ET/OU saisis dans RECEVOIR sont effacés. Les deux formats de coordonnées sont vidés et une acquisition GPS en cours ne peut pas réinjecter l'ancienne position. Rejouer une invitation déjà active ne vide pas les saisies en cours.
+Une autre fenêtre qui modifie l’état bloque l’ancienne vue. Les transactions utilisent
+une révision pour empêcher une préparation devenue obsolète d’écraser la sortie actuelle.
+La création consulte latest.json en ligne. L’import suit exactement la publication du
+message ; une invitation déjà installée peut être rejouée sans réseau si son cache est complet.
+Une première importation demande Internet. Un cache incomplet impose une réparation
+avec l’invitation ; aucune autre publication ne remplace silencieusement la sortie.
 
-Dans ÉMETTRE, une zone compatible est proposée dans cet ordre : zone intégrée, zone éphémère existante, zone personnalisée fixe ; à catégorie égale, l'application choisit la plus grande marge au bord. Créer une nouvelle zone éphémère n'est proposé que si aucune zone intégrée ou éphémère existante ne couvre la position avec au moins 20 km de marge. Une faible marge laisse donc cette possibilité en alternative ; une zone personnalisée locale ne la masque pas, car elle n'est pas nécessairement partagée avec les autres téléphones.
+## Limites de l’application
 
-Dans **Session radio → 🎣 Créer, partager ou installer une sortie**, **Préparer une nouvelle sortie** ouvre un écran indépendant d'ÉMETTRE. On choisit une zone intégrée dans le catalogue embarqué ou une zone éphémère créée depuis une position de référence saisie dans cet écran (marine, décimal ou GPS). **Vérifier la sortie** calcule une nouvelle session et affiche sa zone, son empreinte radio et son alias ; fermer l'écran ou modifier la saisie n'active rien. **Créer et activer la sortie** applique le brouillon vérifié. L'ancien volet **⚠️ Réglages de session avancés** reste disponible pendant l'itération de ce parcours. **Partager la sortie active** ouvre une fenêtre avec le message à relire ; **Partager avec une application** ouvre le partage natif du téléphone avec le message complet, puis l'utilisateur choisit l'application destinataire. Ce bouton apparaît lorsque le partage natif est disponible. **Copier le message** reste disponible et place le texte dans le presse-papiers. Si la copie automatique échoue, le texte reste sélectionnable dans cette fenêtre. Le partage natif transmet du texte, sans lien contenant le secret de session. Le destinataire ouvre son application installée, touche **Recevoir une invitation**, colle le message entier dans sa fenêtre (même s'il contient du texte avant ou après), touche **Vérifier l'invitation**, lit la date, le PROTO/COMPAT, l'empreinte et l'alias, puis **Confirmer et installer la sortie**. Fermer la fenêtre ou modifier le texte avant confirmation n'installe rien. La confirmation vaut pour la session et la zone importées ; un changement manuel ultérieur de zone exige une nouvelle confirmation d'alias.
+Le navigateur peut évincer les données locales. L’application ne peut pas garantir leur
+conservation après un effacement par l’utilisateur ou le système.
+Les zones personnalisées restent propres à chaque sortie ; pas de catalogue personnel
+global ajouté. Le secret manuel est en lecture seule dans cette architecture.
+Les modules partagent l’origine Web : cette isolation fonctionnelle du stockage n’est pas
+une frontière de sécurité contre un script malveillant de la même origine.
+Le téléphone Android réel doit être testé ; iPhone reste à valider sur un appareil réel.
 
-Le résumé et les consignes du message partagé utilisent des pictogrammes pour repérer la date, la zone, la compatibilité et les alias. Les bornes `DEBUT`/`FIN` et le code restent uniquement en caractères ASCII. Le contrôle d'intégrité détecte une copie incomplète ou altérée, mais ne prouve pas l'identité de l'expéditeur. Le secret contenu dans le message n'est **pas chiffré** : limiter le partage aux participants de confiance et créer une nouvelle session à chaque sortie. Une invitation recollée restaure la configuration après une erreur ; si la même sortie est déjà active, elle ne change rien. La date de création par l'émetteur reste distincte de l'installation locale. Les zones intégrées et éphémères sont prises en charge ; les zones personnalisées fixes ne sont pas encore partagées automatiquement. Après une restauration en cours d'échange radio, recommencer l'échange depuis le début.
+## Construire et vérifier
 
-Le message partagé affiche aussi l'alias de session (empreinte radio) et l'alias de zone en clair pour être reconnaissable dans la messagerie ; l'application les recalcule depuis le code lors de l'import. Une zone créée lors de la préparation de la sortie ou reçue par invitation porte le même nom « ÉPHÉMÈRE DE SORTIE » et la même pastille dans la zone active. Elle est conservée jusqu'au changement de session, même si la sortie a été préparée plus de 48 heures à l'avance. Les commandes de suppression individuelle et globale ne la retirent pas ; les zones éphémères ordinaires restent supprimables et expirent après 48 heures. Ce marquage local ne change ni le centre calculé ni le protocole radio.
+Node.js suffit :
 
-Le partage n'est proposé que si la session et la zone actives correspondent à la sortie créée ou importée et si l'alias est confirmé. Changer de zone masque le bouton ; revenir à la zone d'origine et reconfirmer son alias le rétablit. Une sortie enregistrée avant cette vérification doit être réimportée une fois depuis son invitation, ou préparée de nouveau, pour pouvoir être repartagée. Une session créée dans l'ancien volet de réglages reste utilisable mais n'est pas une sortie complète à partager.
+    node tools/build.cjs
+    node tools/build.cjs --check
+    node --test tests/integration.test.cjs
+    node --test tests/release-catalog.test.cjs
+    node --test tests/live-preview.test.cjs
+    node --test tests/catalog-proto6.test.cjs
 
-Hors création ou import d'une sortie complète, toute sélection manuelle d'une autre zone ouvre une confirmation indiquant l'ancienne et la nouvelle zone. Cela vaut aussi pour la suggestion de zone compatible et pour les zones personnalisées ou éphémères créées depuis les panneaux courants. **Annuler** conserve la zone et les résultats préparés ; **Activer** efface ces résultats et impose de comparer à nouveau l'alias zone à la radio avant d'encoder ou de décoder. Un changement confirmé depuis l'une des deux listes de zones vide aussi les coordonnées à transmettre, dans les deux formats de saisie. La suggestion de zone compatible et la création éphémère conservent la position qui les a motivées. La suppression d'une zone active conserve son propre dialogue de confirmation.
+Les fichiers publiables sont déjà construits. Playwright et Chrome servent uniquement
+aux tests sur ordinateur ; les téléphones n’ont besoin ni de Node ni des fichiers du projet.
+Le serveur local est tools/server.cjs : lancer `node tools/server.cjs 8082`, puis ouvrir http://127.0.0.1:8082/.
 
-À chaque évolution, incrémenter **à la fois** `APP_VERSION` dans `vhf_gps_code.html` et `APP_VERSION` dans `sw.js`. Les tests vérifient cette concordance. Le nouveau cache doit être entièrement téléchargé avant d'être utilisé. Lorsqu'une nouvelle version est prête, une fenêtre de prudence s'ouvre une seule fois et le même avertissement reste visible dans Session radio après sa fermeture. Aucun rechargement n'est déclenché par l'application. Attendre la fin de la sortie de pêche, puis fermer complètement et rouvrir l'application avant de préparer la prochaine sortie. Si le protocole a changé, les participants encore sur l'ancienne version peuvent être incompatibles. Une fois la nouvelle version annoncée comme téléchargée, sa réouverture ne requiert pas de réseau. Les téléphones encore sur une version antérieure à V3.28.97 afficheront leur ancien avertissement pour activer cette version ; la nouvelle fenêtre s'appliquera aux mises à jour suivantes.
+## Vérification du 29 septembre 2026
 
-Les fichiers `icons/*.png` sont générés par `tools/generate_pwa_icons.py` avec Pillow. Ils ne sont pas requis pour recalculer le protocole.
+Les 3 contrôles du catalogue passent : dates stables à la reconstruction, nouvelle
+publication répertoriée sans altérer les anciennes, date inconnue pour les anciens
+essais et refus d’un catalogue obsolète ou d’un manifeste altéré.
+
+34 tests d’intégration Chrome passent : échange radio complet, COMPAT et alias identiques,
+zones éphémères, isolation des anciennes données locales, copie, GPS simulé, partage natif simulé,
+mobile 390 px, reprises hors réseau, cache absent/réparation, écritures abandonnées,
+fenêtres concurrentes, altération du code ou du résumé, nouvelle publication disponible,
+confirmation radio avant/après acquittement et échec de sa sauvegarde.
+Un nouveau lanceur est installé en attente, puis Chrome entièrement fermé et rouvert
+hors réseau : la publication et la session restent celles de la sortie. Le même test
+vérifie que le cache d’une publication plus ancienne n’est pas supprimé.
+Le GPS et le partage simulés ne valident pas les permissions et dialogues natifs du téléphone.
+
+Les cinq contrôles des catalogues PROTO 6 sont adaptés à la source actuelle. Les anciens tests liés aux écrans et au stockage monolithiques ne sont pas repris tels quels ; la suite Chrome couvre le parcours actuel et vérifie aussi chaque zone intégrée.
+
+Le démarrage vérifie l’activation de son inscription de service worker, même si Ctrl+F5
+a temporairement contourné son contrôle de la page. Il ne force aucune mise à jour.
+Un double-clic sur index.html affiche une explication : l’application doit être servie via
+localhost (PC) ou HTTPS (GitHub Pages), et non ouvert comme fichier.
+Les deux cas font l’objet de tests navigateur dédiés, dont un vrai rechargement
+Chrome avec ignoreCache et controller null avant la reprise.
+
+Le lanceur et la publication masquent leur contenu pendant le démarrage, jusqu’à la
+modale prête ou la reprise terminée. L’adresse change encore pour charger la publication.
+Une annulation retrouve la position de lecture de la sortie précédente, dans le même onglet.
+Le bouton Installer reste disponible dans le navigateur, indépendamment de la proposition
+native. Il lance cette proposition si elle a été reçue, sinon affiche les instructions.
+Il est masqué dans une fenêtre standalone ou après appinstalled dans cette page.
+Cela ne constitue pas une détection universelle des installations depuis un navigateur.
+Les tests simulent la proposition native et le mode standalone ; les dialogues réels
+et l’installation iPhone restent à vérifier sur appareil.
+Les publications déjà utilisées pour une sortie restent conservées.

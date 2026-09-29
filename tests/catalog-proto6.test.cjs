@@ -3,9 +3,9 @@ const {readFileSync} = require('node:fs');
 const {join} = require('node:path');
 const test = require('node:test');
 
-const html = readFileSync(join(__dirname, '..', 'vhf_gps_code.html'), 'utf8');
+const engine = readFileSync(join(__dirname, '..', 'sources', 'engine.js'), 'utf8');
 const catalog = name => {
-  const match = html.match(new RegExp(`^const ${name}=([^\\r\\n]*);`, 'm'));
+  const match = engine.match(new RegExp(`^const ${name}=([^\\r\\n]*);`, 'm'));
   assert.ok(match, `${name} absent`);
   return JSON.parse(match[1]);
 };

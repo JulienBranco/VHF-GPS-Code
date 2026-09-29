@@ -1,0 +1,566 @@
+"use strict";
+const test=require("node:test"),assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),os=require("node:os");
+const {createServer}=require("../tools/server.cjs");
+let chromium;
+try{({chromium}=require("playwright"));}catch{({chromium}=require(path.join(process.env.USERPROFILE,".cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright")));}
+const executablePath=process.env.PROTOTYPE_CHROME||"C:/Program Files/Google/Chrome/Application/chrome.exe";
+let browser,host,url;const contexts=[];
+test.before(async()=>{host=await createServer();url=host.url;
+ browser=await chromium.launch({headless:true,executablePath});});
+test.beforeEach(()=>{host.state.fail=null;host.state.corrupt=null;host.state.delay=0;host.state.virtual=new Map();});
+test.after(async()=>{for(const ctx of contexts)await ctx.close().catch(()=>{});await browser?.close();await new Promise(resolve=>host.server.close(resolve));});
+async function phone(options={}){
+ const context=await browser.newContext(options);contexts.push(context);
+ const page=await context.newPage();page.on("pageerror",error=>console.log("Erreur navigateur :",error.message));
+ await page.goto(url);await page.waitForFunction(()=>!document.getElementById("create").disabled);
+ return {context,page};
+}
+function frame(page){return page;}
+function actualFrame(page){return page;}
+async function active(page){return page.evaluate(async()=>{const s=await import("/storage.js");return s.read(await s.openStore(),"active");});}
+async function resume(page){
+ await page.locator("#resume").waitFor({state:"visible"});await page.waitForFunction(()=>!document.getElementById("resume").disabled);await page.locator("#resume").click();
+ await page.waitForFunction(()=>document.getElementById("testBanner")?.textContent.includes("Sortie retrouvée"));
+}
+async function openMenu(page){
+ if(new URL(page.url()).pathname.includes("/releases/"))await page.locator("#backHomeBtn").click();
+ await page.waitForFunction(()=>!!document.getElementById("create")&&!document.getElementById("create").disabled);
+ await page.locator("#outingMenu").evaluate(el=>el.open=true);
+}
+async function openNew(page){await openMenu(page);await page.locator("#create").click();}
+async function openReceive(page){
+ await openMenu(page);await page.locator("#receive").click();
+ await page.locator("#invitation").waitFor({state:"visible"});
+}
+async function create(page,{ephemeral=false}={}){
+ await openNew(page);
+ await page.waitForFunction(()=>document.getElementById("testBanner")?.textContent.includes("Confirme la sortie"));
+ const app=frame(page);await app.locator("#outingCreateDialog").waitFor({state:"visible"});
+ if(ephemeral){
+  await app.locator("#outingEphemeralChoice").click();await app.locator("#outingDecimalMode").click();
+  await app.locator("#outingLat").fill("46.2");await app.locator("#outingLon").fill("-2.4");
+ }
+ await app.locator("#checkOutingCreate").click();await app.locator("#confirmOutingCreate").waitFor({state:"visible"});
+ await app.locator("#confirmOutingCreate").click();
+ await page.waitForFunction(()=>(document.getElementById("testBanner")||document.getElementById("status")).textContent.includes("Sortie enregistrée"));
+ await app.locator("#closeOutingSuccess").click();
+ return active(page);
+}
+async function share(page){
+ if(!new URL(page.url()).pathname.includes("/releases/"))await resume(page);
+ await page.locator("#shareOutingBtn").waitFor({state:"visible"});await page.locator("#shareOutingBtn").click();
+ const app=frame(page);
+ await app.locator("#copyOutingMessageBtn").waitFor({state:"visible"});
+ await app.locator("#copyOutingMessageBtn").isEnabled();
+ await page.waitForFunction(()=>document.getElementById("outingShareText").value.includes("VHF-SORTIE2."));
+ return app.locator("#outingShareText").inputValue();
+}
+async function importOuting(page,text){
+ await openReceive(page);await page.locator("#invitation").fill(text);
+ await page.locator("#receiveForm button[type=submit]").click();
+ await frame(page).locator("#confirmOutingImport").waitFor({state:"visible"});
+ await frame(page).locator("#confirmOutingImport").click();
+ await page.waitForFunction(()=>(document.getElementById("testBanner")||document.getElementById("status")).textContent.includes("Sortie enregistrée"));
+ await frame(page).locator("#closeOutingSuccess").click();
+ return active(page);
+}
+async function aliases(page){return actualFrame(page).evaluate(()=>({session:document.getElementById("fingerprintWords").textContent,zone:document.getElementById("sendZoneAlias").textContent,secret:activeSecret(),zoneData:{...activeZone()},compat:document.getElementById("compatFull").textContent}));}
+async function encode(page){
+ const app=frame(page),center=await actualFrame(page).evaluate(()=>({lat:activeZone().lat,lon:activeZone().lon}));
+ await app.locator("#positionModeDecimal").click();await app.locator("#lat").fill(center.lat.toFixed(6));await app.locator("#lon").fill(center.lon.toFixed(6));
+ await app.locator("#encodeBtn").click();await app.locator("#encodedBlock").waitFor({state:"visible"});
+ const phrase=(await app.locator("#encodedWords").innerText()).trim().split(/\s+/);
+ assert.equal(phrase.length,5);
+ return {words:[phrase[0],phrase[1],phrase[3],phrase[4]],connector:phrase[2],ack:await app.locator("#senderExpectedAckWord").innerText(),final:await app.locator("#senderFinalConfirmWord").innerText(),center};
+}
+async function decode(page,message){
+ const app=frame(page);await app.locator("#tabReceive").click();
+ for(let i=0;i<4;i++){
+  const input=app.locator('#wordGrid input[data-i="'+i+'"]');
+  await input.fill(message.words[i].slice(0,3));
+  await app.locator(".wordbox").nth(i).locator(".suggestions button").filter({hasText:message.words[i]}).first().click();
+ }
+ await app.locator("#wordGrid .linkbox button").filter({hasText:new RegExp("^"+message.connector+"$")}).click();
+ await app.locator("#finalConfirmChoices button").first().waitFor({state:"visible"});
+ assert.equal(await app.locator("#receiverAckWord").innerText(),message.ack);
+ assert.equal(await app.locator("#decodedCoordsWrap").isVisible(),false);
+ await app.locator("#finalConfirmChoices button").filter({hasText:new RegExp("^"+message.final+"$")}).click();
+ await app.locator("#decodedCoordsWrap").waitFor({state:"visible"});
+ assert(await app.locator("#decodedBlock").evaluate(el=>el.classList.contains("position-confirmed")));
+ return actualFrame(page).evaluate(()=>({lat:currentDecodedResult.lat,lon:currentDecodedResult.lon}));
+}
+test("échange réel complet entre deux appareils, alias et COMPAT identiques, coordonnées confirmées",async()=>{
+ const sender=await phone();await create(sender.page);const invitation=await share(sender.page);
+ assert.match(invitation,/VHF-SORTIE2\./);assert.match(invitation,/Alias de session/);assert.match(invitation,/Alias de zone/);
+ assert.equal((invitation.match(/Alias de session/g)||[]).length,1);
+ const originalText=(await active(sender.page)).envelope.content;
+ assert(invitation.length<originalText.length*1.9);
+ console.log("Invitation :",originalText.length,"→",invitation.length,"caractères");
+ assert.equal(await sender.page.locator("iframe").count(),0);
+ assert.equal(await sender.page.locator("#create").count(),0);
+ await frame(sender.page).locator("#closeOutingShare").click();
+ const receiver=await phone({timezoneId:"Pacific/Honolulu"});await importOuting(receiver.page,invitation);
+ const first=await aliases(sender.page),second=await aliases(receiver.page);
+ assert.equal(first.session,second.session);assert.equal(first.zone,second.zone);assert.equal(first.secret,second.secret);
+ assert.equal(first.zoneData.lat,second.zoneData.lat);assert.equal(first.zoneData.lon,second.zoneData.lon);
+ assert.equal(first.compat,"4043F648E26823B18361AAC243BC490C70FDC8401484759322464B8C29B16B81");assert.equal(second.compat,first.compat);
+ const message=await encode(sender.page),position=await decode(receiver.page,message);
+ assert(Math.abs(position.lat-message.center.lat)<.002);assert(Math.abs(position.lon-message.center.lon)<.002);
+ assert.equal(await share(receiver.page),invitation);
+});
+test("moteur PROTO 6 : encodage et décodage dans chaque zone intégrée",async()=>{
+ const {page}=await phone();await create(page);
+ const results=await page.evaluate(async()=>{
+  const secret=activeSecret(),rows=[];
+  for(const zone of BUILTIN_ZONES){
+   for(const [dLat,dLon] of [[0,0],[0.08,-0.08]]){
+    const lat=zone.lat+dLat,lon=zone.lon+dLon;
+    const encoded=await encodeCore(lat,lon,secret,zone);
+    const decoded=await decodeCore(encoded.phrase.words,encoded.phrase.connector,secret,zone);
+    rows.push({zone:zone.name,error:haversineM(lat,lon,decoded.lat,decoded.lon),ack:decoded.ack===encoded.ack,final:decoded.finalConfirm===encoded.finalConfirm,nacks:JSON.stringify(decoded.nacks)===JSON.stringify(encoded.nacks)});
+   }
+  }
+  return rows;
+ });
+ assert(results.length>=2);for(const row of results){assert(row.error<75,row.zone+" : écart "+row.error+" m");assert(row.ack&&row.final&&row.nacks,row.zone);}
+});
+
+test("localStorage officiel préservé : création, changement de thème, import et session manuelle en lecture seule",async()=>{
+ const {page}=await phone();
+ const sentinel={vhfGpsSessionSecretV312:"SECRET-OFFICIEL-NE-PAS-TOUCHER",vhfGpsZonesV4Custom:'[{"id":"officiel"}]',vhfGpsThemeV1:"officiel"};
+ await page.evaluate(values=>{for(const [key,value] of Object.entries(values))localStorage.setItem(key,value);},sentinel);
+ await create(page);await frame(page).locator("#themeMode").selectOption("night");
+ await page.waitForFunction(async()=>{const s=await import("/storage.js");const record=await s.read(await s.openStore(),"active");return Object.values(record.state).includes("night");});
+ const text=await share(page);await frame(page).locator("#closeOutingShare").click();
+ await importOuting(page,text);
+ assert(await frame(page).locator("#sessionKey").evaluate(el=>el.readOnly));
+ const official=await page.evaluate(keys=>Object.fromEntries(keys.map(key=>[key,localStorage.getItem(key)])),Object.keys(sentinel));
+ assert.deepEqual(official,sentinel);
+ const registrations=await page.evaluate(async()=>(await navigator.serviceWorker.getRegistrations()).map(r=>r.scope));
+ assert.deepEqual(registrations,[url]);
+});
+test("zone éphémère : centre et alias recalculés identiquement sur le destinataire",async()=>{
+ const first=await phone();await create(first.page,{ephemeral:true});const invitation=await share(first.page);
+ const second=await phone();await importOuting(second.page,invitation);
+ const a=await aliases(first.page),b=await aliases(second.page);
+ assert(a.zoneData.ephemeral);assert(b.zoneData.ephemeral);
+ assert.equal(a.zoneData.lat,b.zoneData.lat);assert.equal(a.zoneData.lon,b.zoneData.lon);assert.equal(a.session,b.session);assert.equal(a.zone,b.zone);
+ await frame(first.page).locator("#closeOutingShare").click();
+ const message=await encode(first.page);await decode(second.page,message);
+});
+test("sortie réelle retrouvée après fermeture complète et réouverture hors connexion",async()=>{
+ const profile=fs.mkdtempSync(path.join(os.tmpdir(),"vhfgps-real-profile-"));
+ let context=await chromium.launchPersistentContext(profile,{headless:true,executablePath});
+ try{
+  let page=await context.newPage();await page.goto(url);await page.waitForFunction(()=>!document.getElementById("create").disabled);
+  await create(page,{ephemeral:true});const before=await aliases(page);
+  await context.close();context=await chromium.launchPersistentContext(profile,{headless:true,executablePath});
+  await context.setOffline(true);page=await context.newPage();await page.goto(url);await resume(page);
+  await page.waitForFunction(()=>(document.getElementById("testBanner")||document.getElementById("status")).textContent.includes("Sortie retrouvée"));
+  const after=await aliases(page);
+  assert.equal(after.secret,before.secret);assert.equal(after.session,before.session);
+  assert.equal(after.zoneData.lat,before.zoneData.lat);assert.equal(after.zoneData.lon,before.zoneData.lon);
+  await encode(page);
+ }finally{
+  await context.close();const target=fs.realpathSync(profile);
+  if(path.dirname(target)!==fs.realpathSync(os.tmpdir())||!path.basename(target).startsWith("vhfgps-real-profile-"))throw Error("Profil hors périmètre");
+  fs.rmSync(target,{recursive:true,force:true});
+ }
+});
+test("création hors ligne et annulation : sortie précédente conservée",async()=>{
+ const {page,context}=await phone();await create(page);const before=await active(page);
+ await context.setOffline(true);await openNew(page);
+ await page.waitForFunction(()=>(document.getElementById("testBanner")||document.getElementById("status")).dataset.kind==="error"&&!document.getElementById("create").disabled);
+ assert.equal((await active(page)).envelope.id,before.envelope.id);
+ await context.setOffline(false);await openNew(page);
+ await frame(page).locator("#cancelOutingCreate").waitFor({state:"visible"});await frame(page).locator("#cancelOutingCreate").click();
+ await page.waitForFunction(()=>(document.getElementById("testBanner")||document.getElementById("status")).textContent.includes("Sortie retrouvée"));
+ assert.equal((await active(page)).envelope.id,before.envelope.id);await encode(page);
+});
+test("cache manquant : aucun remplacement silencieux ; invitation connue répare en ligne",async()=>{
+ const {page,context}=await phone();const record=await create(page),invitation=await share(page);
+ await page.evaluate(async release=>{const cache=await caches.open("vhfgps-main-release-"+release);await cache.delete(new URL("/releases/"+release+"/engine.js",location.origin));},record.release);
+ await context.setOffline(true);await page.reload();
+ await page.waitForFunction(()=>(document.getElementById("testBanner")||document.getElementById("status")).dataset.kind==="error");
+ assert.equal(await page.locator("iframe").count(),0);assert.equal((await active(page)).envelope.id,record.envelope.id);
+ await context.setOffline(false);await importOuting(page,invitation);assert.equal((await active(page)).envelope.id,record.envelope.id);
+});
+test("GPS avec permission Chromium, presse-papiers réel et partage natif simulé",async()=>{
+ const {page,context}=await phone({geolocation:{latitude:48.3,longitude:-5},permissions:["geolocation","clipboard-read","clipboard-write"]});
+ await create(page);
+ await frame(page).locator("#gpsBtn").click();
+ await page.waitForFunction(()=>readActivePosition().ok);
+ const p=await actualFrame(page).evaluate(()=>readActivePosition());assert(Math.abs(p.lat-48.3)<.00001);
+ await share(page);await frame(page).locator("#copyOutingMessageBtn").click();
+ assert.match(await page.evaluate(()=>navigator.clipboard.readText()),/VHF-SORTIE2\./);
+ await actualFrame(page).evaluate(()=>{
+  Object.defineProperty(navigator,"share",{configurable:true,value:async data=>{window.integrationSharedText=data.text;}});
+  Object.defineProperty(navigator,"canShare",{configurable:true,value:()=>true});refreshOutingShareControls();
+ });
+ await frame(page).locator("#nativeShareOutingBtn").click();
+ assert.match(await actualFrame(page).evaluate(()=>window.integrationSharedText),/VHF-SORTIE2\./);
+});
+test("mobile 390 px : modales, saisie et résultat sans débordement",async()=>{
+ const {page}=await phone({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+ await create(page,{ephemeral:true});await encode(page);
+ assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ assert(await actualFrame(page).evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ const dir=path.join(os.tmpdir(),"vhfgps-real-tests");fs.mkdirSync(dir,{recursive:true});
+ await page.screenshot({path:path.join(dir,"emission-mobile.png"),fullPage:true});
+ console.log("Capture :",path.join(dir,"emission-mobile.png"));
+});
+
+test("enregistrement interrompu : ancienne sortie intacte, nouvelle tentative possible après annulation",async()=>{
+ const {page}=await phone();const before=await create(page),oldAliases=await aliases(page);
+ await openNew(page);
+ await page.locator("#outingCreateDialog").waitFor({state:"visible"});
+ await page.evaluate(()=>{
+  const original=IDBObjectStore.prototype.put;
+  IDBObjectStore.prototype.put=function(value,key){
+   const result=original.call(this,value,key);
+   if(key==="active"&&window.integrationAbortOnce){window.integrationAbortOnce=false;this.transaction.abort();}
+   return result;
+  };
+  window.integrationAbortOnce=true;
+ });
+ await frame(page).locator("#checkOutingCreate").waitFor({state:"visible"});await frame(page).locator("#checkOutingCreate").click();
+ await frame(page).locator("#confirmOutingCreate").waitFor({state:"visible"});await frame(page).locator("#confirmOutingCreate").click();
+ await page.waitForFunction(()=>(document.getElementById("testBanner")||document.getElementById("status")).dataset.kind==="error");
+ assert.deepEqual(await active(page),before);
+ await page.locator("#cancelOutingCreate").click();
+ await page.waitForFunction(()=>(document.getElementById("testBanner")||document.getElementById("status")).textContent.includes("Sortie retrouvée"));
+ assert.equal((await aliases(page)).secret,oldAliases.secret);
+ const after=await create(page);assert.notEqual(after.envelope.id,before.envelope.id);
+});
+test("deux fenêtres : une préparation devenue obsolète ne remplace pas la sortie acceptée",async()=>{
+ const {page,context}=await phone();await create(page);
+ const second=await context.newPage();await second.goto(url);await resume(second);
+ await openNew(second);
+ await frame(second).locator("#checkOutingCreate").waitFor({state:"visible"});await frame(second).locator("#checkOutingCreate").click();
+ await frame(second).locator("#confirmOutingCreate").waitFor({state:"visible"});
+ const accepted=await create(page);
+ await frame(second).locator("#confirmOutingCreate").click();
+ await second.waitForFunction(()=>(document.getElementById("testBanner")||document.getElementById("status")).dataset.kind==="error");
+ assert.equal((await active(second)).envelope.id,accepted.envelope.id);
+ await second.reload();await second.waitForFunction(()=>(document.getElementById("testBanner")||document.getElementById("status")).textContent.includes("Sortie retrouvée"));
+ assert.equal((await aliases(second)).secret,(await aliases(page)).secret);
+});
+test("contenu modifié avec une enveloppe recalculée : le vrai moteur refuse, la sortie actuelle reste active",async()=>{
+ const {page}=await phone();const before=await create(page),original=await aliases(page);
+ const invitation=await share(page);await frame(page).locator("#closeOutingShare").click();
+ const modified=await page.evaluate(async text=>{
+  const protocol=await import("/protocol.js"),payload=await protocol.unwrap(text);
+  payload.id=protocol.randomId();
+  // Altérer le code intérieur sans son contrôle d'intégrité.
+  payload.content=payload.content.replace("VHF1.","VHF1.A");
+  return protocol.wrap(payload);
+ },invitation);
+ await openReceive(page);await page.locator("#invitation").fill(modified);
+ await page.locator("#receiveForm button[type=submit]").click();
+ await page.waitForFunction(()=>document.getElementById("importError").textContent.length>0);
+ assert.equal((await active(page)).envelope.id,before.envelope.id);
+ await page.locator("#resume").click();
+ await page.waitForFunction(()=>document.getElementById("testBanner")?.textContent.includes("Sortie retrouvée"));
+ assert.equal((await aliases(page)).secret,original.secret);
+});
+
+test("nouvelle publication réelle disponible : les imports et la réouverture gardent les fichiers de la sortie d'origine",async()=>{
+ const {createHash}=require("node:crypto"),digest=value=>createHash("sha256").update(value).digest("hex");
+ const first=await phone();const original=await create(first.page),invitation=await share(first.page);
+ const root=path.resolve(__dirname,".."),newFiles=new Map();
+ const manifest=JSON.parse(JSON.stringify(original.manifest));
+ for(const file of manifest.files){
+  let bytes=fs.readFileSync(path.join(root,"releases",original.release,file.path));
+  if(file.path==="app.html")bytes=Buffer.from(bytes.toString().replace("<body>","<body data-integration-fixture=new>"));
+  file.sha256=digest(bytes);newFiles.set(file.path,bytes);
+ }
+ const raw=JSON.stringify(manifest),release=digest(raw);
+ assert.notEqual(release,original.release);
+ const prefix="/releases/"+release+"/";
+ host.state.virtual.set(prefix+"manifest.json",Buffer.from(raw));
+ for(const [name,bytes] of newFiles)host.state.virtual.set(prefix+name,bytes);
+ host.state.virtual.set("/latest.json",Buffer.from(JSON.stringify({format:2,release})));
+ await first.page.locator("#closeOutingShare").click();assert.equal(await share(first.page),invitation);assert.equal((await active(first.page)).release,original.release);
+ const receiver=await phone();await importOuting(receiver.page,invitation);
+ assert.equal((await active(receiver.page)).release,original.release);
+ assert.equal(await frame(receiver.page).locator("body").getAttribute("data-integration-fixture"),null);
+ await receiver.context.setOffline(true);await receiver.page.reload();
+ await receiver.page.waitForFunction(()=>(document.getElementById("testBanner")||document.getElementById("status")).textContent.includes("Sortie retrouvée"));
+ assert.equal((await active(receiver.page)).release,original.release);
+ await first.page.goto(url);await first.page.waitForFunction(()=>!document.getElementById("create").disabled);
+ assert.equal(new URL(first.page.url()).pathname,"/");assert.equal((await active(first.page)).release,original.release);
+ await create(first.page);assert.equal((await active(first.page)).release,release);
+ const next=await phone();await create(next.page);
+ assert.equal((await active(next.page)).release,release);
+ assert.equal(await frame(next.page).locator("body").getAttribute("data-integration-fixture"),"new");
+ await next.context.setOffline(true);await next.page.reload();
+ await next.page.waitForFunction(()=>(document.getElementById("testBanner")||document.getElementById("status")).textContent.includes("Sortie retrouvée"));
+ assert.equal(await frame(next.page).locator("body").getAttribute("data-integration-fixture"),"new");
+});
+test("résumé humain altéré dans le message partagé : refus avant installation",async()=>{
+ const {page}=await phone();const before=await create(page),invitation=await share(page);
+ await frame(page).locator("#closeOutingShare").click();
+ await openReceive(page);await page.locator("#invitation").fill(invitation.replace("Alias de zone","Alias de la mauvaise zone"));
+ await page.locator("#receiveForm button[type=submit]").click();
+ await page.waitForFunction(()=>document.getElementById("importError").textContent.length>0);
+ assert.equal((await active(page)).envelope.id,before.envelope.id);
+});
+
+async function changeZone(page){
+ const id=await page.locator("#sendZone option").evaluateAll(options=>options.find(o=>!o.selected).value);
+ await page.locator("#sendZone").selectOption(id);await page.locator("#confirmZoneSwitch").click();
+ await page.waitForFunction(()=>!isZoneConfirmed(activeZone()));
+ await page.evaluate(()=>window.VHFIntegration.commit());
+}
+test("confirmation radio affichée seulement après acquittement durable, conservée au rechargement",async()=>{
+ const {page}=await phone();await create(page);await changeZone(page);
+ await page.evaluate(()=>{
+  const desc=Object.getOwnPropertyDescriptor(IDBTransaction.prototype,"oncomplete");
+  Object.defineProperty(IDBTransaction.prototype,"oncomplete",{...desc,set(callback){
+   desc.set.call(this,function(event){if(this.mode==="readwrite"&&window.holdConfirmation){window.releaseConfirmation=()=>callback.call(this,event);}else callback.call(this,event);});
+  }});window.holdConfirmation=true;
+ });
+ await page.locator("#sendZoneConfirmBtn").click();
+ await page.waitForFunction(()=>typeof window.releaseConfirmation==="function");
+ assert.equal(await page.evaluate(()=>isZoneConfirmed(activeZone())),false);
+ assert.equal(await page.locator("#sendZoneConfirmBtn").evaluate(el=>el.classList.contains("zone-confirm-done")),false);
+ await page.evaluate(()=>{window.holdConfirmation=false;window.releaseConfirmation();});
+ await page.waitForFunction(()=>document.getElementById("sendZoneConfirmBtn").classList.contains("zone-confirm-done"));
+ await page.reload();await page.waitForFunction(()=>document.getElementById("testBanner")?.textContent.includes("Sortie retrouvée"));
+ assert.equal(await page.evaluate(()=>isZoneConfirmed(activeZone())),true);
+});
+test("échec de sauvegarde d’une confirmation : pas d’état confirmé et reprise sans confirmation",async()=>{
+ const {page}=await phone();await create(page);await changeZone(page);
+ await page.evaluate(()=>{const original=IDBObjectStore.prototype.put;IDBObjectStore.prototype.put=function(value,key){const result=original.call(this,value,key);if(key==="active")this.transaction.abort();return result;};});
+ await page.locator("#sendZoneConfirmBtn").click();
+ await page.waitForFunction(()=>document.getElementById("testBanner").dataset.kind==="error");
+ assert.equal(await page.evaluate(()=>isZoneConfirmed(activeZone())),false);
+ assert.equal(await page.evaluate(()=>document.body.inert),true);
+ await page.reload();await page.waitForFunction(()=>document.getElementById("testBanner")?.textContent.includes("Sortie retrouvée"));
+ assert.equal(await page.evaluate(()=>isZoneConfirmed(activeZone())),false);
+});
+test("nouveau lanceur installé puis fermeture complète hors réseau : sortie et anciennes publications conservées",async()=>{
+ const {createHash}=require("node:crypto"),digest=value=>createHash("sha256").update(value).digest("hex");
+ const root=path.resolve(__dirname,".."),profile=fs.mkdtempSync(path.join(os.tmpdir(),"vhfgps-real-profile-"));
+ let ctx=await chromium.launchPersistentContext(profile,{headless:true,executablePath});
+ try{
+  let page=await ctx.newPage();await page.goto(url);await page.waitForFunction(()=>!document.getElementById("create").disabled);const before=await create(page),identity=await aliases(page);
+  const olderRelease="a".repeat(64);
+  await page.evaluate(async id=>{const cache=await caches.open("vhfgps-main-release-"+id);await cache.put(new URL("/releases/"+id+"/manifest.json",location.origin),new Response("ancienne publication"));},olderRelease);
+  const boot=fs.readFileSync(path.join(root,"boot.js"),"utf8")+"\n// Second lanceur de test\n";
+  const index=fs.readFileSync(path.join(root,"index.html"),"utf8").replace("<body>","<body data-shell-fixture=new>");
+  let worker=fs.readFileSync(path.join(root,"sw.js"),"utf8");const match=worker.match(/ASSETS=(\[[^\n]+\]);/);const assets=JSON.parse(match[1]);
+  for(const f of assets){if(f.path==="boot.js")f.sha256=digest(boot);if(f.path==="index.html")f.sha256=digest(index);}
+  const serialized=JSON.stringify(assets);worker=worker.replace(match[1],serialized).replace(/(SHELL_BUILD=")[a-f0-9]{64}/,"$1"+digest(serialized));
+  host.state.virtual.set("/boot.js",Buffer.from(boot));host.state.virtual.set("/index.html",Buffer.from(index));host.state.virtual.set("/sw.js",Buffer.from(worker));
+  await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();await r.update();});
+  await page.waitForFunction(async()=>!!(await navigator.serviceWorker.getRegistration()).waiting);
+  assert.equal((await active(page)).release,before.release);assert.equal((await aliases(page)).secret,identity.secret);
+  await ctx.close();ctx=await chromium.launchPersistentContext(profile,{headless:true,executablePath});await ctx.setOffline(true);page=await ctx.newPage();await page.goto(url);await resume(page);
+  await page.waitForFunction(()=>document.getElementById("testBanner")?.textContent.includes("Sortie retrouvée"));
+  assert.equal((await active(page)).release,before.release);assert.equal((await aliases(page)).secret,identity.secret);await encode(page);
+  assert.equal(await page.evaluate(async id=>{const cache=await caches.open("vhfgps-main-release-"+id);return (await cache.match(new URL("/releases/"+id+"/manifest.json",location.origin)))?.text();},olderRelease),"ancienne publication");
+ }finally{
+  await ctx.close();const target=fs.realpathSync(profile);if(path.dirname(target)!==fs.realpathSync(os.tmpdir())||!path.basename(target).startsWith("vhfgps-real-profile-"))throw Error("Profil hors périmètre");fs.rmSync(target,{recursive:true,force:true});
+ }
+});
+
+test("rechargement forcé : démarrage sans controller, sans attendre un événement qui ne viendra pas",async()=>{
+ const {page,context}=await phone();const cdp=await context.newCDPSession(page);
+ await cdp.send("Page.enable");
+ const loaded=page.waitForEvent("load");await cdp.send("Page.reload",{ignoreCache:true});await loaded;
+ assert.equal(await page.evaluate(()=>navigator.serviceWorker.controller),null);
+ await page.waitForFunction(()=>!document.getElementById("create").disabled,{},{timeout:5000});
+ assert.match(await page.locator("#status").innerText(),/Prépare une sortie/);
+ await create(page);
+});
+test("ouverture file : une explication visible remplace Ouverture, sans dépendre des modules bloqués",async()=>{
+ const context=await browser.newContext();contexts.push(context);const page=await context.newPage();
+ const {pathToFileURL}=require("node:url");await page.goto(pathToFileURL(path.resolve(__dirname,"../index.html")).href);
+ await page.waitForFunction(()=>document.getElementById("status").dataset.kind==="error",{},{timeout:2000});
+ assert.match(await page.locator("#status").innerText(),/fichier|file:/i);
+ assert.equal(await page.locator("#create").isEnabled(),false);
+ assert.match(await page.locator("#localPreview").getAttribute("href"),/^http:\/\/127\.0\.0\.1:8082\/$/);
+});
+
+test("chargement lent : seul le chargement est visible jusqu’à la modale prête",async()=>{
+ const {page,context}=await phone({viewport:{width:390,height:844}});
+ await context.addInitScript(()=>{
+  if(!location.pathname.includes("/releases/"))return;
+  const original=SubtleCrypto.prototype.deriveBits;window.pendingCrypto=[];window.allowCrypto=false;
+  SubtleCrypto.prototype.deriveBits=function(...args){
+   if(window.allowCrypto)return original.apply(this,args);
+   return new Promise((resolve,reject)=>{window.pendingCrypto.push(()=>original.apply(this,args).then(resolve,reject));});
+  };
+ });
+ await openNew(page);await page.waitForFunction(()=>window.pendingCrypto?.length>0);
+ assert(await page.locator("#loadingScreen").isVisible());assert.equal(await page.locator("#sessionCard").isVisible(),false);
+ const dir=path.join(os.tmpdir(),"vhfgps-real-tests");fs.mkdirSync(dir,{recursive:true});await page.screenshot({path:path.join(dir,"chargement-mobile.png")});
+ await page.evaluate(()=>{window.allowCrypto=true;window.pendingCrypto.forEach(run=>run());});
+ await page.waitForFunction(()=>!document.documentElement.classList.contains("app-loading"));
+ assert(await page.locator("#outingCreateDialog").isVisible());assert.equal(await page.locator("#loadingScreen").isVisible(),false);
+ await page.screenshot({path:path.join(dir,"preparation-mobile.png")});
+ await page.locator("#cancelOutingCreate").click();await page.locator("#create").waitFor({state:"visible"});
+});
+test("annuler la préparation restaure la position de lecture et la sortie",async()=>{
+ const {page}=await phone({viewport:{width:390,height:844}});const before=await create(page);
+ await page.evaluate(()=>window.scrollTo({top:350,behavior:"instant"}));const scroll=await page.evaluate(()=>window.scrollY);
+ // Déclencher le bouton sans le scroll automatique de Playwright vers ce bouton.
+ await page.locator("#backHomeBtn").dispatchEvent("click");await page.locator("#create").waitFor({state:"visible"});await page.locator("#create").click();
+ await page.locator("#cancelOutingCreate").waitFor({state:"visible"});await page.locator("#cancelOutingCreate").click();
+ await page.waitForFunction(()=>document.getElementById("testBanner")?.textContent.includes("Sortie retrouvée")&&!document.documentElement.classList.contains("app-loading"));
+ assert.equal((await active(page)).id,before.id);assert(Math.abs((await page.evaluate(()=>window.scrollY))-scroll)<3);
+});
+test("bouton Installer stable dans le lanceur et l’application, avec aide en repli",async()=>{
+ const {page,context}=await phone();
+ // Bloquer la proposition automatique native dans ce test de l’aide manuelle.
+ await context.addInitScript(()=>window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();event.stopImmediatePropagation();},true));
+ await page.reload();await page.locator("#installAppBtn").waitFor({state:"visible"});
+ await page.locator("#installAppBtn").click();assert(await page.locator("#installHelp").isVisible());
+ assert.match(await page.locator("#installHelp").innerText(),/navigateur/);
+ await page.locator("#installAppBtn").click();assert.equal(await page.locator("#installHelp").isVisible(),false);
+ await create(page);assert(await page.locator("#installAppBtn").isVisible());
+ await page.locator("#installAppBtn").click();assert(await page.locator("#installHelp").isVisible());
+ await page.evaluate(()=>window.dispatchEvent(new Event("appinstalled")));assert.equal(await page.locator("#installAppBtn").isVisible(),false);
+});
+test("installation directe proposée seulement au clic ; proposition consommée puis aide disponible",async()=>{
+ const {page}=await phone();
+ await page.evaluate(()=>{window.promptCalls=0;const event=new Event("beforeinstallprompt",{cancelable:true});event.prompt=async()=>{window.promptCalls++;};event.userChoice=Promise.resolve({outcome:"dismissed"});window.dispatchEvent(event);window.promptPrevented=event.defaultPrevented;});
+ assert.equal(await page.evaluate(()=>window.promptPrevented),true);assert.equal(await page.evaluate(()=>window.promptCalls),0);
+ await page.locator("#installAppBtn").click();await page.waitForFunction(()=>window.promptCalls===1&&!document.getElementById("installAppBtn").disabled);
+ await page.locator("#installAppBtn").click();assert(await page.locator("#installHelp").isVisible());assert.equal(await page.evaluate(()=>window.promptCalls),1);
+});
+test("mode installé : pas de bouton Installer dans le lanceur ni dans l’application",async()=>{
+ const context=await browser.newContext();contexts.push(context);
+ await context.addInitScript(()=>{const original=window.matchMedia.bind(window);window.matchMedia=query=>{const result=original(query);if(query==="(display-mode: standalone)")Object.defineProperty(result,"matches",{value:true});return result;};});
+ const page=await context.newPage();await page.goto(url);await page.waitForFunction(()=>!document.getElementById("create").disabled);
+ assert.equal(await page.locator("#installAppBtn").isVisible(),false);await create(page);assert.equal(await page.locator("#installAppBtn").isVisible(),false);
+});
+
+test("module de démarrage absent : le chargement ne reste pas bloqué et la sortie peut être réparée",async()=>{
+ const {page,context}=await phone();const record=await create(page),invitation=await share(page);
+ await page.evaluate(async release=>{const cache=await caches.open("vhfgps-main-release-"+release);await cache.delete(new URL("/releases/"+release+"/runtime.js",location.origin));},record.release);
+ await context.setOffline(true);await page.reload();
+ await page.waitForFunction(()=>document.getElementById("status")?.dataset.kind==="error"&&!document.documentElement.classList.contains("app-loading"));
+ assert.match(await page.locator("#status").innerText(),/chargement.*incomplet/i);assert.equal((await active(page)).id,record.id);
+ await context.setOffline(false);await importOuting(page,invitation);assert.equal((await active(page)).id,record.id);
+});
+
+
+test("accueil sans sortie : deux choix disponibles et aucune redirection",async()=>{
+ const {page}=await phone({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+ assert.equal(new URL(page.url()).pathname,"/");assert.equal(await page.locator("#resume").isVisible(),false);
+ assert.equal(await page.locator("#create").isEnabled(),true);assert.equal(await page.locator("#receive").isEnabled(),true);
+ assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ await openReceive(page);await page.locator("#closeReceive").click();assert.equal(new URL(page.url()).pathname,"/");
+ assert.equal(await active(page),undefined);
+});
+
+test("accueil avec sortie : zone et date visibles, état conservé puis reprise explicite hors réseau",async()=>{
+ const {page,context}=await phone({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+ const before=await create(page,{ephemeral:true}),identity=await aliases(page);
+ await context.setOffline(true);await page.goto(url);await page.waitForFunction(()=>!document.getElementById("create").disabled);
+ assert.equal(new URL(page.url()).pathname,"/");assert.deepEqual(await active(page),before);
+ assert.equal(await page.locator("#resumeZone").innerText(),identity.zoneData.name);assert.match(await page.locator("#resumeDate").innerText(),/^Créée le /);
+ assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ const dir=path.join(os.tmpdir(),"vhfgps-real-tests");fs.mkdirSync(dir,{recursive:true});await page.screenshot({path:path.join(dir,"accueil-mobile.png"),fullPage:true});
+ await resume(page);assert.equal((await active(page)).release,before.release);assert.equal((await aliases(page)).secret,identity.secret);await encode(page);
+});
+
+
+test("annuler la réception : accueil visible par bouton ou Échap, sortie conservée sans reprise automatique",async()=>{
+ const {page}=await phone();const before=await create(page),identity=await aliases(page);
+ await page.goto(url);await page.waitForFunction(()=>!document.getElementById("create").disabled);
+ for(const escape of [false,true]){
+  await openReceive(page);await page.locator("#invitation").fill("message non validé");
+  if(escape)await page.keyboard.press("Escape");else await page.locator("#closeReceive").click();
+  await page.locator("#receiveDialog").waitFor({state:"hidden"});
+  assert.equal(new URL(page.url()).pathname,"/");assert.equal(await page.locator("#empty").isVisible(),true);assert.equal(await page.locator("#resume").isEnabled(),true);
+  assert.deepEqual(await active(page),before);
+ }
+ await resume(page);await openReceive(page);await page.locator("#closeReceive").click();
+ await page.locator("#receiveDialog").waitFor({state:"hidden"});assert.equal(await page.locator("#empty").isVisible(),true);
+ assert.equal(await page.locator("#status").innerText(),"");assert.deepEqual(await active(page),before);
+ await resume(page);assert.equal((await aliases(page)).secret,identity.secret);await encode(page);
+});
+
+
+test("accueil et partage direct : menu unique et invitation identique repartagée hors réseau",async()=>{
+ const {page,context}=await phone({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+ assert.equal(await page.locator("#share").count(),0);
+ const record=await create(page,{ephemeral:true});assert.equal(await page.locator("#outingSettings, #createOutingBtn, #receiveOutingBtn, #copyOutingBtn").count(),0);
+ assert.equal(await page.locator("#backHomeBtn").isVisible(),true);
+ const invitation=await share(page);await page.locator("#closeOutingShare").click();await context.setOffline(true);
+ await openMenu(page);assert.equal(new URL(page.url()).pathname,"/");assert.equal(await page.locator("#outingMenu").count(),1);
+ assert.equal(await page.locator("#share").count(),0);assert.equal((await active(page)).release,record.release);
+ assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ const dir=path.join(os.tmpdir(),"vhfgps-real-tests");fs.mkdirSync(dir,{recursive:true});await page.screenshot({path:path.join(dir,"menu-gestion-mobile.png"),fullPage:true});
+ const again=await share(page);assert.equal(again,invitation);assert.equal((await active(page)).id,record.id);assert.equal((await active(page)).release,record.release);
+});
+
+test("partage dans l’application masqué après changement de zone, même après confirmation radio",async()=>{
+ const {page}=await phone();const before=await create(page);
+ const target=await page.locator("#sendZone").evaluate(select=>[...select.options].find(option=>option.value!==select.value).value);
+ await page.locator("#sendZone").selectOption(target);await page.locator("#confirmZoneSwitch").click();
+ await page.waitForFunction(id=>activeZone().id===id,target);
+ await page.locator("#sendZoneConfirmBtn").waitFor({state:"visible"});await page.waitForFunction(()=>!document.getElementById("sendZoneConfirmBtn").disabled);
+ await page.locator("#sendZoneConfirmBtn").click();await page.waitForFunction(()=>isZoneConfirmed(activeZone()));
+ await openMenu(page);assert.equal(await page.locator("#share").isVisible(),false);assert.equal(await page.locator("#resume").isVisible(),true);
+ assert.equal((await active(page)).id,before.id);assert.equal((await active(page)).release,before.release);
+});
+
+
+test("première ouverture : anciens caches retirés, ancienne sortie ignorée et libellés définitifs",async()=>{
+ const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});contexts.push(context);const page=await context.newPage();
+ const seed=new URL("seed-local.html",url).href;await page.route(seed,route=>route.fulfill({contentType:"text/html",body:"<!doctype html><title>Préparation locale</title>"}));await page.goto(seed);
+ await page.evaluate(async()=>{
+  for(const name of ["vhfgps-integration-shell-legacy","vhfgps-integration-release-legacy","official-cache-sentinel"]){const cache=await caches.open(name);await cache.put("/old-file",new Response("ancien fichier"));}
+  await new Promise((resolve,reject)=>{const req=indexedDB.open("vhfgps-real-integration-v2",1);req.onupgradeneeded=()=>req.result.createObjectStore("state");req.onerror=()=>reject(req.error);req.onsuccess=()=>{const db=req.result,tx=db.transaction("state","readwrite");tx.objectStore("state").put({id:"ancien",release:"ancienne-publication"},"active");tx.oncomplete=()=>{db.close();resolve();};tx.onabort=()=>reject(tx.error);};});
+ });
+ await page.goto(url);await page.waitForFunction(()=>!document.getElementById("create").disabled);
+ assert.equal(await page.locator("#resume").isVisible(),false);assert.equal(await active(page),undefined);
+ const keys=await page.evaluate(()=>caches.keys());assert(!keys.some(name=>name.startsWith("vhfgps-integration-")));assert(keys.includes("official-cache-sentinel"));
+ assert.doesNotMatch(await page.locator("body").innerText(),/\bessai\b|\bde test\b|🧪|ne pas utiliser en navigation/i);
+ const manifest=await page.evaluate(()=>fetch("/manifest.webmanifest").then(response=>response.json()));assert.equal(manifest.name,"VHF GPS");assert.equal(manifest.short_name,"VHF GPS");
+ await create(page);const invitation=await share(page);assert.match(invitation,/VHF-SORTIE2\./);assert.doesNotMatch(invitation,/\bessai\b|\bde test\b|🧪/i);
+ assert.doesNotMatch(await page.locator("body").innerText(),/\bessai\b|\bde test\b|🧪|ne pas utiliser en navigation/i);
+});
+
+
+test("import : effacer puis recoller l’invitation partagée dans la validation permet de l’installer",async()=>{
+ const sender=await phone();const expected=await create(sender.page,{ephemeral:true}),invitation=await share(sender.page);
+ const receiver=await phone();await openReceive(receiver.page);await receiver.page.locator("#invitation").fill(invitation);await receiver.page.locator("#receiveForm button[type=submit]").click();
+ await receiver.page.locator("#confirmOutingImport").waitFor({state:"visible"});
+ assert.equal(await receiver.page.locator("#outingImportText").inputValue(),invitation);
+ await receiver.page.locator("#outingImportText").fill("");await receiver.page.locator("#outingImportText").fill(invitation);
+ await receiver.page.locator("#checkOutingBtn").click();await receiver.page.locator("#confirmOutingImport").waitFor({state:"visible",timeout:3000});
+ assert.equal(await receiver.page.locator("#outingImportDialogError").isVisible(),false);
+ await receiver.page.locator("#confirmOutingImport").click();await receiver.page.locator("#closeOutingSuccess").waitFor({state:"visible"});
+ const result=await active(receiver.page);assert.equal(result.id,expected.id);assert.equal(result.release,expected.release);
+ assert.equal((await aliases(receiver.page)).secret,(await aliases(sender.page)).secret);
+});
+
+
+test("import : une invitation remplacée dans la validation ne change ni la publication ni la sortie active",async()=>{
+ const sender=await phone();const first=await create(sender.page),invitation=await share(sender.page);
+ const other=await phone();await create(other.page,{ephemeral:true});const different=await share(other.page);
+ const receiver=await phone();const previous=await create(receiver.page);
+ await openReceive(receiver.page);await receiver.page.locator("#invitation").fill(invitation);await receiver.page.locator("#receiveForm button[type=submit]").click();await receiver.page.locator("#confirmOutingImport").waitFor({state:"visible"});
+ await receiver.page.locator("#outingImportText").fill(different);await receiver.page.locator("#checkOutingBtn").click();await receiver.page.locator("#outingImportDialogError").waitFor({state:"visible"});
+ assert.match(await receiver.page.locator("#outingImportDialogError").innerText(),/ne correspond pas/);assert.equal(await receiver.page.locator("#confirmOutingImport").isVisible(),false);assert.deepEqual(await active(receiver.page),previous);
+ await receiver.page.locator("#outingImportText").fill(invitation);await receiver.page.locator("#checkOutingBtn").click();await receiver.page.locator("#confirmOutingImport").waitFor({state:"visible"});await receiver.page.locator("#confirmOutingImport").click();await receiver.page.locator("#closeOutingSuccess").waitFor({state:"visible"});assert.equal((await active(receiver.page)).id,first.id);
+});
+
+
+test("partage direct : pas de navigation, position saisie et résultats radio conservés sur mobile",async()=>{
+ const sender=await phone({viewport:{width:390,height:844},isMobile:true,hasTouch:true});await create(sender.page);const message=await encode(sender.page);
+ const page=sender.page,address=page.url(),position=await page.locator("#lat").inputValue(),phrase=await page.locator("#encodedWords").innerText();
+ const invitation=await share(page);assert.equal(page.url(),address);await page.locator("#closeOutingShare").click();
+ assert.equal(await page.locator("#lat").inputValue(),position);assert.equal(await page.locator("#encodedWords").innerText(),phrase);assert.equal(await page.locator("#encodedBlock").isVisible(),true);
+ const buttons=await page.locator(".app-navigation button").evaluateAll(elements=>elements.filter(el=>!el.classList.contains("hidden")).map(el=>{const r=el.getBoundingClientRect();return {top:r.top,right:r.right};}));assert.equal(buttons.length,2);assert.equal(buttons[0].top,buttons[1].top);assert(buttons.every(r=>r.right<=390));
+ const dir=path.join(os.tmpdir(),"vhfgps-real-tests");fs.mkdirSync(dir,{recursive:true});await page.evaluate(()=>window.scrollTo({top:0,behavior:"instant"}));await page.screenshot({path:path.join(dir,"app-header-mobile.png")});
+ const receiver=await phone();await importOuting(receiver.page,invitation);await decode(receiver.page,message);
+ const coords=await receiver.page.locator("#decodedCoords").innerText(),receiverAddress=receiver.page.url();
+ await share(receiver.page);assert.equal(receiver.page.url(),receiverAddress);await receiver.page.locator("#closeOutingShare").click();
+ assert.equal(await receiver.page.locator("#decodedCoords").innerText(),coords);assert.equal(await receiver.page.locator("#decodedCoordsWrap").isVisible(),true);assert(await receiver.page.locator("#decodedBlock").evaluate(el=>el.classList.contains("position-confirmed")));
+});

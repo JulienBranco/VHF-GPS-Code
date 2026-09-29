@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "latest": "e0c73766c08ace11cf7bb5bd515fd1b6dad80ceacdce6f2c559127f118b124f7",
+  "releases": [
+    {
+      "release": "e0c73766c08ace11cf7bb5bd515fd1b6dad80ceacdce6f2c559127f118b124f7",
+      "version": "3.28.106",
+      "protocol": "VHF-GPS-PROTO-6",
+      "createdAt": "2026-09-29T18:47:03.508Z",
+      "indexedAt": "2026-09-29T18:47:03.508Z"
+    }
+  ]
+}

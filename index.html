@@ -1,13 +1,28 @@
-<!doctype html>
-<html lang="fr">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>VHF GPS Code</title>
-  <meta http-equiv="refresh" content="0;url=./vhf_gps_code.html">
-  <link rel="manifest" href="./manifest.webmanifest">
-</head>
-<body>
-  <p><a href="./vhf_gps_code.html">Ouvrir VHF GPS Code</a></p>
-</body>
-</html>
+<!doctype html><html lang="fr" class="app-loading"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#173b45"><meta name="apple-mobile-web-app-capable" content="yes">
+<title>VHF GPS</title><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="style.css"><link rel="stylesheet" href="transition.css"></head>
+<body><div id="loadingScreen" role="status" aria-live="polite"><span class="loading-dot" aria-hidden="true"></span><span>Préparation…</span></div>
+<header><strong>🎣 VHF GPS</strong><nav><button id="installAppBtn" hidden aria-controls="installHelp" aria-expanded="false">Installer l’application</button><a href="GUIDE.html">Guide</a></nav><p id="installHelp" hidden role="status"></p></header>
+<main><section id="empty"><h1>Ta sortie VHF GPS</h1><div class="home-actions">
+<button id="resume" class="resume-button" hidden disabled><span class="home-label">▶ Reprendre la sortie active</span><span id="resumeZone" class="home-zone"></span><span id="resumeDate" class="home-date"></span></button>
+<details id="outingMenu" class="outing-details" open><summary><span class="outing-menu-label">🎣 Préparer ou recevoir une sortie</span><span class="outing-menu-chevron" aria-hidden="true">▾</span></summary><div class="outing-body">
+<button id="create" disabled><span class="home-label">🆕 Préparer une nouvelle sortie</span></button>
+<button id="receive" disabled><span class="home-label">📥 Recevoir une invitation</span></button>
+</div></details>
+</div><p id="status" role="status">Ouverture…</p></section></main>
+<dialog id="receiveDialog"><form id="receiveForm"><h2>Recevoir une invitation</h2><label for="invitation">Colle le message VHF GPS entier</label><textarea id="invitation" rows="8" required spellcheck="false"></textarea><p id="importError" role="alert"></p><div class="actions"><button type="submit">Vérifier</button><button id="closeReceive" type="button">Annuler</button></div></form></dialog>
+<p id="fileHelp" hidden style="padding:0 24px"><a id="localPreview" href="http://127.0.0.1:8082/">Ouvrir l’aperçu local</a></p>
+<script>
+// Ce message fonctionne même quand les modules sont bloqués en ouverture file://.
+if(location.protocol==="file:"){
+ const status=document.getElementById("status");
+ status.textContent="Cette PWA ne fonctionne pas en ouvrant directement le fichier. Utilise son adresse Web ou l’aperçu local démarré sur ce PC.";
+ status.dataset.kind="error";document.getElementById("fileHelp").hidden=false;document.documentElement.classList.remove("app-loading");
+}else{
+ const script=document.createElement("script");script.type="module";script.src="./boot.js";
+ script.onerror=()=>{const status=document.getElementById("status");status.textContent="Le démarrage n’a pas pu être chargé. Vérifie la connexion puis recharge l’application.";status.dataset.kind="error";document.documentElement.classList.remove("app-loading");};
+ document.head.append(script);
+}
+</script>
+</body></html>
