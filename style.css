@@ -12,3 +12,7 @@ html[data-receive-only] header,html[data-receive-only] main{visibility:hidden}
 #deleteDialog p{line-height:1.5}#deleteSummary{font-weight:700;color:#d7fbef}#deleteError{color:#ffb5ae;font-weight:700}
 
 .update-notice{margin:16px 0 4px;padding:15px 16px;border-left:6px solid #ffce61;border-radius:11px;background:#493819;color:#fff4d5;box-shadow:0 3px 14px #0003}.update-notice strong{display:block;font-size:17px}.update-notice p{margin:6px 0 0;line-height:1.45}html[data-theme=day] .update-notice{background:#fff2ce;color:#503813}
+
+#outingLoadErrorTitle{color:#ffb5ae;font-size:20px;line-height:1.3;margin-top:0}#outingLoadErrorDialog p{line-height:1.5}#outingLoadErrorDialog .actions{margin-top:18px}#outingLoadDetails{font-size:12px;margin:14px 0;color:#d5e8e7}#outingLoadDetails summary{cursor:pointer}#outingLoadDiagnostic{white-space:pre-line;overflow-wrap:anywhere}
+
+#importError.import-error-box{margin:14px 0;padding:13px 14px;background:#3d252b;border-left:4px solid #ff8585;border-radius:9px}#importError.import-error-box>strong{display:block;font-size:16px;line-height:1.35}#importError.import-error-box p{margin:8px 0 0;font-weight:400;color:#edf9f7;line-height:1.45}#importError.import-error-box .import-error-preserved{font-weight:700}

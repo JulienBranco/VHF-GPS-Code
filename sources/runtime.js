@@ -13,7 +13,14 @@ let state=Object.create(null),chain=Promise.resolve();
 const broadcast=new BroadcastChannel("vhfgps-main-state-v1");
 function status(text,kind="info"){banner.textContent=text;banner.dataset.kind=kind;}
 function stop(error){showPage();stopped=true;document.body.inert=true;status((error.message||String(error))+" Rouvre VHF GPS pour continuer.","error");banner.style.background="#941c25";}
-function returnHome(error,action=""){showLoading();sessionStorage.removeItem(LAUNCH_KEY);if(error)sessionStorage.setItem(ERROR_KEY,error.message||String(error));location.replace(action?new URL("#"+action,root):root);}
+function returnHome(error,action=""){
+ showLoading();sessionStorage.removeItem(LAUNCH_KEY);sessionStorage.removeItem(ERROR_KEY+"-details");
+ if(error){
+  const message=error.message||String(error);sessionStorage.setItem(ERROR_KEY,message);
+  if(error.code==="OUTING_VERSION_MISMATCH")sessionStorage.setItem(ERROR_KEY+"-details",JSON.stringify({code:error.code,message,...error.diagnostic}));
+ }
+ location.replace(action?new URL("#"+action,root):root);
+}
 function snapshot(){return {...state};}
 function outingSummary(){return {zoneName:window.activeZone()?.name||"Sortie enregistrée",createdAt:window.sessionCreatedAt()};}
 function equal(a,b){return Object.keys(a).length===Object.keys(b).length&&Object.entries(a).every(([key,value])=>b[key]===value);}
@@ -91,7 +98,12 @@ async function start(){
  state=Object.assign(Object.create(null),record.state||{});
  await script("engine.js");await script("app-adapter.js");
  const info=await window.startDistributedApp({mode,content:record.envelope?.content||""});
- if(info.version!==record.manifest.version||info.protocol!==record.manifest.protocol)throw Error("Le moteur ne correspond pas à la publication.");
+ if(info.version!==record.manifest.version||info.protocol!==record.manifest.protocol){
+  const error=Error("La version ouverte de VHF GPS ne correspond pas à celle prévue pour cette sortie.");
+  error.code="OUTING_VERSION_MISMATCH";
+  error.diagnostic={expectedVersion:record.manifest.version,expectedProtocol:record.manifest.protocol,loadedVersion:info.version,loadedProtocol:info.protocol};
+  throw error;
+ }
  initTechnicalInfo({root,outing:record});
  booted=true;
  if(installed){await commit();await changedElsewhere();if(!stopped)status("Sortie retrouvée · version "+info.version+" · "+release.slice(0,8)+" · prête hors connexion","success");}

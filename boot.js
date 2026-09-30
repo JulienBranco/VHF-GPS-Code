@@ -7,6 +7,32 @@ import {base,LAUNCH_KEY,ERROR_KEY,network,download,verify,fileURL} from "./relea
 const $=id=>document.getElementById(id);let db,busy=true,technicalInfo;
 applyLoadingTheme();initInstallUI();
 function status(text,kind="info"){$("status").textContent=text;$("status").dataset.kind=kind;if(kind==="error")showPage();}
+function clearImportError(){$("importError").replaceChildren();$("importError").classList.remove("import-error-box");}
+function showImportError(error){
+ clearImportError();
+ if(!["RELEASE_UNAVAILABLE","RELEASE_INCOMPLETE"].includes(error.code)){$("importError").textContent=error.message;return;}
+ const unavailable=error.code==="RELEASE_UNAVAILABLE",title=document.createElement("strong");
+ title.textContent=unavailable?"⛔ Version de cette sortie indisponible":"⛔ Téléchargement incomplet";
+ $("importError").classList.add("import-error-box");$("importError").append(title);
+ function paragraph(text){const p=document.createElement("p");p.textContent=text;$("importError").append(p);return p;}
+ paragraph(unavailable?"La version de VHF GPS nécessaire à cette invitation ne peut plus être téléchargée.":error.message);
+ if(unavailable)paragraph("Demande au créateur une nouvelle invitation préparée avec la version actuelle.");
+ if(!$("resume").hidden)paragraph("Ta sortie active est conservée.").className="import-error-preserved";
+}
+function showStartupError(message,rawDetails){
+ let details=null;try{details=JSON.parse(rawDetails||"null");}catch{}
+ if(details?.code!=="OUTING_VERSION_MISMATCH"||details.message!==message||
+  ["expectedVersion","expectedProtocol","loadedVersion","loadedProtocol"].some(key=>typeof details[key]!=="string"||details[key].length>100))details=null;
+ const versionMismatch=message==="Le moteur ne correspond pas à la publication."||!!details;
+ if(!versionMismatch){status(message,"error");$("importError").textContent=message;return;}
+ status("");$("importError").textContent="";
+ const diagnostic=$("outingLoadDiagnostic");
+ diagnostic.textContent=details?
+  "Version attendue : "+details.expectedVersion+" · "+details.expectedProtocol+"\nVersion ouverte : "+details.loadedVersion+" · "+details.loadedProtocol:"";
+ $("outingLoadDetails").hidden=!details;
+ showPage();$("outingLoadErrorDialog").showModal();
+}
+$("closeOutingLoadError").onclick=()=>$("outingLoadErrorDialog").close();
 let versionRefreshRevision=0;
 function showCatalogVersion(catalog,revision){
  if(revision!==versionRefreshRevision||catalog?.format!==1||!/^[a-f0-9]{64}$/.test(catalog.latest)||!Array.isArray(catalog.releases))return;
@@ -45,9 +71,13 @@ async function prepare(imported=null){
   }else{const latest=JSON.parse(new TextDecoder().decode(await network(new URL("latest.json",base))));if(latest.format!==2)throw Error("Publication annoncée invalide.");release=latest.release;id=randomId();}
   const manifest=await download(release,known?.manifest);
   enter({id,release,manifest,state:imported&&known?known.state:{},envelope:imported},imported?"import":"create",expected);
- }catch(error){status(error.message,"error");$("importError").textContent=error.message;busySet(false);}
+ }catch(error){
+  if(imported){status("");showImportError(error);showPage();}
+  else status(error.message,"error");
+  busySet(false);
+ }
 }
-function openReceive(){$("invitation").value="";$("importError").textContent="";$("receiveDialog").showModal();showPage();}
+function openReceive(){$("invitation").value="";clearImportError();$("receiveDialog").showModal();showPage();}
 async function resumePrevious(){
  showLoading();try{if(!await restore()){delete document.documentElement.dataset.receiveOnly;showPage();}}
  catch(error){delete document.documentElement.dataset.receiveOnly;status(error.message,"error");}
@@ -97,10 +127,11 @@ $("confirmDelete").onclick=async()=>{
  finally{busySet(false);}
 };
 $("create").onclick=()=>prepare();$("receive").onclick=openReceive;
-function cancelReceive(){delete document.documentElement.dataset.receiveOnly;status("");showPage();}
+function cancelReceive(){delete document.documentElement.dataset.receiveOnly;status("");clearImportError();showPage();}
 $("closeReceive").onclick=()=>{$("receiveDialog").close();cancelReceive();};
 $("receiveDialog").addEventListener("cancel",cancelReceive);
-$("receiveForm").onsubmit=async event=>{event.preventDefault();try{await prepare(await unwrap($("invitation").value));}catch(error){$("importError").textContent=error.message;}};
+$("invitation").addEventListener("input",clearImportError);
+$("receiveForm").onsubmit=async event=>{event.preventDefault();clearImportError();try{await prepare(await unwrap($("invitation").value));}catch(error){showImportError(error);}};
 // Un rechargement forcé peut laisser controller à null malgré une installation active.
 // Attendre cette inscription précise, sans forcer une mise à jour en attente.
 function waitForInstalledWorker(registration){
@@ -158,8 +189,9 @@ function watchLauncherUpdate(registration){
   $("resumeDate").textContent=createdLabel(active);
  }
  const message=sessionStorage.getItem(ERROR_KEY);sessionStorage.removeItem(ERROR_KEY);
+ const errorDetails=sessionStorage.getItem(ERROR_KEY+"-details");sessionStorage.removeItem(ERROR_KEY+"-details");
  const action=location.hash;history.replaceState(null,"",base);
- if(message){busySet(false);status(message,"error");$("importError").textContent=message;}else if(action==="#new"){busySet(false);await prepare();}else if(action==="#receive"){document.documentElement.dataset.receiveOnly="true";busySet(false);openReceive();}else if(action==="#resume"){busySet(false);if(!await restore())showPage();}else{busySet(false);status("");showPage();}
+ if(message){busySet(false);showStartupError(message,errorDetails);}else if(action==="#new"){busySet(false);await prepare();}else if(action==="#receive"){document.documentElement.dataset.receiveOnly="true";busySet(false);openReceive();}else if(action==="#resume"){busySet(false);if(!await restore())showPage();}else{busySet(false);status("");showPage();}
  watchLauncherUpdate(registration);navigator.storage?.persist?.().catch(()=>{});
 }
 start().catch(error=>{status(error.message,"error");busySet(!db);});
