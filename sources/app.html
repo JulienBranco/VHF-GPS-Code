@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="VHF GPS">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>VHF GPS Code</title>
+<link rel="icon" type="image/png" sizes="192x192" href="../../icons/icon-192.png">
 <style>
 :root{
   color-scheme:dark;
@@ -178,8 +179,7 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
 :root[data-theme="day"] #encodedWords.message{
   background:#ffffff
 }
-#sessionCompactStatus,
-#sessionState{
+#sessionCompactStatus{
   padding:10px 12px;
   background:var(--session-surface);
   border:0;
@@ -205,18 +205,6 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
   padding:12px 14px;border:2px solid var(--session-line);border-radius:12px;background:var(--session-surface);
   margin-top:8px;color:var(--focus-text)
 }
-.session-details{
-  margin-top:12px;border-top:1px solid color-mix(in srgb, var(--session-line) 35%, transparent);padding-top:6px
-}
-.session-details>summary{
-  cursor:pointer;list-style:none;padding:10px 2px 4px;color:var(--session-muted);font-weight:800;
-  user-select:none
-}
-.session-details>summary::-webkit-details-marker{display:none}
-.session-details>summary::before{content:"▸";display:inline-block;margin-right:8px;transition:transform .15s ease}
-.session-details[open]>summary::before{transform:rotate(90deg)}
-.session-details[open]>summary{color:var(--focus-text)}
-
 #encodedBlock{
   margin-top:14px;
   scroll-margin-top:84px;
@@ -451,9 +439,11 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
 :root[data-theme="day"] .wordbox.valid input{outline:3px solid #087532}
 :root[data-theme="day"] .wordbox.invalid input{outline:3px solid #a31621}
 
-.app-topline{display:flex;align-items:flex-start;gap:8px}
-.app-topline h1{flex:1;min-width:0}
-.theme-switch{flex:none;margin:4px 0 0}
+.app-header{background:#173b45;color:#ffe399}
+.app-header-inner{max-width:820px;margin:auto;padding:8px 16px;display:flex;align-items:center;gap:12px}
+.app-brand-icon{display:block;width:56px;height:56px;flex:none}
+.app-header h1{margin:0;min-width:0;font-size:26px;line-height:1.2;color:#ffe399}
+.theme-switch{flex:none;margin:0 0 0 auto}
 .theme-switch select{
   width:76px;
   min-width:76px;
@@ -1371,30 +1361,6 @@ select.custom-zone-active{
 }
 
 
-/* ===== V3.25 — réglages de session simplifiés / mobile ===== */
-.session-key-input{
-  width:100%;
-  box-sizing:border-box;
-  min-height:48px;
-  font-size:16px;
-  font-weight:850;
-  letter-spacing:.035em;
-  font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
-  text-align:center;
-  user-select:text;
-  -webkit-user-select:text;
-}
-.session-actions{
-  display:flex;
-  align-items:center;
-  justify-content:flex-start;
-  flex-wrap:wrap;
-  gap:8px;
-  margin-top:9px;
-}
-.session-actions button{width:auto;margin:0}
-.session-action-small{padding:8px 12px;min-height:38px;font-size:.78rem}
-.session-action-main{padding:9px 14px;min-height:40px;font-size:.82rem}
 .app-navigation{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
 .app-navigation>button{width:auto;margin:0;min-height:40px;padding:8px 12px;font-size:.88rem;font-weight:900;border:2px solid #5ca5e9;border-radius:10px;background:#0759a8;color:#fff}
 .app-navigation>#shareOutingBtn{background:rgba(7,89,168,.22);color:#eaf5ff}
@@ -1457,12 +1423,11 @@ dialog.outing-success-dialog{width:min(360px,calc(100vw - 32px));border-color:#2
   --setup-blue-text:#064780
 }
 .outing-setup-dialog p,.outing-setup-dialog .small,.outing-setup-dialog label{color:var(--session-muted)}
-#outingCreateDialog input,#outingCreateDialog select,#outingImportDialog textarea,#outingShareDialog textarea{
+#outingCreateDialog input,#outingCreateDialog select,#outingShareDialog textarea{
   background:var(--session-surface);color:var(--focus-text);
   border-color:var(--session-line)
 }
-#outingCreateDialog input:focus,#outingCreateDialog select:focus,#outingImportDialog textarea:focus,#outingShareDialog textarea:focus{border-color:var(--setup-blue)}
-#outingImportDialog textarea{min-height:160px;margin-top:6px}
+#outingCreateDialog input:focus,#outingCreateDialog select:focus,#outingShareDialog textarea:focus{border-color:var(--setup-blue)}
 #outingShareDialog textarea{min-height:min(40dvh,320px);margin-top:6px}
 .outing-setup-dialog h2{margin-top:0}
 .outing-setup-field{display:grid;gap:7px;margin-top:14px}
@@ -1486,7 +1451,7 @@ dialog.outing-success-dialog{width:min(360px,calc(100vw - 32px));border-color:#2
 #cancelOutingCreate,#cancelOutingImport,#closeOutingShare{
   background:#b42332;border:2px solid #b42332;color:#fff
 }
-#checkOutingCreate,#confirmOutingCreate,#checkOutingBtn,#confirmOutingImport,#copyOutingMessageBtn{
+#checkOutingCreate,#confirmOutingCreate,#confirmOutingImport,#copyOutingMessageBtn{
   background:var(--setup-blue);border:2px solid var(--setup-blue);color:#fff
 }
 #copyOutingMessageBtn:disabled{opacity:.55;cursor:not-allowed}
@@ -1500,24 +1465,6 @@ dialog.outing-success-dialog{width:min(360px,calc(100vw - 32px));border-color:#2
 .outing-setup-review{margin-top:14px}
 .outing-setup-review strong{display:block;margin-bottom:3px}
 @media(max-width:600px){dialog.outing-setup-dialog:not(.outing-success-dialog){width:100vw;max-width:none;max-height:100dvh;height:100dvh;margin:0;border-radius:0}.outing-setup-coordinate-grid{grid-template-columns:1fr 1fr 1fr}}
-.session-paste-help{
-  margin-top:9px;
-  padding:9px 11px;
-  border-radius:10px;
-  border:1px solid color-mix(in srgb, var(--session-line) 35%, transparent);
-  background:rgba(255,255,255,.045);
-  color:var(--session-muted);
-  font-size:.80rem;
-  line-height:1.45;
-}
-.session-state-compact{
-  margin-top:9px;
-  padding:9px 11px !important;
-  font-size:.82rem;
-}
-:root[data-theme="day"] .session-paste-help{background:var(--session-surface)}
-
-
 /* ===== V3.26.3 — verrouillage réel de la grille sur mobile ===== */
 @media(max-width:600px){
   .zone-bound-grid{
@@ -2374,10 +2321,9 @@ button:focus-visible,
   ERREUR PROTOCOLE — NE PAS UTILISER POUR COMMUNIQUER
   <div id="protocolFatalDetail" style="font-weight:600;margin-top:4px"></div>
 </div>
+<header class="app-header"><div class="app-header-inner"><img class="app-brand-icon" src="../../icons/icon-192.png" width="56" height="56" alt=""><h1>VHF GPS Code</h1></div></header>
 <main>
-  <nav class="app-navigation" aria-label="Sortie"><button type="button" id="backHomeBtn">⌂ Accueil</button><button type="button" id="shareOutingBtn" class="hidden" aria-label="Partager la sortie">📤 Partager la sortie</button></nav>
-  <div class="app-topline">
-    <h1>VHF GPS Code — <span id="appVersionHeading"></span></h1>
+  <nav class="app-navigation" aria-label="Sortie"><button type="button" id="backHomeBtn">⌂ Accueil</button><button type="button" id="shareOutingBtn" class="hidden" aria-label="Partager la sortie">📤 Partager la sortie</button>
     <div class="theme-switch">
       <select id="themeMode" aria-label="Affichage : AUTO, JOUR ou NUIT" title="Affichage">
         <option value="auto">AUTO</option>
@@ -2385,7 +2331,7 @@ button:focus-visible,
         <option value="night">NUIT</option>
       </select>
     </div>
-  </div>
+  </nav>
 
   <div class="card session-card" id="sessionCard">
     <div class="session-compact-title">
@@ -2407,51 +2353,6 @@ button:focus-visible,
       <div class="session-fingerprint" id="fingerprintWords"></div>
     </div>
 
-    <details id="sessionSettings" class="session-details">
-      <summary>⚠️ Réglages de session avancés</summary>
-
-      <div class="small" style="margin:6px 0 10px">
-        Le secret est commun aux rôles ÉMETTRE et RECEVOIR. L'invitation complète ci-dessus partage aussi la zone. La saisie du secret seul reste disponible.
-      </div>
-
-      <label for="sessionKey">Secret de session</label>
-      <input id="sessionKey" class="session-key-input" type="text"
-             autocomplete="off" autocorrect="off" autocapitalize="characters"
-             spellcheck="false" inputmode="text" enterkeyhint="done"
-             placeholder="XXXXXXX-XXXXXXX-XXXXXXX-XXXXXXX"
-             aria-describedby="sessionPasteHelp sessionState">
-
-      <div class="session-actions">
-        <button class="secondary session-action-small" id="copySecret">COPIER</button>
-        <button class="primary session-action-main" id="generateSecret">NOUVELLE SESSION</button>
-      </div>
-
-      <div id="sessionPasteHelp" class="session-paste-help">
-        <strong>Secret seul reçu ?</strong> Appui long dans le champ puis <strong>Coller</strong>.
-        Dès que le secret est valide, il est enregistré et activé automatiquement. Pour une invitation complète, utilise « Recevoir une invitation » plus haut.
-      </div>
-
-      <div id="sessionState" class="zone-summary session-state-compact">Aucune session active.</div>
-      <div id="secretStatus" class="status hidden"></div>
-
-      <div class="small" style="margin-top:10px">
-        28 caractères majuscules/chiffres non ambigus (≈137 bits).
-        L'empreinte compacte ci-dessus permet de vérifier oralement que les appareils utilisent bien la même session.
-        <strong>Changer de session annule automatiquement toute transmission préparée avec l’ancienne.</strong>
-      </div>
-
-      <div class="small" style="margin-top:10px">
-        <strong>Compatibilité protocole :</strong>
-        <span id="compatShort">calcul…</span><br>
-        <span style="word-break:break-all">SHA-256 : <span id="compatFull">calcul…</span></span><br>
-        Une modification de catalogue ou d'un paramètre de protocole change automatiquement ce digest.
-        Les changements purement visuels (couleurs, accents d'affichage équivalents, mise en page) n'ont pas vocation à le modifier.
-        <div style="margin-top:8px">
-          <button class="secondary" id="protocolSelfTestBtn">RETESTER LE PROTOCOLE</button>
-          <div id="protocolSelfTestStatus" class="status hidden"></div>
-        </div>
-      </div>
-    </details>
   </div>
 
   <div class="tabs">
@@ -2897,9 +2798,16 @@ button:focus-visible,
     </div>
   </details>
 
-  <details class="card utility-details small">
+  <details id="technicalInfo" class="card utility-details small">
     <summary>Informations techniques</summary>
     <div class="utility-body">
+      <div class="protocol-diagnostics">
+        <div><strong>Compatibilité protocole :</strong> <span id="compatShort">calcul…</span></div>
+        <div>SHA-256 : <span id="compatFull" style="overflow-wrap:anywhere">calcul…</span></div>
+        <button class="secondary" id="protocolSelfTestBtn">RETESTER LE PROTOCOLE</button>
+        <div id="protocolSelfTestStatus" class="status hidden" role="status" aria-live="polite"></div>
+      </div>
+      <hr>
       <div><strong id="protocolInfoTitle"></strong> la position est quantifiée sur une grille 2500 × 2500 à 100 m. Le message radio est
     SUJET + QUALIFICATIF + ET/OU + SUJET + QUALIFICATIF et embarque la case de position plus un contrôle HMAC de 9 bits.
     La session possède une empreinte orale indépendante. Les zones ont un alias radio dérivé du secret ; une zone éphémère utilise une
@@ -3016,18 +2924,14 @@ button:focus-visible,
     <button type="button" class="primary" id="copyOutingMessageBtn" disabled>COPIER LE MESSAGE</button>
   </div>
 </dialog>
-<dialog id="outingImportDialog" class="zone-delete-dialog outing-setup-dialog" aria-labelledby="outingImportTitle" aria-describedby="outingImportDescription outingImportSummary">
-  <h2 id="outingImportTitle">Recevoir une invitation</h2>
-  <p id="outingImportDescription">Colle le message entier reçu, même s’il contient du texte avant ou après l’invitation. La sortie active ne changera qu’après ta confirmation.</p>
-  <label for="outingImportText">Invitation reçue</label>
-  <textarea id="outingImportText" class="outing-textarea" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="Colle ici le message reçu."></textarea>
+<dialog id="outingImportDialog" class="zone-delete-dialog outing-setup-dialog" aria-labelledby="outingImportTitle" aria-describedby="outingImportSummary">
+  <h2 id="outingImportTitle">Confirmer la sortie reçue</h2>
   <div id="outingImportDialogError" class="status hidden" role="alert"></div>
   <div id="outingImportVerified" class="outing-verified-heading hidden">✓ INFORMATIONS RECALCULÉES DEPUIS LE CODE</div>
   <div id="outingImportSummary" class="outing-summary hidden"></div>
   <div id="outingImportWarning" class="status hidden" role="alert"></div>
   <div class="zone-delete-actions">
     <button type="button" id="cancelOutingImport">ANNULER</button>
-    <button type="button" class="secondary" id="checkOutingBtn">VÉRIFIER L'INVITATION</button>
     <button type="button" class="primary hidden" id="confirmOutingImport">CONFIRMER ET INSTALLER LA SORTIE</button>
   </div>
 </dialog>

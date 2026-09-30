@@ -11,7 +11,7 @@ document.body.inert=true;
 let db,record,mode="resume",expected=0,installed=false,booted=false,stopped=false,dirty=false,scheduled=false,writing=0;
 let state=Object.create(null),chain=Promise.resolve();
 const broadcast=new BroadcastChannel("vhfgps-main-state-v1");
-function status(text,kind="info"){banner.textContent=text;banner.dataset.kind=kind;}
+function status(text,kind="info"){banner.textContent=text;banner.dataset.kind=kind;banner.hidden=kind==="success";}
 function stop(error){showPage();stopped=true;document.body.inert=true;status((error.message||String(error))+" Rouvre VHF GPS pour continuer.","error");banner.style.background="#941c25";}
 function returnHome(error,action=""){
  showLoading();sessionStorage.removeItem(LAUNCH_KEY);sessionStorage.removeItem(ERROR_KEY+"-details");
@@ -70,14 +70,14 @@ window.VHFIntegration={
   const envelope={format:2,api:API,id:record.id,release:record.release,content};
   record=await writeActive(db,{...record,envelope,state:snapshot(),summary:outingSummary()},expected,{install:true});
   installed=true;dirty=false;sessionStorage.removeItem(LAUNCH_KEY);sessionStorage.removeItem(VIEW_KEY);broadcast.postMessage(record.revision);
-  status("Sortie enregistrée · version "+record.manifest.version+" · "+record.release.slice(0,8)+" · prête hors connexion","success");
+  status("Sortie enregistrée.","success");
   }catch(error){sessionStorage.removeItem(LAUNCH_KEY);status(error.message,"error");throw error;}
  },
  async navigate(action){
   if(!installed||stopped)return;
   try{rememberView(record.id);showLoading();persist();await commit();location.replace(new URL("#"+action,root));}catch(error){stop(error);}
  },
- cancel:()=>{if(!installed)returnHome(null,"resume");}
+ cancel:(destination="resume")=>{if(!installed)returnHome(null,destination==="resume"?"resume":"");}
 };
 async function changedElsewhere(){
  if(!installed||!booted||stopped||writing)return;
@@ -106,7 +106,7 @@ async function start(){
  }
  initTechnicalInfo({root,outing:record});
  booted=true;
- if(installed){await commit();await changedElsewhere();if(!stopped)status("Sortie retrouvée · version "+info.version+" · "+release.slice(0,8)+" · prête hors connexion","success");}
+ if(installed){await commit();await changedElsewhere();if(!stopped)status("Sortie retrouvée.","success");}
  else status("Confirme la sortie dans la fenêtre de l’application.");
  if(!stopped){if(mode==="resume")restoreView(record.id);document.body.inert=false;showPage();}
 }

@@ -1,7 +1,7 @@
 import {showLoading,showPage,applyLoadingTheme,VIEW_KEY} from "./transition.js";
 import {initInstallUI} from "./install.js";
 import {initTechnicalInfo} from "./technical-info.js";
-import {randomId,wrap,unwrap,sameInvitationContent} from "./protocol.js";
+import {randomId,wrap,unwrap,sameInvitationContent,splitContent} from "./protocol.js";
 import {openStore,read} from "./storage.js";
 import {base,LAUNCH_KEY,ERROR_KEY,network,download,verify,fileURL} from "./release.js";
 const $=id=>document.getElementById(id);let db,busy=true,technicalInfo;
@@ -48,7 +48,21 @@ async function refreshLatestVersion(){
  try{showCatalogVersion(JSON.parse(new TextDecoder().decode(await network(url))),revision);}catch{}
 }
 function busySet(value){busy=value;$("create").disabled=busy;$("receive").disabled=busy;$("resume").disabled=busy;$("deleteOuting").disabled=busy;$("confirmDelete").disabled=busy;$("cancelDelete").disabled=busy;$("receiveForm").querySelector("button[type=submit]").disabled=busy;}
-function createdLabel(record){const created=Number(record.summary?.createdAt||record.state?.vhfGpsSessionCreatedAtV312||0);return Number.isFinite(created)&&created>0&&Number.isFinite(new Date(created).getTime())?"Créée le "+new Date(created).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"}):"";}
+function dateLabel(value,label){const time=Number(value||0);return Number.isFinite(time)&&time>0&&Number.isFinite(new Date(time).getTime())?label+new Date(time).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"}):"";}
+function createdLabel(record){return dateLabel(record.summary?.createdAt||record.state?.vhfGpsSessionCreatedAtV312,"Créée le ");}
+function sessionFingerprintLabel(record){
+ // Lire le résumé de l'invitation déjà validée par sa publication, sans recalculer son empreinte.
+ try{
+  const {summary}=splitContent(record.envelope.content);
+  const rows=summary.normalize("NFC").split(/\r?\n/).map(line=>line.match(/^(?:🔐 )?Alias de session \(empreinte radio\) : (.+)$/u)).filter(Boolean);
+  return rows.length===1&&rows[0][1].length<=200?rows[0][1].trim():"";
+ }catch{return "";}
+}
+function renderOutingDetails(record,prefix){
+ $(prefix+"Zone").textContent=record?.summary?.zoneName|| (record?"Sortie enregistrée":"");
+ const values={Fingerprint:record?sessionFingerprintLabel(record):"",Date:record?createdLabel(record):"",Installed:record?dateLabel(record.state?.vhfGpsOutingInstalledAtV1,"Installée sur ce téléphone le "):""};
+ for(const [suffix,value] of Object.entries(values)){const el=$(prefix+suffix);(suffix==="Fingerprint"?$(prefix+"FingerprintWords"):el).textContent=value;el.hidden=!value;}
+}
 function enter(record,mode,expected){
  showLoading();sessionStorage.setItem(LAUNCH_KEY,JSON.stringify({record,mode,expected}));
  location.replace(fileURL(record.release,"app.html"));
@@ -106,7 +120,7 @@ async function openDelete(){
  const current=await read(db,"active");
  if(!current||current.deleted){$("resume").hidden=true;$("deleteOuting").hidden=true;status("Aucune sortie active à supprimer.");return;}
  pendingDeletion={id:current.id,revision:current.revision};
- $("deleteSummary").textContent="Zone : "+(current.summary?.zoneName||"Sortie enregistrée")+(createdLabel(current)?" · "+createdLabel(current):"");
+ renderOutingDetails(current,"delete");
  $("deleteError").textContent="";$("deleteDialog").showModal();
 }
 $("deleteOuting").onclick=()=>openDelete().catch(error=>status(error.message,"error"));
@@ -120,7 +134,7 @@ $("confirmDelete").onclick=async()=>{
   sessionStorage.removeItem(LAUNCH_KEY);sessionStorage.removeItem(ERROR_KEY);sessionStorage.removeItem(VIEW_KEY);
   if("BroadcastChannel" in window){const channel=new BroadcastChannel("vhfgps-main-state-v1");channel.postMessage(revision);channel.close();}
   $("deleteDialog").close();pendingDeletion=null;$("resume").hidden=true;$("deleteOuting").hidden=true;
-  $("resumeZone").textContent="";$("resumeDate").textContent="";
+  renderOutingDetails(null,"resume");renderOutingDetails(null,"delete");
   technicalInfo?.setOuting(null);
   status("");
  }catch(error){$("deleteError").textContent=error.message;}
@@ -184,10 +198,7 @@ function watchLauncherUpdate(registration){
  db=await openStore();
  const active=await read(db,"active"),hasActive=!!active&&!active.deleted;$("resume").hidden=!hasActive;$("deleteOuting").hidden=!hasActive;
  technicalInfo=initTechnicalInfo({root:base,outing:hasActive?active:null});
- if(hasActive){
-  $("resumeZone").textContent=active.summary?.zoneName||"Sortie enregistrée";
-  $("resumeDate").textContent=createdLabel(active);
- }
+ if(hasActive)renderOutingDetails(active,"resume");
  const message=sessionStorage.getItem(ERROR_KEY);sessionStorage.removeItem(ERROR_KEY);
  const errorDetails=sessionStorage.getItem(ERROR_KEY+"-details");sessionStorage.removeItem(ERROR_KEY+"-details");
  const action=location.hash;history.replaceState(null,"",base);

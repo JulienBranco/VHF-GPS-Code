@@ -12,7 +12,7 @@ async function receive(page,text){
 async function confirm(page){
  await page.locator('#confirmOutingImport').click();await page.waitForFunction(()=>document.getElementById('testBanner').textContent.includes('Sortie enregistrée'));await page.locator('#closeOutingSuccess').click();
 }
-for(const sources of [true,false])test('copier-coller et rejeu réel : '+(sources?'sources actuelles et nouvelle vérification dans la modale':'ancienne publication conservée'),async t=>{
+for(const sources of [true,false])test('copier-coller et rejeu réel : '+(sources?'sources actuelles et confirmation automatique':'ancienne publication conservée'),async t=>{
  const browser=await chromium.launch(browserOptions()),host=await createServer();
  t.after(async()=>{await browser.close();await new Promise(resolve=>host.server.close(resolve));});
  if(sources){const prepared=prepareBuild();for(const [name,bytes] of prepared.output)host.state.virtual.set('/'+name,bytes);}
@@ -26,8 +26,8 @@ for(const sources of [true,false])test('copier-coller et rejeu réel : '+(source
  const receiver=await browser.newContext(),other=await receiver.newPage();await other.goto(host.url);await other.waitForFunction(()=>!document.getElementById('receive').disabled);
  await receive(other,copied(invitation));
  if(sources){
-  await other.locator('#outingImportText').fill(copied(invitation));await other.locator('#checkOutingBtn').click();
-  await other.waitForFunction(()=>!!pendingOutingImport);assert.equal(await other.locator('#confirmOutingImport').isEnabled(),true);
+  assert.equal(await other.locator('#outingImportDialog textarea, #checkOutingBtn').count(),0);
+  assert.equal(await other.locator('#confirmOutingImport').isEnabled(),true);
  }
  await confirm(other);const first=await installed(other);
  assert.equal(first.id,original.id);assert.equal(first.release,original.release);

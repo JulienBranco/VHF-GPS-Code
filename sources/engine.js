@@ -43,7 +43,7 @@ function initTheme(){
   }
 }
 
-const APP_VERSION="3.28.110";
+const APP_VERSION="3.28.111";
 const PROTOCOL_ID="VHF-GPS-PROTO-6";
 
 function protocolShortLabel(){
@@ -55,10 +55,9 @@ function initVersionUi(){
   const proto=protocolShortLabel(),app=appVersionLabel();
   document.title=`VHF GPS Code ${app} — ${proto}`;
   const set=(id,text)=>{const e=$(id);if(e)e.textContent=text;};
-  set("appVersionHeading",app);
   set("protocolBadgeSession",proto);
-  set("protocolInfoTitle",`Protocole ${app} / ${proto} :`);
-  set("catalogInfoTitle",`Catalogue ${app} audité`);
+  set("protocolInfoTitle","Fonctionnement :");
+  set("catalogInfoTitle","Catalogue radio audité");
   set("protocolInlineLabel",proto);
 }
 
@@ -799,12 +798,10 @@ function syncSavedSecret(secret){
     clearOutingShare();
   }
   validatedSessionSecret=nextSecret;
-  $("sessionKey").value=validatedSessionSecret;
   masterKeyCache={secret:"",key:null};
-  $("sessionState").textContent=validatedSessionSecret?"Session active et enregistrée.":"Aucune session active.";
   $("sessionCompactStatus").textContent=validatedSessionSecret
     ?`Session active · ${sessionAgeText()}`
-    :"Aucune session active — ouvre les réglages pour en créer ou en coller une.";
+    :"Aucune session active.";
   refreshEncodeState();
   if(typeof refreshOutingActions==="function")refreshOutingActions();
 }
@@ -3402,7 +3399,6 @@ const appSessionReady=(async function initSessionSecret(){
   if(!saved){
     syncSavedSecret("");
     hideSessionFingerprint();
-    $("sessionSettings").open=true;
     return;
   }
   const pending=installValidatedSecret(saved,false);
@@ -3410,119 +3406,13 @@ const appSessionReady=(async function initSessionSecret(){
   try{
     const v=await pending;
     if(!v || activeSecret()!==saved || activeSessionRevision!==revision)return;
-    $("sessionSettings").open=false;
-    setStatus("secretStatus","Session chargée depuis cet appareil et active.","ok");
   }catch{
     if(activeSessionRevision!==revision)return;
     appStorage.removeItem(SESSION_SECRET_KEY);
     syncSavedSecret("");
     hideSessionFingerprint();
-    $("sessionSettings").open=true;
-    setStatus("secretStatus",`Aucun secret ${protocolShortLabel()} valide n’est mémorisé : génère une nouvelle session.`,"warn");
   }
 })();
-
-let sessionInputRevision=0;
-
-function deactivateSessionWhileEditing(){
-  if(validatedSessionSecret)activeSessionRevision++;
-  validatedSessionSecret="";
-  masterKeyCache={secret:"",key:null};
-  confirmedZoneIds.clear();
-  manualConfirmedZoneIds.clear();
-  outingAutoConfirmedZoneId=null;
-  clearOutingShare();
-
-  // Dès que le secret est modifié, aucune ancienne transmission ne doit
-  // pouvoir être prise pour une transmission encore valable.
-  invalidateEncodedResult();
-
-  $("sessionState").textContent="Saisie en cours — session inactive.";
-  hideSessionFingerprint();
-  refreshZoneAliases();
-  invalidateDecodedResult();
-  refreshZoneConfirmationUi();
-  refreshDecodeState();
-  refreshEphemeralWorkflow();
-}
-
-async function activateSessionFromField({generated=false}={}){
-  const input=$("sessionKey");
-  const revision=++sessionInputRevision;
-  const raw=input.value;
-  const v=validateOperationalSessionSecret(raw);
-
-  if(!v.ok){
-    deactivateSessionWhileEditing();
-
-    if(!String(raw).trim()){
-      $("sessionState").textContent="Aucune session active.";
-      hideStatus("secretStatus");
-      return false;
-    }
-
-    const compact=String(raw).replace(/[\s-]+/g,"");
-    if(compact.length<SECRET_RAW_LENGTH){
-      setStatus(
-        "secretStatus",
-        `Saisie en cours : ${compact.length}/${SECRET_RAW_LENGTH} caractères. Colle de préférence le secret complet.`,
-        "warn"
-      );
-    }else{
-      setStatus("secretStatus",v.msg,"bad");
-    }
-    return false;
-  }
-
-  try{
-    const installed=await installValidatedSecret(v.canonical,true);
-    if(revision!==sessionInputRevision || !installed)return false;
-    input.value=installed.canonical;
-    setStatus(
-      "secretStatus",
-      generated
-        ?"Nouvelle session générée, enregistrée et active."
-        :"Session reconnue, enregistrée et active.",
-      "ok"
-    );
-    return true;
-  }catch(e){
-    if(revision===sessionInputRevision){
-      deactivateSessionWhileEditing();
-      setStatus("secretStatus",e.message||String(e),"bad");
-    }
-    return false;
-  }
-}
-
-$("generateSecret").onclick=async()=>{
-  $("sessionSettings").open=true;
-  $("sessionKey").value=generateSessionSecret();
-  await activateSessionFromField({generated:true});
-};
-
-async function clipboardWrite(textToCopy){
-  if(navigator.clipboard?.writeText){
-    try{
-      await navigator.clipboard.writeText(textToCopy);
-      return true;
-    }catch{}
-  }
-
-  const input=$("sessionKey");
-  const previousStart=input.selectionStart;
-  const previousEnd=input.selectionEnd;
-  input.focus({preventScroll:true});
-  input.select();
-
-  let ok=false;
-  try{ok=document.execCommand("copy");}catch{}
-
-  if(Number.isInteger(previousStart)&&Number.isInteger(previousEnd)){
-    try{input.setSelectionRange(previousStart,previousEnd);}catch{}
-  }
-  return ok;
-}
 
 const OUTING_BEGIN="----- DEBUT INVITATION VHF-GPS -----";
 const OUTING_END="----- FIN INVITATION VHF-GPS -----";
@@ -3869,7 +3759,6 @@ async function installOutingInvitation(prepared){
     clearExchangeInputsForNewOuting();
     refreshZoneConfirmationUi();
     refreshEncodeState();refreshDecodeState();refreshOutingActions();
-    $("sessionSettings").open=false;
     return"Sortie installée : session et alias de zone confirmés.";
   });
 }
@@ -4103,7 +3992,6 @@ async function commitOutingSetup(){
       await persistPreparedOuting();
       return target;
     });
-    $("sessionSettings").open=false;
     $("outingCreateDialog").close();
     showOutingSuccessDialog(`Sortie créée et active · ${target.name}.`);
   }catch(e){setStatus("outingCreateError",e.message||String(e),"bad");}
@@ -4272,8 +4160,6 @@ $("outingShareDialog").addEventListener("close",()=>{clearOutingShare();refreshO
 function invalidateOutingImportReview(){
   outingImportRevision++;
   pendingOutingImport=null;
-  $("checkOutingBtn").disabled=false;
-  $("checkOutingBtn").classList.remove("hidden");
   $("confirmOutingImport").classList.add("hidden");
   $("outingImportSummary").classList.add("hidden");
   $("outingImportVerified").classList.add("hidden");
@@ -4281,93 +4167,53 @@ function invalidateOutingImportReview(){
   hideStatus("outingImportDialogError");
 }
 
-$("outingImportText").addEventListener("input",invalidateOutingImportReview);
-$("checkOutingBtn").onclick=async()=>{
+async function prepareOutingImport(content){
   if(outingMutationBusy||!$("outingImportDialog").open)return;
-  const button=$("checkOutingBtn"),sourceText=$("outingImportText").value;
-  const revision=++outingImportRevision;
-  button.disabled=true;
-  pendingOutingImport=null;
-  hideStatus("outingImportDialogError");
+  invalidateOutingImportReview();
+  const revision=outingImportRevision;
   try{
-    const prepared=await inspectOutingImportText(sourceText);
-    if(revision!==outingImportRevision||!$("outingImportDialog").open||$("outingImportText").value!==sourceText)return;
-    pendingOutingImport={...prepared,sourceText,sessionRevision:activeSessionRevision,zoneId:activeZoneId};
+    const prepared=await inspectOutingInvitation(content);
+    if(revision!==outingImportRevision||!$("outingImportDialog").open)return;
+    pendingOutingImport={...prepared,sessionRevision:activeSessionRevision,zoneId:activeZoneId};
     showOutingImportSummary(prepared);
-    button.classList.add("hidden");
     $("confirmOutingImport").classList.remove("hidden");
   }catch(e){
     if(revision===outingImportRevision&&$("outingImportDialog").open){
       setStatus("outingImportDialogError",e.message||String(e),"bad");
     }
-  }finally{if(revision===outingImportRevision)button.disabled=false;}
-};
+  }
+}
 $("cancelOutingImport").onclick=()=>{if(!outingMutationBusy)$("outingImportDialog").close();};
 $("outingImportDialog").addEventListener("cancel",event=>{if(outingMutationBusy)event.preventDefault();});
 $("outingImportDialog").addEventListener("close",()=>{
   invalidateOutingImportReview();
-  $("outingImportText").value="";
 });
 $("confirmOutingImport").onclick=async()=>{
   const prepared=pendingOutingImport,dialog=$("outingImportDialog");
   if(!prepared||outingMutationBusy||!dialog.open)return;
-  if($("outingImportText").value!==prepared.sourceText||
-      activeSessionRevision!==prepared.sessionRevision||activeZoneId!==prepared.zoneId){
+  if(activeSessionRevision!==prepared.sessionRevision||activeZoneId!==prepared.zoneId){
     invalidateOutingImportReview();
-    setStatus("outingImportDialogError","Le message, la session ou la zone active a changé. Vérifie l'invitation de nouveau.","bad");
+    setStatus("outingImportDialogError","La session ou la zone active a changé. Annule puis reçois l'invitation de nouveau depuis l'accueil.","bad");
     return;
   }
   outingMutationBusy=true;refreshOutingActions();
-  for(const id of ["outingImportText","checkOutingBtn","confirmOutingImport","cancelOutingImport"])$(id).disabled=true;
+  for(const id of ["confirmOutingImport","cancelOutingImport"])$(id).disabled=true;
   try{
-    const result=await installOutingInvitation(prepared);
+    await installOutingInvitation(prepared);
     await persistPreparedOuting();
     dialog.close();
-    showOutingSuccessDialog(`${result} Zone active : ${activeZone()?.name||"—"}.`);
+    showOutingSuccessDialog(`Sortie activée. Zone active : ${activeZone()?.name||"—"}.`);
   }catch(e){
     invalidateOutingImportReview();
     setStatus("outingImportDialogError",e.message||String(e),"bad");
   }finally{
-    for(const id of ["outingImportText","checkOutingBtn","confirmOutingImport","cancelOutingImport"])$(id).disabled=false;
+    for(const id of ["confirmOutingImport","cancelOutingImport"])$(id).disabled=false;
     outingMutationBusy=false;refreshOutingActions();
   }
 };
 refreshOutingActions();
 
 $("protocolSelfTestBtn").onclick=runProtocolSelfTest;
-
-$("copySecret").onclick=async()=>{
-  const v=validateOperationalSessionSecret($("sessionKey").value);
-  if(!v.ok){
-    setStatus("secretStatus",v.msg||"Aucun secret valide à copier.","warn");
-    return;
-  }
-
-  try{
-    const ok=await clipboardWrite(v.canonical);
-    if(!ok)throw new Error();
-    setStatus("secretStatus","Secret copié. Tu peux maintenant l'envoyer par messagerie.","ok");
-  }catch{
-    $("sessionKey").focus({preventScroll:true});
-    $("sessionKey").select();
-    setStatus(
-      "secretStatus",
-      "Copie automatique indisponible : le secret est sélectionné, utilise Copier dans le menu du téléphone.",
-      "warn"
-    );
-  }
-};
-
-$("sessionKey").addEventListener("input",()=>{
-  $("sessionSettings").open=true;
-  activateSessionFromField();
-});
-
-$("sessionKey").addEventListener("paste",()=>{
-  $("sessionSettings").open=true;
-  // Pas de lecture JavaScript du presse-papiers : le collage natif déclenche
-  // ensuite l'événement input avec la valeur réellement collée.
-});
 
 // Navigation / GPS / zones
 $("tabSend").onclick=()=>{$("sendPanel").classList.remove("hidden");$("receivePanel").classList.add("hidden");$("tabSend").classList.add("active");$("tabReceive").classList.remove("active");};

@@ -2,10 +2,12 @@
 const test=require("node:test"),assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),os=require("node:os");
 const {createServer}=require("../tools/server.cjs");
 const {chromium,browserOptions}=require("../tools/test-browser.cjs");
-let browser,host,url;const contexts=[];
+let browser,host,url,sourceFiles;const contexts=[];
 test.before(async()=>{browser=await chromium.launch(browserOptions());
- host=await createServer();url=host.url;});
-test.beforeEach(()=>{host.state.fail=null;host.state.corrupt=null;host.state.delay=0;host.state.virtual=new Map();});
+ host=await createServer();url=host.url;
+ // Tester les sources actuelles avec une publication virtuelle, sans écrire de release.
+ sourceFiles=new Map([...require("../tools/build.cjs").prepareBuild().output].map(([name,bytes])=>["/"+name,bytes]));});
+test.beforeEach(()=>{host.state.fail=null;host.state.corrupt=null;host.state.delay=0;host.state.virtual=new Map(sourceFiles);});
 test.after(async()=>{for(const ctx of contexts)await ctx.close().catch(()=>{});await browser?.close();if(host)await new Promise(resolve=>host.server.close(resolve));});
 async function phone(options={}){
  const context=await browser.newContext(options);contexts.push(context);
@@ -123,7 +125,7 @@ test("moteur PROTO 6 : encodage et décodage dans chaque zone intégrée",async(
  assert(results.length>=2);for(const row of results){assert(row.error<75,row.zone+" : écart "+row.error+" m");assert(row.ack&&row.final&&row.nacks,row.zone);}
 });
 
-test("localStorage officiel préservé : création, changement de thème, import et session manuelle en lecture seule",async()=>{
+test("localStorage officiel préservé : création, changement de thème et import sans réglage manuel de session",async()=>{
  const {page}=await phone();
  const sentinel={vhfGpsSessionSecretV312:"SECRET-OFFICIEL-NE-PAS-TOUCHER",vhfGpsZonesV4Custom:'[{"id":"officiel"}]',vhfGpsThemeV1:"officiel"};
  await page.evaluate(values=>{for(const [key,value] of Object.entries(values))localStorage.setItem(key,value);},sentinel);
@@ -131,7 +133,7 @@ test("localStorage officiel préservé : création, changement de thème, import
  await page.waitForFunction(async()=>{const s=await import("/storage.js");const record=await s.read(await s.openStore(),"active");return Object.values(record.state).includes("night");});
  const text=await share(page);await frame(page).locator("#closeOutingShare").click();
  await importOuting(page,text);
- assert(await frame(page).locator("#sessionKey").evaluate(el=>el.readOnly));
+ assert.equal(await frame(page).locator("#sessionSettings, #sessionKey, #generateSecret, #copySecret").count(),0);
  const official=await page.evaluate(keys=>Object.fromEntries(keys.map(key=>[key,localStorage.getItem(key)])),Object.keys(sentinel));
  assert.deepEqual(official,sentinel);
  const registrations=await page.evaluate(async()=>(await navigator.serviceWorker.getRegistrations()).map(r=>r.scope));
@@ -270,7 +272,7 @@ test("nouvelle publication réelle disponible : les imports et la réouverture g
  const root=path.resolve(__dirname,".."),newFiles=new Map();
  const manifest=JSON.parse(JSON.stringify(original.manifest));
  for(const file of manifest.files){
-  let bytes=fs.readFileSync(path.join(root,"releases",original.release,file.path));
+  let bytes=host.state.virtual.get("/releases/"+original.release+"/"+file.path)||fs.readFileSync(path.join(root,"releases",original.release,file.path));
   if(file.path==="app.html")bytes=Buffer.from(bytes.toString().replace("<body>","<body data-integration-fixture=new>"));
   file.sha256=digest(bytes);newFiles.set(file.path,bytes);
  }
@@ -351,7 +353,7 @@ test("nouveau lanceur installé puis fermeture complète hors réseau : sortie e
   assert.equal(await page.locator("#updateNotice").isVisible(),false);
   const boot=fs.readFileSync(path.join(root,"boot.js"),"utf8")+"\n// Second lanceur de test\n";
   const index=fs.readFileSync(path.join(root,"index.html"),"utf8").replace("<body>","<body data-shell-fixture=new>");
-  let worker=fs.readFileSync(path.join(root,"sw.js"),"utf8");const match=worker.match(/ASSETS=(\[[^\n]+\]);/);const assets=JSON.parse(match[1]);
+  let worker=host.state.virtual.get("/sw.js").toString();const match=worker.match(/ASSETS=(\[[^\n]+\]);/);const assets=JSON.parse(match[1]);
   for(const f of assets){if(f.path==="boot.js")f.sha256=digest(boot);if(f.path==="index.html")f.sha256=digest(index);}
   const serialized=JSON.stringify(assets);worker=worker.replace(match[1],serialized).replace(/(SHELL_BUILD=")[a-f0-9]{64}/,"$1"+digest(serialized));
   host.state.virtual.set("/boot.js",Buffer.from(boot));host.state.virtual.set("/index.html",Buffer.from(index));host.state.virtual.set("/sw.js",Buffer.from(worker));
@@ -418,27 +420,68 @@ test("annuler la préparation restaure la position de lecture et la sortie",asyn
  await page.waitForFunction(()=>document.getElementById("testBanner")?.textContent.includes("Sortie retrouvée")&&!document.documentElement.classList.contains("app-loading"));
  assert.equal((await active(page)).id,before.id);assert(Math.abs((await page.evaluate(()=>window.scrollY))-scroll)<3);
 });
-test("bouton Installer et aide uniquement dans le lanceur",async()=>{
- const {page,context}=await phone();
- // Bloquer la proposition automatique native dans ce test de l’aide manuelle.
+test("installation Android : aide dans une modale du lanceur uniquement",async()=>{
+ const {page,context}=await phone({userAgent:'Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/150.0.0.0 Mobile Safari/537.36'});
  await context.addInitScript(()=>window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();event.stopImmediatePropagation();},true));
  await page.reload();await page.locator("#installAppBtn").waitFor({state:"visible"});
- await page.locator("#installAppBtn").click();assert(await page.locator("#installHelp").isVisible());
- assert.match(await page.locator("#installHelp").innerText(),/navigateur/);
- await page.locator("#installAppBtn").click();assert.equal(await page.locator("#installHelp").isVisible(),false);
- await page.locator(".install-guide").evaluate(el=>el.open=true);
- assert.match(await page.locator(".install-guide").innerText(),/PRÊTE HORS RÉSEAU/);
+ await page.locator("#installAppBtn").click();assert(await page.locator("#installDialog").isVisible());
+ assert.match(await page.locator("#installSteps").innerText(),/Chrome/);assert.equal(await page.locator('#installAddress').inputValue(),url);
+ await page.locator("#closeInstall").click();assert.equal(await page.locator("#installDialog").isVisible(),false);
  await create(page);assert.equal(await page.locator("#installAppBtn, #installHelp").count(),0);
  await page.locator("#backHomeBtn").click();await page.locator("#installAppBtn").waitFor({state:"visible"});
  await page.evaluate(()=>window.dispatchEvent(new Event("appinstalled")));assert.equal(await page.locator("#installAppBtn").isVisible(),false);
 });
-test("installation directe proposée seulement au clic ; proposition consommée puis aide disponible",async()=>{
- const {page}=await phone();
+
+test("installation directe proposée seulement au clic ; proposition consommée puis aide Android disponible",async()=>{
+ const {page}=await phone({userAgent:'Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/150.0.0.0 Mobile Safari/537.36'});
  await page.evaluate(()=>{window.promptCalls=0;const event=new Event("beforeinstallprompt",{cancelable:true});event.prompt=async()=>{window.promptCalls++;};event.userChoice=Promise.resolve({outcome:"dismissed"});window.dispatchEvent(event);window.promptPrevented=event.defaultPrevented;});
  assert.equal(await page.evaluate(()=>window.promptPrevented),true);assert.equal(await page.evaluate(()=>window.promptCalls),0);
  await page.locator("#installAppBtn").click();await page.waitForFunction(()=>window.promptCalls===1&&!document.getElementById("installAppBtn").disabled);
- await page.locator("#installAppBtn").click();assert(await page.locator("#installHelp").isVisible());assert.equal(await page.evaluate(()=>window.promptCalls),1);
+ await page.locator("#installAppBtn").click();assert(await page.locator("#installDialog").isVisible());assert.equal(await page.evaluate(()=>window.promptCalls),1);
 });
+
+test("installation iPhone : étapes Safari, adresse copiable et repli manuel sans modifier la sortie",async()=>{
+ const {page,context}=await phone({userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 Version/26.0 Mobile/15E148 Safari/604.1',viewport:{width:390,height:844},permissions:['clipboard-read','clipboard-write']});
+ await create(page);await openHome(page);const before=await active(page);
+ assert.equal(await page.locator('#installAppBtn').innerText(),'Ajouter à l’écran d’accueil');
+ await page.locator('#installAppBtn').click();assert.equal(await page.locator('#installTitle').innerText(),'Installer sur iPhone / iPad');
+ assert.match(await page.locator('#installSteps').innerText(),/Safari/);assert.match(await page.locator('#installSteps').innerText(),/Ouvrir comme app web/);
+ assert.equal(await page.locator('#installAddress').inputValue(),url);assert.equal(await page.locator('#installAddress').getAttribute('readonly'),'');
+ await page.locator('#copyInstallAddress').click();await page.waitForFunction(()=>document.getElementById('installCopyStatus').textContent.includes('Adresse copiée'));
+ assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),url);
+ fs.mkdirSync(path.resolve(__dirname,'../test-results'),{recursive:true});await page.screenshot({path:path.resolve(__dirname,'../test-results/install-iphone-mobile.png')});
+ await page.evaluate(()=>Object.defineProperty(navigator.clipboard,'writeText',{configurable:true,value:async()=>{throw Error('Permission refusée');}}));
+ await page.locator('#copyInstallAddress').click();await page.waitForFunction(()=>document.getElementById('installCopyStatus').textContent.includes('sélectionnée'));
+ assert.equal(await page.locator('#installAddress').evaluate(el=>el.selectionStart===0&&el.selectionEnd===el.value.length),true);
+ await page.keyboard.press('Escape');assert.equal(await page.locator('#installDialog').isVisible(),false);assert.deepEqual(await active(page),before);
+ await page.setViewportSize({width:320,height:640});await page.locator('#installAppBtn').click();assert(await page.locator('#installDialog').evaluate(el=>el.scrollWidth<=el.clientWidth));
+ await page.locator('#closeInstall').click();await page.waitForFunction(()=>document.getElementById('installAppBtn').getAttribute('aria-expanded')==='false');
+ await context.addInitScript(()=>Object.defineProperty(navigator,'standalone',{configurable:true,value:true}));await page.reload();await page.waitForFunction(()=>!document.getElementById('create').disabled);
+ assert.equal(await page.locator('#installAppBtn').isVisible(),false);
+});
+
+test("installation iPhone : adresse publique avec sous-répertoire, sans paramètres ni fragment",async()=>{
+ const context=await browser.newContext({userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 Version/26.0 Mobile/15E148 Safari/604.1'});contexts.push(context);
+ const address='https://julienbranco.github.io/VHF-GPS-Code/';
+ await context.route(address+'**',async route=>{
+  const pathname=new URL(route.request().url()).pathname.slice('/VHF-GPS-Code/'.length);
+  if(pathname==='boot.js')return route.fulfill({contentType:'text/javascript',body:'import {initInstallUI} from "./install.js";initInstallUI();'});
+  const files={'':'index.html','install.js':'install.js','style.css':'style.css','icons/icon-192.png':'icons/icon-192.png'};
+  if(!files[pathname])return route.fulfill({status:404,body:''});
+  await route.fulfill({path:path.resolve(__dirname,'..',files[pathname]),contentType:pathname.endsWith('.js')?'text/javascript':undefined});
+ });
+ const page=await context.newPage();await page.goto(address+'?provenance=message#invitation');
+ await page.locator('#installAppBtn').click();assert.equal(await page.locator('#installAddress').inputValue(),address);
+});
+test("installation : aide iPad détectée et aucun bouton générique pour Firefox sur PC",async()=>{
+ const ipad=await phone({userAgent:'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 Version/26.0 Safari/605.1.15'});
+ await ipad.context.addInitScript(()=>Object.defineProperty(navigator,'maxTouchPoints',{value:5}));await ipad.page.reload();await ipad.page.waitForFunction(()=>!document.getElementById('create').disabled);
+ assert.equal(await ipad.page.locator('#installAppBtn').innerText(),'Ajouter à l’écran d’accueil');await ipad.page.locator('#installAppBtn').click();assert.match(await ipad.page.locator('#installSteps').innerText(),/Safari/);
+ const firefox=await phone({userAgent:'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0'});
+ await firefox.context.addInitScript(()=>window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();event.stopImmediatePropagation();},true));await firefox.page.reload();await firefox.page.waitForFunction(()=>!document.getElementById('create').disabled);
+ assert.equal(await firefox.page.locator('#installAppBtn').isVisible(),false);
+});
+
 test("mode installé : pas de bouton Installer dans le lanceur ni dans l’application",async()=>{
  const context=await browser.newContext();contexts.push(context);
  await context.addInitScript(()=>{const original=window.matchMedia.bind(window);window.matchMedia=query=>{const result=original(query);if(query==="(display-mode: standalone)")Object.defineProperty(result,"matches",{value:true});return result;};});
@@ -578,28 +621,36 @@ test("première ouverture : anciens caches retirés, ancienne sortie ignorée et
 });
 
 
-test("import : effacer puis recoller l’invitation partagée dans la validation permet de l’installer",async()=>{
- const sender=await phone();const expected=await create(sender.page,{ephemeral:true}),invitation=await share(sender.page);
- const receiver=await phone();await openReceive(receiver.page);await receiver.page.locator("#invitation").fill(invitation);await receiver.page.locator("#receiveForm button[type=submit]").click();
- await receiver.page.locator("#confirmOutingImport").waitFor({state:"visible"});
- assert.equal(await receiver.page.locator("#outingImportText").inputValue(),invitation);
- await receiver.page.locator("#outingImportText").fill("");await receiver.page.locator("#outingImportText").fill(invitation);
- await receiver.page.locator("#checkOutingBtn").click();await receiver.page.locator("#confirmOutingImport").waitFor({state:"visible",timeout:3000});
- assert.equal(await receiver.page.locator("#outingImportDialogError").isVisible(),false);
- await receiver.page.locator("#confirmOutingImport").click();await receiver.page.locator("#closeOutingSuccess").waitFor({state:"visible"});
- const result=await active(receiver.page);assert.equal(result.id,expected.id);assert.equal(result.release,expected.release);
- assert.equal((await aliases(receiver.page)).secret,(await aliases(sender.page)).secret);
+test("import : confirmation automatique sans saisie, résumé complet et installation explicite",async()=>{
+ const sender=await phone();const expected=await create(sender.page,{ephemeral:true}),invitation=await share(sender.page),identity=await aliases(sender.page);
+ const receiver=await phone({viewport:{width:320,height:640},isMobile:true,hasTouch:true});const previous=await create(receiver.page);
+ await openReceive(receiver.page);await receiver.page.locator("#invitation").fill(invitation);await receiver.page.locator("#receiveForm button[type=submit]").click();
+ const page=receiver.page;await page.locator("#confirmOutingImport").waitFor({state:"visible"});
+ assert.equal(await page.locator("#outingImportTitle").innerText(),"Confirmer la sortie reçue");
+ assert.equal(await page.locator("#outingImportDialog textarea, #checkOutingBtn, #outingImportDescription").count(),0);
+ const summary=await page.locator("#outingImportSummary").innerText();assert(summary.includes(identity.session));assert(summary.includes(identity.zone));assert.match(summary,/Création de la sortie|Installation sur ce téléphone/);assert.match(summary,/ÉPHÉMÈRE DE SORTIE/);
+ assert.equal(await page.locator("#outingImportDialogError").isVisible(),false);
+ assert.deepEqual(await active(page),previous);assert(await page.locator("#outingImportDialog").evaluate(el=>el.scrollWidth<=el.clientWidth));
+ fs.mkdirSync(path.resolve(__dirname,'../test-results'),{recursive:true});await page.screenshot({path:path.resolve(__dirname,'../test-results/outing-import-confirmation-mobile.png')});
+ await page.locator("#confirmOutingImport").click();await page.locator("#closeOutingSuccess").waitFor({state:"visible"});
+ const result=await active(page);assert.equal(result.id,expected.id);assert.equal(result.release,expected.release);assert.equal((await aliases(page)).secret,identity.secret);
 });
 
-
-test("import : une invitation remplacée dans la validation ne change ni la publication ni la sortie active",async()=>{
+test("import : invitation liée à la sortie, annulation et garde-fou de session conservent la sortie active",async()=>{
  const sender=await phone();const first=await create(sender.page),invitation=await share(sender.page);
  const other=await phone();await create(other.page,{ephemeral:true});const different=await share(other.page);
- const receiver=await phone();const previous=await create(receiver.page);
- await openReceive(receiver.page);await receiver.page.locator("#invitation").fill(invitation);await receiver.page.locator("#receiveForm button[type=submit]").click();await receiver.page.locator("#confirmOutingImport").waitFor({state:"visible"});
- await receiver.page.locator("#outingImportText").fill(different);await receiver.page.locator("#checkOutingBtn").click();await receiver.page.locator("#outingImportDialogError").waitFor({state:"visible"});
- assert.match(await receiver.page.locator("#outingImportDialogError").innerText(),/ne correspond pas/);assert.equal(await receiver.page.locator("#confirmOutingImport").isVisible(),false);assert.deepEqual(await active(receiver.page),previous);
- await receiver.page.locator("#outingImportText").fill(invitation);await receiver.page.locator("#checkOutingBtn").click();await receiver.page.locator("#confirmOutingImport").waitFor({state:"visible"});await receiver.page.locator("#confirmOutingImport").click();await receiver.page.locator("#closeOutingSuccess").waitFor({state:"visible"});assert.equal((await active(receiver.page)).id,first.id);
+ const receiver=await phone();const previous=await create(receiver.page),page=receiver.page;
+ async function review(text){await openReceive(page);await page.locator("#invitation").fill(text);await page.locator("#receiveForm button[type=submit]").click();await page.locator("#confirmOutingImport").waitFor({state:"visible"});}
+ await review(invitation);
+ // Le contrat de distribution continue à refuser une invitation différente de celle chargée.
+ await assert.rejects(page.evaluate(text=>VHFIntegration.importContent(text),different),/ne correspond pas/);
+ assert.deepEqual(await active(page),previous);await page.locator("#cancelOutingImport").click();await page.waitForFunction(()=>document.getElementById("receive")&&!document.getElementById("receive").disabled);
+ assert.equal(new URL(page.url()).pathname,"/");assert.deepEqual(await active(page),previous);
+ await review(different);assert.match(await page.locator("#outingImportSummary").innerText(),/ÉPHÉMÈRE DE SORTIE/);await page.keyboard.press("Escape");await page.waitForFunction(()=>document.getElementById("receive")&&!document.getElementById("receive").disabled);assert.deepEqual(await active(page),previous);
+ await review(invitation);await page.evaluate(()=>{activeSessionRevision++;});await page.locator("#confirmOutingImport").click();
+ await page.locator("#outingImportDialogError").waitFor({state:"visible"});assert.match(await page.locator("#outingImportDialogError").innerText(),/session ou la zone active a changé/);assert.equal(await page.locator("#confirmOutingImport").isVisible(),false);assert.deepEqual(await active(page),previous);
+ await page.locator("#cancelOutingImport").click();await page.waitForFunction(()=>document.getElementById("receive")&&!document.getElementById("receive").disabled);
+ await review(invitation);await page.locator("#confirmOutingImport").click();await page.locator("#closeOutingSuccess").waitFor({state:"visible"});assert.equal((await active(page)).id,first.id);
 });
 
 
@@ -614,4 +665,43 @@ test("partage direct : pas de navigation, position saisie et résultats radio co
  const coords=await receiver.page.locator("#decodedCoords").innerText(),receiverAddress=receiver.page.url();
  await share(receiver.page);assert.equal(receiver.page.url(),receiverAddress);await receiver.page.locator("#closeOutingShare").click();
  assert.equal(await receiver.page.locator("#decodedCoords").innerText(),coords);assert.equal(await receiver.page.locator("#decodedCoordsWrap").isVisible(),true);assert(await receiver.page.locator("#decodedBlock").evaluate(el=>el.classList.contains("position-confirmed")));
+});
+
+test("accueil et suppression : icône, empreinte validée et dates distinctes de création et d'installation",async()=>{
+ const sender=await phone({timezoneId:'Europe/Paris'});await create(sender.page);
+ const identity=await aliases(sender.page),invitation=await share(sender.page);
+ const receiver=await phone({timezoneId:'Europe/Paris',viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+ const installedAt=Date.now()+2*60*60*1000;
+ await receiver.context.addInitScript(value=>{Date.now=()=>value;},installedAt);
+ await receiver.page.reload();await receiver.page.waitForFunction(()=>!document.getElementById('receive').disabled);
+ await importOuting(receiver.page,invitation);await openHome(receiver.page);
+ const page=receiver.page,before=await active(page);
+ const dates=await page.evaluate(record=>({created:'Créée le '+new Date(record.summary.createdAt).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}),installed:'Installée sur ce téléphone le '+new Date(Number(record.state.vhfGpsOutingInstalledAtV1)).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'})}),before);
+ assert.equal(Number(before.state.vhfGpsOutingInstalledAtV1),installedAt);
+ assert.equal(await page.locator('#resumeFingerprintWords').innerText(),identity.session);
+ assert.equal(await page.locator('#resumeDate').innerText(),dates.created);assert.equal(await page.locator('#resumeInstalled').innerText(),dates.installed);
+ assert.equal(await page.locator('#resume .outing-icon').evaluate(img=>img.complete&&img.naturalWidth>0&&img.getBoundingClientRect().width===64),true);
+ assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ await receiver.context.setOffline(true);await page.reload();await page.waitForFunction(()=>!document.getElementById('deleteOuting').disabled);
+ assert.equal(await page.locator('#resumeFingerprintWords').innerText(),identity.session);
+ await page.locator('#deleteOuting').click();await page.locator('#deleteDialog').waitFor({state:'visible'});
+ assert.equal(await page.locator('#deleteZone').innerText(),await page.locator('#resumeZone').innerText());
+ assert.equal(await page.locator('#deleteFingerprintWords').innerText(),identity.session);
+ assert.equal(await page.locator('#deleteDate').innerText(),dates.created);assert.equal(await page.locator('#deleteInstalled').innerText(),dates.installed);
+ assert.equal(await page.locator('#deleteDialog .outing-icon').evaluate(img=>img.complete&&img.naturalWidth>0),true);
+ fs.mkdirSync(path.resolve(__dirname,'../test-results'),{recursive:true});
+ await page.screenshot({path:path.resolve(__dirname,'../test-results/outing-delete-details-mobile.png')});
+ await page.locator('#cancelDelete').click();assert.deepEqual(await active(page),before);
+ await page.screenshot({path:path.resolve(__dirname,'../test-results/outing-resume-details-mobile.png')});
+ await page.setViewportSize({width:320,height:640});await page.locator('#deleteOuting').click();
+ assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ assert(await page.locator('#deleteDialog').evaluate(el=>el.scrollWidth<=el.clientWidth));
+ await page.locator('#cancelDelete').click();assert.deepEqual(await active(page),before);
+ // Les détails absents sur une ancienne sortie sont masqués, jamais inventés.
+ await receiver.context.setOffline(false);
+ await page.evaluate(async()=>{const s=await import('/storage.js'),db=await s.openStore(),record=await s.read(db,'active');delete record.state.vhfGpsOutingInstalledAtV1;delete record.envelope.content;
+ await new Promise((resolve,reject)=>{const tx=db.transaction('state','readwrite');tx.objectStore('state').put(record,'active');tx.oncomplete=resolve;tx.onabort=()=>reject(tx.error);});db.close();});
+ await page.reload();await page.waitForFunction(()=>!document.getElementById('deleteOuting').disabled);
+ assert.equal(await page.locator('#resumeFingerprint').isVisible(),false);assert.equal(await page.locator('#resumeInstalled').isVisible(),false);assert.equal(await page.locator('#resumeDate').innerText(),dates.created);
+ await page.locator('#deleteOuting').click();assert.equal(await page.locator('#deleteFingerprint').isVisible(),false);assert.equal(await page.locator('#deleteInstalled').isVisible(),false);
 });

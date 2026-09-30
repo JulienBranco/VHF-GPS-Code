@@ -1,7 +1,9 @@
 // Informations de dépannage, sans secret ni données de position.
 export function initTechnicalInfo({root,outing=null}){
- const panel=document.createElement("details"),summary=document.createElement("summary"),list=document.createElement("dl");
- panel.id="technicalInfo";panel.className="technical-info";summary.textContent="Informations techniques";
+ const existingPanel=document.getElementById("technicalInfo");
+ const panel=existingPanel||document.createElement("details"),summary=existingPanel?.querySelector(":scope > summary")||document.createElement("summary"),list=document.createElement("dl");
+ panel.id="technicalInfo";list.className="technical-info-list";
+ if(!existingPanel){panel.className="technical-info";summary.textContent="Informations techniques";}
  function row(label,value,parent=list){const term=document.createElement("dt"),detail=document.createElement("dd");term.textContent=label;detail.textContent=value;parent.append(term,detail);return detail;}
  const launcher=row("Accueil installé","Déplie ce panneau pour afficher son identifiant.");
  const outingRows=document.createElement("div");
@@ -10,14 +12,15 @@ export function initTechnicalInfo({root,outing=null}){
   if(!value){outingRows.remove();return;}
   const version=row("Application de cette sortie","v"+value.manifest.version+" · "+value.release.slice(0,8),outingRows);
   version.title=value.release;
-  row("Protocole de cette sortie",value.manifest.protocol.replace("VHF-GPS-PROTO-","PROTO "),outingRows);
+  if(!panel.querySelector("#compatShort"))row("Protocole de cette sortie",value.manifest.protocol.replace("VHF-GPS-PROTO-","PROTO "),outingRows);
   list.append(outingRows);
  }
  setOuting(outing);
- panel.append(summary,list);(document.getElementById("empty")||document.querySelector("main")).append(panel);
+ if(existingPanel)(panel.querySelector(".utility-body")||panel).prepend(list);
+ else{panel.append(summary,list);(document.getElementById("empty")||document.querySelector("main")).append(panel);}
  if(!document.getElementById("technicalInfoStyle")){
   const style=document.createElement("style");style.id="technicalInfoStyle";
-  style.textContent=".technical-info{margin:24px 0 12px;font:13px/1.5 system-ui,sans-serif;color:var(--muted,#d5e8e7)}.technical-info>summary{cursor:pointer;font-weight:600}.technical-info dl{margin:12px 0}.technical-info dt{margin-top:10px;font-weight:700}.technical-info dd{margin:2px 0;overflow-wrap:anywhere;color:var(--text,#edf9f7)}html[data-theme=day] .technical-info{color:var(--muted,#364e57)}html[data-theme=day] .technical-info dd{color:var(--text,#173b45)}";
+  style.textContent=".technical-info{margin:24px 0 12px;font:13px/1.5 system-ui,sans-serif;color:var(--muted,#d5e8e7)}.technical-info>summary{cursor:pointer;font-weight:600}.technical-info-list{margin:12px 0}.technical-info-list dt{margin-top:10px;font-weight:700}.technical-info-list dd{margin:2px 0;overflow-wrap:anywhere;color:var(--text,#edf9f7)}html[data-theme=day] .technical-info{color:var(--muted,#364e57)}html[data-theme=day] .technical-info-list dd{color:var(--text,#173b45)}";
   document.head.append(style);
  }
  let revision=0;

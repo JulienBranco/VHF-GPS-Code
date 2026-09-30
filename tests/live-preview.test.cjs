@@ -13,7 +13,6 @@ test("aperçu local : rechargement des sources sans créer une publication",asyn
   assert(await page.evaluate(()=>Math.abs(document.querySelector(".header-inner").getBoundingClientRect().left-document.getElementById("create").getBoundingClientRect().left)<1));
   assert.match(await page.locator("#create").innerText(),/🎣 Préparer une nouvelle sortie/);
   assert.equal(await page.locator("#receive").isVisible(),true);
-  assert.equal(await page.locator(".install-guide").count(),1);
   await page.locator("#technicalInfo summary").click();
   await page.waitForFunction(()=>document.querySelector("#technicalInfo dd").textContent==="Aperçu local — sources");
   const catalog=JSON.parse(fs.readFileSync(path.join(root,"releases.json"),"utf8"));
