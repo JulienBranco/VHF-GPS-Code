@@ -8,16 +8,13 @@ const version=engine.match(/const APP_VERSION="([^"]+)"/)[1],protocol=engine.mat
 const output=new Map(),add=(name,value)=>output.set(name,Buffer.isBuffer(value)?value:Buffer.from(value));
 const files=new Map();
 for(const name of ["app.html","engine.js","app-adapter.js","runtime.js"])files.set(name,Buffer.from(read("sources/"+name)));
-for(const name of ["protocol.js","storage.js","release.js","transition.js","transition.css","install.js"])files.set(name,Buffer.from(read(name)));
+for(const name of ["protocol.js","storage.js","release.js","transition.js","transition.css"])files.set(name,Buffer.from(read(name)));
 const manifest={format:2,api:2,version,protocol,files:[...files].map(([name,value])=>({path:name,sha256:hash(value)}))};
 const raw=JSON.stringify(manifest),id=hash(raw);
 const releaseAlreadyExists=fs.existsSync(path.join(root,"releases",id,"manifest.json"));
 for(const [name,value] of files)add("releases/"+id+"/"+name,value);
 add("releases/"+id+"/manifest.json",raw);add("latest.json",JSON.stringify({format:2,release:id}));
 for(const name of ["icon-192.png","icon-512.png","apple-touch-icon.png"])add("icons/"+name,fs.readFileSync(path.join(root,"icons",name)));
-const names=["index.html","boot.js","protocol.js","storage.js","release.js","transition.js","transition.css","install.js","style.css","manifest.webmanifest","GUIDE.html","icons/icon-192.png","icons/icon-512.png","icons/apple-touch-icon.png"];
-const assets=names.map(name=>({path:name,sha256:hash(output.get(name)||Buffer.from(read(name)))}));
-add("sw.js",read("tools/sw.template.js").replace("__BUILD__",JSON.stringify(hash(JSON.stringify(assets)))).replace("__ASSETS__",JSON.stringify(assets)));
 // Le catalogue est informatif : il ne participe ni à l’invitation ni au moteur.
 // Conserver les dates enregistrées ; ne pas inventer une date de création pour les anciennes publications.
 const cataloguePath=path.join(root,"releases.json");
@@ -43,6 +40,9 @@ const escape=value=>String(value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&l
 const date=value=>new Intl.DateTimeFormat("fr-FR",{timeZone:"Europe/Paris",dateStyle:"short",timeStyle:"short"}).format(new Date(value));
 const table=rows.map(row=>'<tr><td>'+(row.release===id?'<strong>Dernière publication</strong>':'Ancienne publication')+'</td><td>'+escape(row.version)+'</td><td>'+escape(row.protocol)+'</td><td>'+(row.createdAt?escape(date(row.createdAt)):'Date de création inconnue<br><small>Répertoriée le '+escape(date(row.indexedAt))+'</small>')+'</td><td><code title="'+row.release+'">'+row.release.slice(0,12)+'</code><br><a href="releases/'+row.release+'/manifest.json">Manifeste</a></td></tr>').join('\n');
 add("RELEASES.html",'<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Publications VHF GPS</title><style>:root{color-scheme:light dark}body{font:16px/1.5 system-ui,sans-serif;max-width:1000px;margin:auto;padding:24px}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;border-bottom:1px solid #8885}th{background:#8882}small{opacity:.8}.table-scroll{overflow:auto}code{white-space:nowrap}</style></head><body><h1>Publications VHF GPS</h1><p>Catalogue pour gérer les fichiers du projet. Les dates sont affichées à l’heure de Paris. Les dossiers restent identifiés par leur empreinte.</p><div class="table-scroll"><table><thead><tr><th>État</th><th>Version</th><th>Protocole</th><th>Créée le</th><th>Publication</th></tr></thead><tbody>'+table+'</tbody></table></div><p>La date ne permet pas de savoir si une sortie utilise encore une publication. Après diffusion de son invitation, conserver ses fichiers pour permettre son import et sa réparation. Ce catalogue ne supprime rien automatiquement.</p><p>Les dates de création des publications antérieures au catalogue sont inconnues. Leur date de référencement est indiquée séparément.</p><p><a href="releases.json">Métadonnées complètes</a> · <a href="./">Application</a></p></body></html>\n');
+const names=["index.html","boot.js","protocol.js","storage.js","release.js","transition.js","transition.css","install.js","style.css","manifest.webmanifest","GUIDE.html","releases.json","icons/icon-192.png","icons/icon-512.png","icons/apple-touch-icon.png"];
+const assets=names.map(name=>({path:name,sha256:hash(output.get(name)||Buffer.from(read(name)))}));
+add("sw.js",read("tools/sw.template.js").replace("__BUILD__",JSON.stringify(hash(JSON.stringify(assets)))).replace("__ASSETS__",JSON.stringify(assets)));
 for(const [name,value] of output){
  const target=path.join(root,name),exists=fs.existsSync(target),same=exists&&fs.readFileSync(target).equals(value);
  if(check){if(!same)throw Error("Fichier obsolète : "+name);}

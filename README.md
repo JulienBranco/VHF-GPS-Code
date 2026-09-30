@@ -1,6 +1,6 @@
 # VHF GPS — distribution par publication
 
-La racine du dépôt contient désormais l’application distribuée V3.28.106,
+La racine du dépôt contient désormais l’application distribuée V3.28.108,
 PROTO 6 / COMPAT 4043F648. L’interface et les invitations utilisent les libellés
 de l’application finale. Les anciennes sources à la racine ont été remplacées.
 Aucun commit ni push automatique.
@@ -71,6 +71,8 @@ en ligne ; Recevoir suit la publication de l’invitation. Annuler la saisie d�
 reprendre automatiquement la sortie. Une création annulée revient à la sortie
 précédente et à sa position de lecture. Les sorties sans résumé affichent Sortie enregistrée ; leur date est lue depuis leur état.
 
+Lorsqu’une nouvelle version du lanceur est téléchargée mais attend encore son activation, l’accueil montre un avis visible demandant de fermer complètement puis de rouvrir VHF GPS avant la prochaine sortie. La sortie active ne change pas de publication. L’accueil vérifie aussi au retour du réseau et lorsqu’il revient au premier plan ; il ne force ni activation ni rechargement.
+
 Le lanceur propose Reprendre et un panneau Préparer ou recevoir une sortie.
 Dans l’application, deux boutons compacts sont placés en haut : Accueil revient
 au lanceur après sauvegarde ; Partager ouvre la modale dans la page actuelle,
@@ -125,6 +127,10 @@ message ; une invitation déjà installée peut être rejouée sans réseau si s
 Une première importation demande Internet. Un cache incomplet impose une réparation
 avec l’invitation ; aucune autre publication ne remplace silencieusement la sortie.
 
+Pour une nouvelle sortie, le type « zone intégrée » est proposé, mais aucune zone précise n’est présélectionnée. Il faut choisir explicitement dans la liste avant de vérifier la sortie. Cette règle évite le repli implicite vers IROISE / BREST, même lorsque la précédente sortie était éphémère.
+
+Depuis l’accueil, « Supprimer la sortie active » demande une confirmation. La transaction efface la sortie active et sa copie enregistrée (session, invitation et réglages). Elle conserve seulement une révision sans secret pour bloquer les écritures d’un ancien onglet. Les fichiers de publication en cache restent disponibles ; retrouver la sortie exige son invitation conservée.
+
 ## Limites de l’application
 
 Le navigateur peut évincer les données locales. L’application ne peut pas garantir leur
@@ -156,7 +162,7 @@ Les 3 contrôles du catalogue passent : dates stables à la reconstruction, nouv
 publication répertoriée sans altérer les anciennes, date inconnue pour les anciens
 essais et refus d’un catalogue obsolète ou d’un manifeste altéré.
 
-34 tests d’intégration Chrome passent : échange radio complet, COMPAT et alias identiques,
+36 tests d’intégration Chrome passent : échange radio complet, COMPAT et alias identiques,
 zones éphémères, isolation des anciennes données locales, copie, GPS simulé, partage natif simulé,
 mobile 390 px, reprises hors réseau, cache absent/réparation, écritures abandonnées,
 fenêtres concurrentes, altération du code ou du résumé, nouvelle publication disponible,
@@ -178,8 +184,8 @@ Chrome avec ignoreCache et controller null avant la reprise.
 Le lanceur et la publication masquent leur contenu pendant le démarrage, jusqu’à la
 modale prête ou la reprise terminée. L’adresse change encore pour charger la publication.
 Une annulation retrouve la position de lecture de la sortie précédente, dans le même onglet.
-Le bouton Installer reste disponible dans le navigateur, indépendamment de la proposition
-native. Il lance cette proposition si elle a été reçue, sinon affiche les instructions.
+Le bouton Installer et les consignes hors réseau sont réunis dans le lanceur. Dans le
+navigateur, le bouton lance la proposition native si elle a été reçue, sinon affiche les instructions.
 Il est masqué dans une fenêtre standalone ou après appinstalled dans cette page.
 Cela ne constitue pas une détection universelle des installations depuis un navigateur.
 Les tests simulent la proposition native et le mode standalone ; les dialogues réels

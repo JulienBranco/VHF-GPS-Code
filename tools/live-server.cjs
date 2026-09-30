@@ -6,7 +6,7 @@ const types={".html":"text/html; charset=utf-8",".js":"text/javascript; charset=
 const releaseFiles=new Map([
  ["app.html","sources/app.html"],["engine.js","sources/engine.js"],
  ["app-adapter.js","sources/app-adapter.js"],["runtime.js","sources/runtime.js"],
- ...["protocol.js","storage.js","transition.js","transition.css","install.js"].map(name=>[name,name])
+ ...["protocol.js","storage.js","transition.js","transition.css"].map(name=>[name,name])
 ]);
 const liveWorker=`"use strict";\nself.addEventListener("install",event=>event.waitUntil(self.skipWaiting()));\nself.addEventListener("activate",event=>event.waitUntil(self.clients.claim()));\nself.addEventListener("fetch",event=>{if(event.request.url.startsWith(self.registration.scope))event.respondWith(fetch(event.request,{cache:"no-store"}));});\n`;
 const liveRelease=`import {manifestCheck} from "./protocol.js";

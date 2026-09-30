@@ -1,4 +1,4 @@
-// Une seule gestion de l’installation, dans le lanceur comme dans la publication.
+// L’installation de la PWA se gère depuis le lanceur.
 export function initInstallUI(){
  const button=document.getElementById("installAppBtn"),help=document.getElementById("installHelp");
  if(!button||!help)return;

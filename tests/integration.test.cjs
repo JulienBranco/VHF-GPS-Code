@@ -22,14 +22,14 @@ async function resume(page){
  await page.locator("#resume").waitFor({state:"visible"});await page.waitForFunction(()=>!document.getElementById("resume").disabled);await page.locator("#resume").click();
  await page.waitForFunction(()=>document.getElementById("testBanner")?.textContent.includes("Sortie retrouvée"));
 }
-async function openMenu(page){
+async function openHome(page){
  if(new URL(page.url()).pathname.includes("/releases/"))await page.locator("#backHomeBtn").click();
  await page.waitForFunction(()=>!!document.getElementById("create")&&!document.getElementById("create").disabled);
- await page.locator("#outingMenu").evaluate(el=>el.open=true);
+
 }
-async function openNew(page){await openMenu(page);await page.locator("#create").click();}
+async function openNew(page){await openHome(page);await page.locator("#create").click();}
 async function openReceive(page){
- await openMenu(page);await page.locator("#receive").click();
+ await openHome(page);await page.locator("#receive").click();
  await page.locator("#invitation").waitFor({state:"visible"});
 }
 async function create(page,{ephemeral=false}={}){
@@ -39,7 +39,7 @@ async function create(page,{ephemeral=false}={}){
  if(ephemeral){
   await app.locator("#outingEphemeralChoice").click();await app.locator("#outingDecimalMode").click();
   await app.locator("#outingLat").fill("46.2");await app.locator("#outingLon").fill("-2.4");
- }
+ }else await app.locator("#outingBuiltinSelect").selectOption("iroise-brest");
  await app.locator("#checkOutingCreate").click();await app.locator("#confirmOutingCreate").waitFor({state:"visible"});
  await app.locator("#confirmOutingCreate").click();
  await page.waitForFunction(()=>(document.getElementById("testBanner")||document.getElementById("status")).textContent.includes("Sortie enregistrée"));
@@ -223,6 +223,7 @@ test("enregistrement interrompu : ancienne sortie intacte, nouvelle tentative po
   };
   window.integrationAbortOnce=true;
  });
+ await frame(page).locator("#outingBuiltinSelect").selectOption("iroise-brest");
  await frame(page).locator("#checkOutingCreate").waitFor({state:"visible"});await frame(page).locator("#checkOutingCreate").click();
  await frame(page).locator("#confirmOutingCreate").waitFor({state:"visible"});await frame(page).locator("#confirmOutingCreate").click();
  await page.waitForFunction(()=>(document.getElementById("testBanner")||document.getElementById("status")).dataset.kind==="error");
@@ -236,6 +237,7 @@ test("deux fenêtres : une préparation devenue obsolète ne remplace pas la sor
  const {page,context}=await phone();await create(page);
  const second=await context.newPage();await second.goto(url);await resume(second);
  await openNew(second);
+ await frame(second).locator("#outingBuiltinSelect").selectOption("iroise-brest");
  await frame(second).locator("#checkOutingCreate").waitFor({state:"visible"});await frame(second).locator("#checkOutingCreate").click();
  await frame(second).locator("#confirmOutingCreate").waitFor({state:"visible"});
  const accepted=await create(page);
@@ -347,16 +349,23 @@ test("nouveau lanceur installé puis fermeture complète hors réseau : sortie e
   let page=await ctx.newPage();await page.goto(url);await page.waitForFunction(()=>!document.getElementById("create").disabled);const before=await create(page),identity=await aliases(page);
   const olderRelease="a".repeat(64);
   await page.evaluate(async id=>{const cache=await caches.open("vhfgps-main-release-"+id);await cache.put(new URL("/releases/"+id+"/manifest.json",location.origin),new Response("ancienne publication"));},olderRelease);
+  await page.goto(url);await page.waitForFunction(()=>!document.getElementById("create").disabled);await page.setViewportSize({width:390,height:844});
+  assert.equal(await page.locator("#updateNotice").isVisible(),false);
   const boot=fs.readFileSync(path.join(root,"boot.js"),"utf8")+"\n// Second lanceur de test\n";
   const index=fs.readFileSync(path.join(root,"index.html"),"utf8").replace("<body>","<body data-shell-fixture=new>");
   let worker=fs.readFileSync(path.join(root,"sw.js"),"utf8");const match=worker.match(/ASSETS=(\[[^\n]+\]);/);const assets=JSON.parse(match[1]);
   for(const f of assets){if(f.path==="boot.js")f.sha256=digest(boot);if(f.path==="index.html")f.sha256=digest(index);}
   const serialized=JSON.stringify(assets);worker=worker.replace(match[1],serialized).replace(/(SHELL_BUILD=")[a-f0-9]{64}/,"$1"+digest(serialized));
   host.state.virtual.set("/boot.js",Buffer.from(boot));host.state.virtual.set("/index.html",Buffer.from(index));host.state.virtual.set("/sw.js",Buffer.from(worker));
-  await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();await r.update();});
+  await page.evaluate(()=>window.dispatchEvent(new Event("online")));
   await page.waitForFunction(async()=>!!(await navigator.serviceWorker.getRegistration()).waiting);
-  assert.equal((await active(page)).release,before.release);assert.equal((await aliases(page)).secret,identity.secret);
-  await ctx.close();ctx=await chromium.launchPersistentContext(profile,{headless:true,executablePath});await ctx.setOffline(true);page=await ctx.newPage();await page.goto(url);await resume(page);
+  await page.locator("#updateNotice").waitFor({state:"visible"});
+  assert.match(await page.locator("#updateNotice").innerText(),/Nouvelle version téléchargée/);
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  assert.equal((await active(page)).release,before.release);await resume(page);assert.equal((await aliases(page)).secret,identity.secret);
+  await ctx.close();ctx=await chromium.launchPersistentContext(profile,{headless:true,executablePath});await ctx.setOffline(true);page=await ctx.newPage();await page.goto(url);
+  assert.equal(await page.locator("body").getAttribute("data-shell-fixture"),"new");
+  assert.equal(await page.locator("#updateNotice").isVisible(),false);await resume(page);
   await page.waitForFunction(()=>document.getElementById("testBanner")?.textContent.includes("Sortie retrouvée"));
   assert.equal((await active(page)).release,before.release);assert.equal((await aliases(page)).secret,identity.secret);await encode(page);
   assert.equal(await page.evaluate(async id=>{const cache=await caches.open("vhfgps-main-release-"+id);return (await cache.match(new URL("/releases/"+id+"/manifest.json",location.origin)))?.text();},olderRelease),"ancienne publication");
@@ -371,7 +380,7 @@ test("rechargement forcé : démarrage sans controller, sans attendre un événe
  const loaded=page.waitForEvent("load");await cdp.send("Page.reload",{ignoreCache:true});await loaded;
  assert.equal(await page.evaluate(()=>navigator.serviceWorker.controller),null);
  await page.waitForFunction(()=>!document.getElementById("create").disabled,{},{timeout:5000});
- assert.match(await page.locator("#status").innerText(),/Prépare une sortie/);
+ assert.equal(await page.locator("#status").innerText(),"");assert.equal(await page.locator("#receive").isEnabled(),true);
  await create(page);
 });
 test("ouverture file : une explication visible remplace Ouverture, sans dépendre des modules bloqués",async()=>{
@@ -411,7 +420,7 @@ test("annuler la préparation restaure la position de lecture et la sortie",asyn
  await page.waitForFunction(()=>document.getElementById("testBanner")?.textContent.includes("Sortie retrouvée")&&!document.documentElement.classList.contains("app-loading"));
  assert.equal((await active(page)).id,before.id);assert(Math.abs((await page.evaluate(()=>window.scrollY))-scroll)<3);
 });
-test("bouton Installer stable dans le lanceur et l’application, avec aide en repli",async()=>{
+test("bouton Installer et aide uniquement dans le lanceur",async()=>{
  const {page,context}=await phone();
  // Bloquer la proposition automatique native dans ce test de l’aide manuelle.
  await context.addInitScript(()=>window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();event.stopImmediatePropagation();},true));
@@ -419,8 +428,10 @@ test("bouton Installer stable dans le lanceur et l’application, avec aide en r
  await page.locator("#installAppBtn").click();assert(await page.locator("#installHelp").isVisible());
  assert.match(await page.locator("#installHelp").innerText(),/navigateur/);
  await page.locator("#installAppBtn").click();assert.equal(await page.locator("#installHelp").isVisible(),false);
- await create(page);assert(await page.locator("#installAppBtn").isVisible());
- await page.locator("#installAppBtn").click();assert(await page.locator("#installHelp").isVisible());
+ await page.locator(".install-guide").evaluate(el=>el.open=true);
+ assert.match(await page.locator(".install-guide").innerText(),/PRÊTE HORS RÉSEAU/);
+ await create(page);assert.equal(await page.locator("#installAppBtn, #installHelp").count(),0);
+ await page.locator("#backHomeBtn").click();await page.locator("#installAppBtn").waitFor({state:"visible"});
  await page.evaluate(()=>window.dispatchEvent(new Event("appinstalled")));assert.equal(await page.locator("#installAppBtn").isVisible(),false);
 });
 test("installation directe proposée seulement au clic ; proposition consommée puis aide disponible",async()=>{
@@ -434,7 +445,7 @@ test("mode installé : pas de bouton Installer dans le lanceur ni dans l’appli
  const context=await browser.newContext();contexts.push(context);
  await context.addInitScript(()=>{const original=window.matchMedia.bind(window);window.matchMedia=query=>{const result=original(query);if(query==="(display-mode: standalone)")Object.defineProperty(result,"matches",{value:true});return result;};});
  const page=await context.newPage();await page.goto(url);await page.waitForFunction(()=>!document.getElementById("create").disabled);
- assert.equal(await page.locator("#installAppBtn").isVisible(),false);await create(page);assert.equal(await page.locator("#installAppBtn").isVisible(),false);
+ assert.equal(await page.locator("#installAppBtn").isVisible(),false);await create(page);assert.equal(await page.locator("#installAppBtn").count(),0);
 });
 
 test("module de démarrage absent : le chargement ne reste pas bloqué et la sortie peut être réparée",async()=>{
@@ -447,6 +458,22 @@ test("module de démarrage absent : le chargement ne reste pas bloqué et la sor
 });
 
 
+test("nouvelle sortie : aucune zone intégrée présélectionnée, même après une zone éphémère",async()=>{
+ const {page}=await phone();
+ await openNew(page);await page.locator("#outingCreateDialog").waitFor({state:"visible"});
+ assert.equal(await page.locator("#outingBuiltinSelect").inputValue(),"");
+ assert.equal(await page.locator("#outingBuiltinSelect option").first().innerText(),"Choisir une zone intégrée");
+ assert.equal(await page.locator("#checkOutingCreate").isEnabled(),false);
+ assert.equal(await page.locator("#outingBoundsPreview").isVisible(),false);
+ await page.locator("#outingBuiltinSelect").selectOption("iroise-brest");
+ assert.equal(await page.locator("#checkOutingCreate").isEnabled(),true);
+ assert.equal(await page.locator("#outingBoundsPreview").isVisible(),true);
+ await page.locator("#cancelOutingCreate").click();await page.waitForURL(url);
+ await create(page,{ephemeral:true});await openNew(page);
+ await page.locator("#outingCreateDialog").waitFor({state:"visible"});
+ assert.equal(await page.locator("#outingBuiltinSelect").inputValue(),"");
+ assert.equal(await page.locator("#checkOutingCreate").isEnabled(),false);
+});
 test("accueil sans sortie : deux choix disponibles et aucune redirection",async()=>{
  const {page}=await phone({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
  assert.equal(new URL(page.url()).pathname,"/");assert.equal(await page.locator("#resume").isVisible(),false);
@@ -461,6 +488,8 @@ test("accueil avec sortie : zone et date visibles, état conservé puis reprise 
  const before=await create(page,{ephemeral:true}),identity=await aliases(page);
  await context.setOffline(true);await page.goto(url);await page.waitForFunction(()=>!document.getElementById("create").disabled);
  assert.equal(new URL(page.url()).pathname,"/");assert.deepEqual(await active(page),before);
+ await page.waitForFunction(()=>!document.getElementById("latestVersion").hidden);
+ assert.match(await page.locator("#latestVersion").innerText(),/Dernière publication v/);
  assert.equal(await page.locator("#resumeZone").innerText(),identity.zoneData.name);assert.match(await page.locator("#resumeDate").innerText(),/^Créée le /);
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
  const dir=path.join(os.tmpdir(),"vhfgps-real-tests");fs.mkdirSync(dir,{recursive:true});await page.screenshot({path:path.join(dir,"accueil-mobile.png"),fullPage:true});
@@ -468,6 +497,29 @@ test("accueil avec sortie : zone et date visibles, état conservé puis reprise 
 });
 
 
+test("accueil : suppression confirmée efface la sortie, bloque l’ancien onglet et permet de repartir",async()=>{
+ const {page,context}=await phone({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+ const before=await create(page,{ephemeral:true}),invitation=await share(page);
+ const stale=await context.newPage();await stale.goto(url);await resume(stale);
+ await page.goto(url);await page.waitForFunction(()=>!document.getElementById("deleteOuting").disabled);
+ assert.equal(await page.locator("#deleteOuting").isVisible(),true);
+ await page.locator("#deleteOuting").click();await page.locator("#deleteDialog").waitFor({state:"visible"});
+ assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ assert(await page.locator("#confirmDelete").evaluate(el=>{const rect=el.getBoundingClientRect();return rect.left>=0&&rect.right<=innerWidth&&rect.top>=0&&rect.bottom<=innerHeight;}));
+ assert.match(await page.locator("#deleteSummary").innerText(),/ÉPHÉMÈRE DE SORTIE/);
+ await page.locator("#cancelDelete").click();assert.deepEqual(await active(page),before);
+ await page.locator("#deleteOuting").click();await page.locator("#confirmDelete").click();
+ await page.locator("#deleteDialog").waitFor({state:"hidden"});
+ assert.equal(await page.locator("#resume").isVisible(),false);
+ assert.equal(await page.locator("#deleteOuting").isVisible(),false);
+ const tombstone=await active(page);assert.deepEqual(tombstone,{deleted:true,revision:before.revision+1});
+ assert.equal(await page.evaluate(async id=>{const s=await import("/storage.js");return s.read(await s.openStore(),"outing:"+id);},before.id),undefined);
+ await stale.waitForFunction(()=>document.getElementById("testBanner")?.textContent.includes("modifiée dans une autre fenêtre"));
+ await context.setOffline(true);await page.goto(url);await page.waitForFunction(()=>!document.getElementById("create").disabled);
+ assert.equal(await page.locator("#resume").isVisible(),false);
+ await context.setOffline(false);const restored=await importOuting(page,invitation);
+ assert.equal(restored.id,before.id);assert(restored.revision>tombstone.revision);
+});
 test("annuler la réception : accueil visible par bouton ou Échap, sortie conservée sans reprise automatique",async()=>{
  const {page}=await phone();const before=await create(page),identity=await aliases(page);
  await page.goto(url);await page.waitForFunction(()=>!document.getElementById("create").disabled);
@@ -485,16 +537,17 @@ test("annuler la réception : accueil visible par bouton ou Échap, sortie conse
 });
 
 
-test("accueil et partage direct : menu unique et invitation identique repartagée hors réseau",async()=>{
+test("accueil et partage direct : actions visibles et invitation identique repartagée hors réseau",async()=>{
  const {page,context}=await phone({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
  assert.equal(await page.locator("#share").count(),0);
  const record=await create(page,{ephemeral:true});assert.equal(await page.locator("#outingSettings, #createOutingBtn, #receiveOutingBtn, #copyOutingBtn").count(),0);
  assert.equal(await page.locator("#backHomeBtn").isVisible(),true);
  const invitation=await share(page);await page.locator("#closeOutingShare").click();await context.setOffline(true);
- await openMenu(page);assert.equal(new URL(page.url()).pathname,"/");assert.equal(await page.locator("#outingMenu").count(),1);
+ await openHome(page);assert.equal(new URL(page.url()).pathname,"/");assert.equal(await page.locator("#outingMenu").count(),0);
+ assert.equal(await page.locator("#create").isVisible(),true);assert.equal(await page.locator("#receive").isVisible(),true);
  assert.equal(await page.locator("#share").count(),0);assert.equal((await active(page)).release,record.release);
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
- const dir=path.join(os.tmpdir(),"vhfgps-real-tests");fs.mkdirSync(dir,{recursive:true});await page.screenshot({path:path.join(dir,"menu-gestion-mobile.png"),fullPage:true});
+ const dir=path.join(os.tmpdir(),"vhfgps-real-tests");fs.mkdirSync(dir,{recursive:true});await page.screenshot({path:path.join(dir,"accueil-mobile.png"),fullPage:true});
  const again=await share(page);assert.equal(again,invitation);assert.equal((await active(page)).id,record.id);assert.equal((await active(page)).release,record.release);
 });
 
@@ -505,7 +558,7 @@ test("partage dans l’application masqué après changement de zone, même apr�
  await page.waitForFunction(id=>activeZone().id===id,target);
  await page.locator("#sendZoneConfirmBtn").waitFor({state:"visible"});await page.waitForFunction(()=>!document.getElementById("sendZoneConfirmBtn").disabled);
  await page.locator("#sendZoneConfirmBtn").click();await page.waitForFunction(()=>isZoneConfirmed(activeZone()));
- await openMenu(page);assert.equal(await page.locator("#share").isVisible(),false);assert.equal(await page.locator("#resume").isVisible(),true);
+ await openHome(page);assert.equal(await page.locator("#share").isVisible(),false);assert.equal(await page.locator("#resume").isVisible(),true);
  assert.equal((await active(page)).id,before.id);assert.equal((await active(page)).release,before.release);
 });
 

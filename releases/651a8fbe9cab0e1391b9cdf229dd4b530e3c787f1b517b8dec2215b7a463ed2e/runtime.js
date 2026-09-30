@@ -1,11 +1,10 @@
 import {showLoading,showPage,rememberView,restoreView,applyLoadingTheme,VIEW_KEY} from "./transition.js";
-import {initInstallUI} from "./install.js";
 import {API,wrap,unwrap,stateCheck} from "./protocol.js";
 import {openStore,read,writeActive} from "./storage.js";
 import {distributionBase,LAUNCH_KEY,ERROR_KEY,verify} from "./release.js";
 const root=distributionBase(),release=location.pathname.split("/releases/")[1]?.split("/")[0];
 const banner=document.getElementById("testBanner");
-applyLoadingTheme();initInstallUI();
+applyLoadingTheme();
 // Aucun bouton de l’application n’agit avant la vérification et la reprise complètes.
 document.body.inert=true;
 let db,record,mode="resume",expected=0,installed=false,booted=false,stopped=false,dirty=false,scheduled=false,writing=0;

@@ -43,7 +43,7 @@ function initTheme(){
   }
 }
 
-const APP_VERSION="3.28.106";
+const APP_VERSION="3.28.108";
 const PROTOCOL_ID="VHF-GPS-PROTO-6";
 
 function protocolShortLabel(){
@@ -67,7 +67,7 @@ function setPwaStatus(message,kind){
   el.textContent=message;
   el.className=`pwa-status ${kind}`;
 }
-// Installation et cache hors réseau gérés par install.js et le lanceur.
+// Installation de la PWA gérée par le lanceur ; cette sortie vérifie son propre cache hors réseau.
 const SIDE_KM=250, HALF_KM=125, CELL_KM=0.1, CELLS=2500;
 const ZONE_PROTOCOL_VERSION="ZONE-V3";
 const ZONE_ALIAS_VERSION="ZONE-ALIAS-V2";
@@ -3893,7 +3893,7 @@ function renderOutingBoundsPreview(zone=null){
 function outingSetupChanged(){
   outingSetupRevision++;
   outingCheckBusy=false;
-  $("checkOutingCreate").disabled=false;
+  $("checkOutingCreate").disabled=outingZoneType==="builtin"&&!$("outingBuiltinSelect").value;
   pendingOutingCreation=null;
   $("outingCreateSummary").classList.add("hidden");
   $("confirmOutingCreate").classList.add("hidden");
@@ -3954,6 +3954,11 @@ function setOutingPositionMode(mode){
 function populateOutingBuiltinSelect(){
   const select=$("outingBuiltinSelect");
   select.innerHTML="";
+  const placeholder=document.createElement("option");
+  placeholder.value="";
+  placeholder.textContent="Choisir une zone intégrée";
+  placeholder.disabled=true;
+  select.appendChild(placeholder);
   for(const z of [...BUILTIN_ZONES].sort((a,b)=>
     a.region.localeCompare(b.region,"fr")||compareZoneNames(a,b))){
     const option=document.createElement("option");
@@ -3961,8 +3966,7 @@ function populateOutingBuiltinSelect(){
     option.textContent=z.region+" · "+z.name;
     select.appendChild(option);
   }
-  const current=activeZone();
-  select.value=current?.builtin?current.id:BUILTIN_ZONES[0]?.id||"";
+  select.value="";
 }
 
 function openOutingSetup(){
@@ -4157,7 +4161,7 @@ $("outingCreateDialog").addEventListener("cancel",event=>{if(outingMutationBusy)
 $("outingCreateDialog").addEventListener("close",()=>{
   outingSetupRevision++;
   outingCheckBusy=false;
-  $("checkOutingCreate").disabled=false;
+  $("checkOutingCreate").disabled=outingZoneType==="builtin"&&!$("outingBuiltinSelect").value;
   pendingOutingCreation=null;
   hideStatus("outingCreateError");
   $("outingBoundsPreview").innerHTML="";

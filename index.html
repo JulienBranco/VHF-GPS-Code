@@ -3,15 +3,20 @@
 <title>VHF GPS</title><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="stylesheet" href="style.css"><link rel="stylesheet" href="transition.css"></head>
 <body><div id="loadingScreen" role="status" aria-live="polite"><span class="loading-dot" aria-hidden="true"></span><span>Préparation…</span></div>
-<header><strong>🎣 VHF GPS</strong><nav><button id="installAppBtn" hidden aria-controls="installHelp" aria-expanded="false">Installer l’application</button><a href="GUIDE.html">Guide</a></nav><p id="installHelp" hidden role="status"></p></header>
-<main><section id="empty"><h1>Ta sortie VHF GPS</h1><div class="home-actions">
-<button id="resume" class="resume-button" hidden disabled><span class="home-label">▶ Reprendre la sortie active</span><span id="resumeZone" class="home-zone"></span><span id="resumeDate" class="home-date"></span></button>
-<details id="outingMenu" class="outing-details" open><summary><span class="outing-menu-label">🎣 Préparer ou recevoir une sortie</span><span class="outing-menu-chevron" aria-hidden="true">▾</span></summary><div class="outing-body">
-<button id="create" disabled><span class="home-label">🆕 Préparer une nouvelle sortie</span></button>
-<button id="receive" disabled><span class="home-label">📥 Recevoir une invitation</span></button>
-</div></details>
-</div><p id="status" role="status">Ouverture…</p></section></main>
+<header><div class="header-inner"><strong><span class="brand-icon" aria-hidden="true">🎣</span> VHF GPS <span id="latestVersion" class="launcher-version" hidden></span></strong><nav><button id="installAppBtn" hidden aria-controls="installHelp" aria-expanded="false">Installer l’application</button><a href="GUIDE.html">Guide</a></nav><p id="installHelp" hidden role="status"></p></div></header>
+<main><section id="empty"><div id="updateNotice" class="update-notice" hidden role="status" aria-live="polite"><strong>⚠️ Nouvelle version téléchargée</strong><p>Ta sortie en cours reste inchangée. Avant de préparer la prochaine sortie, ferme complètement VHF GPS puis rouvre-la.</p></div><div class="home-actions">
+<button id="resume" class="resume-button" hidden disabled><span class="home-label"><span class="home-icon" aria-hidden="true">▶</span> Reprendre la sortie active</span><span id="resumeZone" class="home-zone"></span><span id="resumeDate" class="home-date"></span></button>
+<button id="deleteOuting" class="delete-outing-button" hidden disabled><span class="home-icon" aria-hidden="true">🗑</span> Supprimer la sortie active</button>
+<button id="create" disabled><span class="home-label"><span class="home-icon" aria-hidden="true">🎣</span> Préparer une nouvelle sortie</span></button>
+<button id="receive" disabled><span class="home-label"><span class="home-icon" aria-hidden="true">📥</span> Recevoir une invitation</span></button>
+</div><details class="install-guide"><summary>Installer et vérifier le mode hors réseau</summary><div>
+<p>Si l’application n’est pas installée, utilise « Installer l’application » en haut de cet accueil. Sur iPhone, ouvre cette adresse dans Safari, puis choisis Partager → « Sur l’écran d’accueil ».</p>
+<p>Ouvre ensuite l’icône installée avec du réseau, puis prépare ou reçois une sortie. Vérifie que la session radio indique « APPLICATION PRÊTE HORS RÉSEAU ». Sur iPhone, les données de Safari peuvent être séparées de celles de l’application installée.</p>
+<p>Avant de partir, passe en mode avion et coupe aussi le Wi-Fi. Ferme puis rouvre l’application depuis son icône, et vérifie la sortie et le GPS. Si le GPS ne répond pas, recopie la position du sondeur ou du traceur.</p>
+<p>Si une nouvelle version est annoncée pendant une sortie, attends la fin de celle-ci avant de fermer l’application pour l’activer.</p>
+</div></details><p id="status" role="status">Ouverture…</p></section></main>
 <dialog id="receiveDialog"><form id="receiveForm"><h2>Recevoir une invitation</h2><label for="invitation">Colle le message VHF GPS entier</label><textarea id="invitation" rows="8" required spellcheck="false"></textarea><p id="importError" role="alert"></p><div class="actions"><button type="submit">Vérifier</button><button id="closeReceive" type="button">Annuler</button></div></form></dialog>
+<dialog id="deleteDialog"><h2>Supprimer cette sortie ?</h2><p id="deleteSummary"></p><p>La session, son invitation et les réglages de cette sortie seront effacés de ce téléphone. Pour la retrouver, il faudra réimporter son invitation conservée.</p><p id="deleteError" role="alert"></p><div class="actions"><button id="confirmDelete" class="delete-confirm" type="button">Supprimer définitivement</button><button id="cancelDelete" type="button">Annuler</button></div></dialog>
 <p id="fileHelp" hidden style="padding:0 24px"><a id="localPreview" href="http://127.0.0.1:8082/">Ouvrir l’aperçu local</a></p>
 <script>
 // Ce message fonctionne même quand les modules sont bloqués en ouverture file://.

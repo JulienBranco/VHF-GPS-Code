@@ -58,8 +58,6 @@ input:focus,select:focus{border-color:var(--accent)}
   color:#ffe3a2;background:#41301a;font-size:.93rem;line-height:1.45
 }
 .pwa-status.problem{color:var(--bad);background:rgba(200,55,55,.12)}
-.install-app-btn{display:block;margin:0 0 14px;padding:10px 13px;background:rgba(98,221,183,.14);color:var(--text);border-color:var(--accent);font-size:.9rem}
-.install-help{margin:0 0 14px;padding:12px 14px;border-radius:10px;background:rgba(98,221,183,.08);color:var(--text);line-height:1.45;font-size:.9rem}
 :root[data-theme="day"] .pwa-status.pending{color:#704000;background:#fff4d7}
 :root[data-theme="day"] .pwa-status.update{color:#704000;background:#fff4d7;border-color:#b77912}
 :root[data-theme="day"] .pwa-status.ready{color:#075f27;background:#e7f8eb}
@@ -424,8 +422,6 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
 :root[data-theme="day"] button{
   background:#f4f4f4;color:#080808;border-color:#151515
 }
-:root[data-theme="day"] .install-app-btn{background:#e4f7eb;color:#075f27;border-color:#198a52}
-:root[data-theme="day"] .install-help{background:#effaf3;color:#17452b}
 :root[data-theme="day"] button.primary,
 :root[data-theme="day"] .tab.active,
 :root[data-theme="day"] .position-mode-switch button.active{
@@ -2379,9 +2375,9 @@ button:focus-visible,
   <div id="protocolFatalDetail" style="font-weight:600;margin-top:4px"></div>
 </div>
 <main>
-  <nav class="app-navigation" aria-label="Sortie"><button type="button" id="backHomeBtn">⌂ Accueil</button><button type="button" id="shareOutingBtn" class="hidden" aria-label="Partager la sortie active">📤 Partager</button></nav>
+  <nav class="app-navigation" aria-label="Sortie"><button type="button" id="backHomeBtn">⌂ Accueil</button><button type="button" id="shareOutingBtn" class="hidden" aria-label="Partager la sortie">📤 Partager la sortie</button></nav>
   <div class="app-topline">
-    <h1>VHF GPS Code — <span id="appVersionHeading"></span> <span class="small">Compatibilité automatique</span></h1>
+    <h1>VHF GPS Code — <span id="appVersionHeading"></span></h1>
     <div class="theme-switch">
       <select id="themeMode" aria-label="Affichage : AUTO, JOUR ou NUIT" title="Affichage">
         <option value="auto">AUTO</option>
@@ -2390,8 +2386,6 @@ button:focus-visible,
       </select>
     </div>
   </div>
-  <button type="button" id="installAppBtn" class="install-app-btn hidden" aria-controls="installHelp" aria-expanded="false">Installer l’application</button>
-  <div id="installHelp" class="install-help" hidden role="status"></div>
 
   <div class="card session-card" id="sessionCard">
     <div class="session-compact-title">
@@ -2923,16 +2917,6 @@ button:focus-visible,
         <span>Afficher les détails du contrôle après génération</span>
       </label>
       <p class="small">Le contrôle automatique reste actif même quand ces détails sont masqués.</p>
-    </div>
-  </details>
-
-  <details class="card utility-details small">
-    <summary>Installer et vérifier le mode hors réseau</summary>
-    <div class="utility-body">
-      <p>Avec du réseau, utilise le bouton « Installer l’application » en haut de la page. Sur Android, il peut ouvrir directement la confirmation ; sinon, utilise « Installer l’application » dans le menu du navigateur. Sur iPhone, le bouton explique le chemin Safari → Partager → « Sur l’écran d’accueil ».</p>
-      <p>Ouvre ensuite l’icône installée <strong>avec du réseau</strong> et attends « PRÊTE HORS RÉSEAU » dans le bloc Session radio. Sur iPhone, les données saisies dans Safari peuvent ne pas être reprises : vérifie la session et les zones dans l’application installée.</p>
-      <p>Avant de partir, passe en mode avion, ferme puis rouvre l’application depuis son icône. Vérifie la session, les zones et le GPS. Si le GPS ne répond pas, recopie la position du sondeur ou du traceur.</p>
-      <p>Une mise à jour téléchargée n’interrompt pas l’application ouverte. Attends la fin de la sortie de pêche, puis ferme complètement et rouvre l’application avant de préparer la prochaine sortie.</p>
     </div>
   </details>
 
