@@ -3,6 +3,11 @@ const SHELL_BUILD=__BUILD__, ASSETS=__ASSETS__;
 const PREFIX="vhfgps-main-shell-",CACHE=PREFIX+SHELL_BUILD,BASE=self.registration.scope;
 const absolute=path=>new URL(path,BASE).href;
 const shellURLs=new Set(ASSETS.map(file=>absolute(file.path)));
+self.addEventListener("message",event=>{
+ if(event.data?.type==="VHF_LAUNCHER_INFO"&&event.data.api===1&&event.ports[0]){
+  event.ports[0].postMessage({type:"VHF_LAUNCHER_INFO",api:1,build:SHELL_BUILD});
+ }
+});
 async function hash(bytes){return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes)),n=>n.toString(16).padStart(2,"0")).join("");}
 self.addEventListener("install",event=>event.waitUntil((async()=>{
  const cache=await caches.open(CACHE);

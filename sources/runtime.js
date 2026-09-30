@@ -1,5 +1,6 @@
 import {showLoading,showPage,rememberView,restoreView,applyLoadingTheme,VIEW_KEY} from "./transition.js";
-import {API,wrap,unwrap,stateCheck} from "./protocol.js";
+import {API,wrap,unwrap,stateCheck,sameInvitationContent} from "./protocol.js";
+import {initTechnicalInfo} from "./technical-info.js";
 import {openStore,read,writeActive} from "./storage.js";
 import {distributionBase,LAUNCH_KEY,ERROR_KEY,verify} from "./release.js";
 const root=distributionBase(),release=location.pathname.split("/releases/")[1]?.split("/")[0];
@@ -42,7 +43,7 @@ window.VHFIntegration={
  storage,commit,
  async importContent(text){
   const incoming=await unwrap(text);
-  if(!record.envelope||incoming.id!==record.id||incoming.release!==record.release||incoming.content!==record.envelope.content){
+  if(!record.envelope||incoming.id!==record.id||incoming.release!==record.release||!sameInvitationContent(incoming.content,record.envelope.content)){
    throw Error("Cette invitation ne correspond pas à la sortie en cours de vérification. Annule puis reçois-la depuis l’accueil pour charger sa publication.");
   }
   return incoming.content;
@@ -56,7 +57,7 @@ window.VHFIntegration={
  share:content=>wrap({format:2,api:API,id:record.id,release:record.release,content}),
  async activate(content){
   if(installed)throw Error("Aucune préparation en cours.");
-  if(record.envelope&&record.envelope.content!==content)throw Error("L’invitation activée diffère de celle reçue.");
+  if(record.envelope&&!sameInvitationContent(record.envelope.content,content))throw Error("L’invitation activée diffère de celle reçue.");
   try{
   await verify(record.release,record.manifest);
   const envelope={format:2,api:API,id:record.id,release:record.release,content};
@@ -91,6 +92,7 @@ async function start(){
  await script("engine.js");await script("app-adapter.js");
  const info=await window.startDistributedApp({mode,content:record.envelope?.content||""});
  if(info.version!==record.manifest.version||info.protocol!==record.manifest.protocol)throw Error("Le moteur ne correspond pas à la publication.");
+ initTechnicalInfo({root,outing:record});
  booted=true;
  if(installed){await commit();await changedElsewhere();if(!stopped)status("Sortie retrouvée · version "+info.version+" · "+release.slice(0,8)+" · prête hors connexion","success");}
  else status("Confirme la sortie dans la fenêtre de l’application.");

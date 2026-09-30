@@ -1,4 +1,4 @@
-import {stateCheck,envelopeCheck} from "./protocol.js";
+import {stateCheck,envelopeCheck,sameInvitationContent} from "./protocol.js";
 export function openStore(){return new Promise((resolve,reject)=>{
  const req=indexedDB.open("vhfgps-main-v1",1);
  req.onupgradeneeded=()=>req.result.createObjectStore("state");
@@ -17,7 +17,7 @@ export function writeActive(db,record,expected,{install=false}={}){
    if(!install&&get.result?.envelope.id!==record.envelope.id){fail("Cette sortie n’est plus active.");return;}
    const known=store.get("outing:"+record.envelope.id);
    known.onsuccess=()=>{
-    if(known.result&&(known.result.envelope.release!==record.envelope.release||known.result.envelope.content!==record.envelope.content)){
+    if(known.result&&(known.result.envelope.release!==record.envelope.release||!sameInvitationContent(known.result.envelope.content,record.envelope.content))){
      fail("Cet identifiant correspond déjà à une autre invitation.");return;
     }
     result={...record,revision:expected+1};

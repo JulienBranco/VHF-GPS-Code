@@ -1,12 +1,12 @@
 "use strict";
 const test=require("node:test"),assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path");
 const {createLiveServer,LIVE_ID}=require("../tools/live-server.cjs");
-let chromium;try{({chromium}=require("playwright"));}catch{({chromium}=require(path.join(process.env.USERPROFILE||process.env.HOME,".cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright")));}
-const executablePath=process.env.VHF_CHROME||"C:/Program Files/Google/Chrome/Application/chrome.exe";
+const {chromium,browserOptions}=require("../tools/test-browser.cjs");
 test("aperçu local : rechargement des sources sans créer une publication",async()=>{
  const root=path.resolve(__dirname,".."),before=fs.readdirSync(path.join(root,"releases")).sort(),latest=fs.readFileSync(path.join(root,"latest.json"),"utf8");
- const host=await createLiveServer(),browser=await chromium.launch({headless:true,executablePath});
+ const browser=await chromium.launch(browserOptions());let host;
  try{
+  host=await createLiveServer();
   const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true}),page=await context.newPage();
   await page.goto(host.url);await page.waitForFunction(()=>!document.getElementById("create").disabled);
   assert.equal(await page.locator("#outingMenu").count(),0);
@@ -14,6 +14,8 @@ test("aperçu local : rechargement des sources sans créer une publication",asyn
   assert.match(await page.locator("#create").innerText(),/🎣 Préparer une nouvelle sortie/);
   assert.equal(await page.locator("#receive").isVisible(),true);
   assert.equal(await page.locator(".install-guide").count(),1);
+  await page.locator("#technicalInfo summary").click();
+  await page.waitForFunction(()=>document.querySelector("#technicalInfo dd").textContent==="Aperçu local — sources");
   const catalog=JSON.parse(fs.readFileSync(path.join(root,"releases.json"),"utf8"));
   const latestVersion=catalog.releases.find(row=>row.release===catalog.latest).version;
   await page.waitForFunction(()=>!document.getElementById("latestVersion").hidden);
@@ -36,5 +38,5 @@ test("aperçu local : rechargement des sources sans créer une publication",asyn
   assert.equal(fs.readFileSync(path.join(root,"latest.json"),"utf8"),latest);
   assert.deepEqual(fs.readdirSync(path.join(root,"releases")).sort(),before);
   await context.close();
- }finally{await browser.close();await new Promise(resolve=>host.server.close(resolve));}
+ }finally{await browser.close();if(host)await new Promise(resolve=>host.server.close(resolve));}
 });

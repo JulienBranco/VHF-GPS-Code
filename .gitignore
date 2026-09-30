@@ -1,0 +1,7 @@
+# Sauvegarde locale de restauration d'une purge interrompue : ne pas publier.
+.release-maintenance/
+*.maintenance-tmp
+# Dépendances et résultats de test locaux ; package-lock.json reste versionné.
+node_modules/
+test-results/
+playwright-report/

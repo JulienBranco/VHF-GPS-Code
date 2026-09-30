@@ -24,8 +24,17 @@ export function splitContent(content){
  return {summary:parts[0].trim(),code};
 }
 export function joinContent(summary,code){return summary+"\n\n"+INNER_BEGIN+"\n"+code+"\n"+INNER_END;}
+// NFC garde les accents et la casse. Ne jamais normaliser les octets du code.
+function normalizeSummary(summary){return summary.normalize("NFC").replace(/\r\n?/g,"\n").replace(/[\u00a0\u202f]/g," ");}
+export function sameInvitationContent(first,second){
+ if(first===second)return typeof first==="string";
+ try{
+  const a=splitContent(first),b=splitContent(second);
+  return a.code===b.code&&normalizeSummary(a.summary)===normalizeSummary(b.summary);
+ }catch{return false;}
+}
 export async function wrap(p){
- envelopeCheck(p);const {summary,code}=splitContent(p.content);
+ envelopeCheck(p);const parts=splitContent(p.content),summary=normalizeSummary(parts.summary),code=parts.code;
  // Le résumé est présent une seule fois, en clair. Le contrôle lie résumé et code.
  const bytes=new TextEncoder().encode(JSON.stringify({format:2,api:API,id:p.id,release:p.release,code}));
  const encoded=btoa(String.fromCharCode(...bytes)).replaceAll("+","-").replaceAll("/","_").replace(/=+$/,"");
@@ -36,8 +45,12 @@ export async function unwrap(text){
  if(typeof text!=="string"||text.length>24000)throw Error("Message trop long.");
  const parts=text.split(BEGIN);
  if(parts.length!==2||parts[1].split(END).length!==2||parts[0].split(SUMMARY).length!==2)throw Error("Colle une nouvelle invitation VHF GPS complète.");
- const summary=parts[0].split(SUMMARY)[1].trim(),token=parts[1].split(END)[0].replace(/\s/g,""),match=token.match(/^VHF-SORTIE2\.([A-Za-z0-9_-]+)\.([a-f0-9]{64})$/);
- if(!match||summary.length>5000||await hash("VHF-SORTIE2."+match[1]+"\n"+summary)!==match[2])throw Error("Invitation incomplète ou modifiée.");
+ const rawSummary=parts[0].split(SUMMARY)[1].trim(),summary=normalizeSummary(rawSummary),token=parts[1].split(END)[0].replace(/\s/g,""),match=token.match(/^VHF-SORTIE2\.([A-Za-z0-9_-]+)\.([a-f0-9]{64})$/);
+ if(!match||rawSummary.length>5000)throw Error("Invitation incomplète ou modifiée.");
+ // Accepter les anciens contrôles exacts, puis les équivalences de présentation.
+ const prefix="VHF-SORTIE2."+match[1]+"\n";
+ const exact=await hash(prefix+rawSummary)===match[2];
+ if(!exact&&(summary===rawSummary||await hash(prefix+summary)!==match[2]))throw Error("Invitation incomplète ou modifiée.");
  try{
   const p=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(Uint8Array.from(atob(match[1].replaceAll("-","+").replaceAll("_","/")),c=>c.charCodeAt(0))));
   if(typeof p.code!=="string"||p.code.length>12000)throw Error("Code invalide");

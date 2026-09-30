@@ -6,9 +6,10 @@ const types={".html":"text/html; charset=utf-8",".js":"text/javascript; charset=
 const releaseFiles=new Map([
  ["app.html","sources/app.html"],["engine.js","sources/engine.js"],
  ["app-adapter.js","sources/app-adapter.js"],["runtime.js","sources/runtime.js"],
- ...["protocol.js","storage.js","transition.js","transition.css"].map(name=>[name,name])
+ ...["protocol.js","storage.js","transition.js","transition.css","technical-info.js"].map(name=>[name,name])
 ]);
 const liveWorker=`"use strict";\nself.addEventListener("install",event=>event.waitUntil(self.skipWaiting()));\nself.addEventListener("activate",event=>event.waitUntil(self.clients.claim()));\nself.addEventListener("fetch",event=>{if(event.request.url.startsWith(self.registration.scope))event.respondWith(fetch(event.request,{cache:"no-store"}));});\n`;
+const previewInfo=`self.addEventListener("message",event=>{if(event.data?.type==="VHF_LAUNCHER_INFO"&&event.data.api===1&&event.ports[0])event.ports[0].postMessage({type:"VHF_LAUNCHER_INFO",api:1,preview:true});});\n`;
 const liveRelease=`import {manifestCheck} from "./protocol.js";
 export const base=new URL("./",import.meta.url);
 export const LAUNCH_KEY="vhfgps-live-launch-v1",ERROR_KEY="vhfgps-live-error-v1";
@@ -28,7 +29,7 @@ function manifest(){
 }
 function content(pathname,state){
  if(pathname==="/latest.json")return [JSON.stringify({format:2,release:LIVE_ID}),".json"];
- if(pathname==="/sw.js")return [liveWorker,".js"];
+ if(pathname==="/sw.js")return [liveWorker+previewInfo,".js"];
  if(pathname==="/release.js")return [liveRelease,".js"];
  const release=pathname.match(/^\/releases\/([a-f0-9]{64})\/([a-zA-Z0-9_.-]+)$/);
  if(release){

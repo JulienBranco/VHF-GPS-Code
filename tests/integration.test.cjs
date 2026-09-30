@@ -1,14 +1,12 @@
 "use strict";
 const test=require("node:test"),assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),os=require("node:os");
 const {createServer}=require("../tools/server.cjs");
-let chromium;
-try{({chromium}=require("playwright"));}catch{({chromium}=require(path.join(process.env.USERPROFILE,".cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright")));}
-const executablePath=process.env.PROTOTYPE_CHROME||"C:/Program Files/Google/Chrome/Application/chrome.exe";
+const {chromium,browserOptions}=require("../tools/test-browser.cjs");
 let browser,host,url;const contexts=[];
-test.before(async()=>{host=await createServer();url=host.url;
- browser=await chromium.launch({headless:true,executablePath});});
+test.before(async()=>{browser=await chromium.launch(browserOptions());
+ host=await createServer();url=host.url;});
 test.beforeEach(()=>{host.state.fail=null;host.state.corrupt=null;host.state.delay=0;host.state.virtual=new Map();});
-test.after(async()=>{for(const ctx of contexts)await ctx.close().catch(()=>{});await browser?.close();await new Promise(resolve=>host.server.close(resolve));});
+test.after(async()=>{for(const ctx of contexts)await ctx.close().catch(()=>{});await browser?.close();if(host)await new Promise(resolve=>host.server.close(resolve));});
 async function phone(options={}){
  const context=await browser.newContext(options);contexts.push(context);
  const page=await context.newPage();page.on("pageerror",error=>console.log("Erreur navigateur :",error.message));
@@ -150,11 +148,11 @@ test("zone éphémère : centre et alias recalculés identiquement sur le destin
 });
 test("sortie réelle retrouvée après fermeture complète et réouverture hors connexion",async()=>{
  const profile=fs.mkdtempSync(path.join(os.tmpdir(),"vhfgps-real-profile-"));
- let context=await chromium.launchPersistentContext(profile,{headless:true,executablePath});
+ let context=await chromium.launchPersistentContext(profile,browserOptions());
  try{
   let page=await context.newPage();await page.goto(url);await page.waitForFunction(()=>!document.getElementById("create").disabled);
   await create(page,{ephemeral:true});const before=await aliases(page);
-  await context.close();context=await chromium.launchPersistentContext(profile,{headless:true,executablePath});
+  await context.close();context=await chromium.launchPersistentContext(profile,browserOptions());
   await context.setOffline(true);page=await context.newPage();await page.goto(url);await resume(page);
   await page.waitForFunction(()=>(document.getElementById("testBanner")||document.getElementById("status")).textContent.includes("Sortie retrouvée"));
   const after=await aliases(page);
@@ -344,7 +342,7 @@ test("échec de sauvegarde d’une confirmation : pas d’état confirmé et rep
 test("nouveau lanceur installé puis fermeture complète hors réseau : sortie et anciennes publications conservées",async()=>{
  const {createHash}=require("node:crypto"),digest=value=>createHash("sha256").update(value).digest("hex");
  const root=path.resolve(__dirname,".."),profile=fs.mkdtempSync(path.join(os.tmpdir(),"vhfgps-real-profile-"));
- let ctx=await chromium.launchPersistentContext(profile,{headless:true,executablePath});
+ let ctx=await chromium.launchPersistentContext(profile,browserOptions());
  try{
   let page=await ctx.newPage();await page.goto(url);await page.waitForFunction(()=>!document.getElementById("create").disabled);const before=await create(page),identity=await aliases(page);
   const olderRelease="a".repeat(64);
@@ -360,10 +358,10 @@ test("nouveau lanceur installé puis fermeture complète hors réseau : sortie e
   await page.evaluate(()=>window.dispatchEvent(new Event("online")));
   await page.waitForFunction(async()=>!!(await navigator.serviceWorker.getRegistration()).waiting);
   await page.locator("#updateNotice").waitFor({state:"visible"});
-  assert.match(await page.locator("#updateNotice").innerText(),/Nouvelle version téléchargée/);
+  assert.match(await page.locator("#updateNotice").innerText(),/Mise à jour de l’accueil téléchargée/);
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   assert.equal((await active(page)).release,before.release);await resume(page);assert.equal((await aliases(page)).secret,identity.secret);
-  await ctx.close();ctx=await chromium.launchPersistentContext(profile,{headless:true,executablePath});await ctx.setOffline(true);page=await ctx.newPage();await page.goto(url);
+  await ctx.close();ctx=await chromium.launchPersistentContext(profile,browserOptions());await ctx.setOffline(true);page=await ctx.newPage();await page.goto(url);
   assert.equal(await page.locator("body").getAttribute("data-shell-fixture"),"new");
   assert.equal(await page.locator("#updateNotice").isVisible(),false);await resume(page);
   await page.waitForFunction(()=>document.getElementById("testBanner")?.textContent.includes("Sortie retrouvée"));

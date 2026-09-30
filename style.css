@@ -4,7 +4,7 @@ html[data-receive-only] header,html[data-receive-only] main{visibility:hidden}
 
 .home-actions{display:grid;gap:14px;margin:16px 0 24px}.home-actions>button{text-align:left;width:100%;padding:18px 20px;min-height:64px}.home-label,.home-zone,.home-date{display:block}.home-label{font-size:17px}.home-icon{display:inline-block;font-size:27px;line-height:1;vertical-align:middle;margin-right:8px}.home-zone{font-size:16px;margin-top:8px;overflow-wrap:anywhere}.home-date{font-size:13px;font-weight:400;margin-top:4px}.resume-button{background:#146a4e;color:#effff7}#status{font-size:14px;margin:18px 0}main{flex:none}body{min-height:100dvh;height:auto}
 
-.home-actions>#create,.home-actions>#receive{border:2px solid #5ca5e9;border-radius:11px;text-align:center}.home-actions>#receive{background:#173f5d;color:#eaf5ff}html[data-theme=day] .home-actions>#receive{background:#e4f1ff;border-color:#0759a8;color:#0759a8}
+.home-actions>#create,.home-actions>#receive{border:2px solid #5ca5e9;border-radius:11px;text-align:center}.home-actions>#receive{background:#173f5d;color:#eaf5ff}
 .install-guide{margin:22px 0;color:#d5e8e7}.install-guide summary{cursor:pointer;font-weight:700;color:#bde6ff}.install-guide>div{margin:11px 0 0;padding:2px 0 2px 14px;border-left:3px solid #5ca5e9;line-height:1.5}.install-guide p{margin:8px 0 12px}
 
 .delete-outing-button,.delete-confirm{background:#b43139;color:#fff}

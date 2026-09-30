@@ -1,16 +1,24 @@
 # VHF GPS — distribution par publication
 
-La racine du dépôt contient désormais l’application distribuée V3.28.108,
-PROTO 6 / COMPAT 4043F648. L’interface et les invitations utilisent les libellés
+La racine du dépôt contient l’application distribuée. La version publiée est indiquée
+dans RELEASES.html ; le moteur actuel utilise PROTO 6 / COMPAT 4043F648. L’interface et les invitations utilisent les libellés
 de l’application finale. Les anciennes sources à la racine ont été remplacées.
 Aucun commit ni push automatique.
+
+L’icône radio et carte marine choisie est intégrée pour Android et iPhone.
+Sa source et ses exports sont décrits dans [icons/README.md](icons/README.md).
+Les icônes adaptatives déclarées dans le manifeste font partie du cache du launcher.
+
+Pour les opérations courantes, lire [DEVELOPPEMENT.md](DEVELOPPEMENT.md).
+Double-cliquer sur **PUBLICATIONS.cmd** ouvre le menu local de préparation,
+vérification, affichage et purge des publications. Il utilise Node.js et ne publie rien à ta place.
 
 ## Publier
 
 Le dépôt à sa racine contient l’application distribuable et ses icônes.
 La génération utilise uniquement les fichiers de ce dépôt.
 Adresse : https://julienbranco.github.io/VHF-GPS-Code/
-L’icône installée s’appelle VHF GPS. Le bouton Guide explique l’utilisation.
+L’icône installée s’appelle VHF GPS. L’accueil présente les instructions d’installation et de vérification hors réseau.
 
 La remise à zéro du 29 septembre conserve une seule publication et utilise une
 nouvelle base locale. Les invitations de l’ancienne application ne sont pas compatibles.
@@ -27,7 +35,7 @@ Après une première diffusion réelle, conserver les publications distribuées.
 - sources/app-adapter.js : démarrage, préparation/import et partage de sortie.
 - sources/runtime.js : sauvegarde, reprise et navigation en pleine page.
 - transition.js / transition.css : chargement commun et retour à la position de lecture.
-- install.js : bouton d’installation et instructions en repli dans les deux pages.
+- install.js : bouton d’installation et instructions dans le launcher.
 - boot.js : ouverture de la bonne publication, création et réception initiales.
 - protocol.js, storage.js, release.js : invitation compacte, transactions, téléchargement.
 - releases/ : fichiers générés à publier. Ne pas les éditer à la main.
@@ -73,7 +81,7 @@ précédente et à sa position de lecture. Les sorties sans résumé affichent S
 
 Lorsqu’une nouvelle version du lanceur est téléchargée mais attend encore son activation, l’accueil montre un avis visible demandant de fermer complètement puis de rouvrir VHF GPS avant la prochaine sortie. La sortie active ne change pas de publication. L’accueil vérifie aussi au retour du réseau et lorsqu’il revient au premier plan ; il ne force ni activation ni rechargement.
 
-Le lanceur propose Reprendre et un panneau Préparer ou recevoir une sortie.
+Le lanceur propose directement Reprendre, Préparer une nouvelle sortie et Recevoir une invitation.
 Dans l’application, deux boutons compacts sont placés en haut : Accueil revient
 au lanceur après sauvegarde ; Partager ouvre la modale dans la page actuelle,
 sans navigation et sans perdre les saisies ni les résultats radio. Le partage est
@@ -97,6 +105,11 @@ Une fermeture avant confirmation ne remplace donc pas la sortie précédente.
 Les publications antérieures ont été purgées lors de la remise à zéro.
 Après diffusion d’une invitation, garder les fichiers de sa publication sur le serveur.
 Le générateur conserve les publications et refuse de modifier leurs fichiers existants.
+Il refuse aussi une publication référencée dont le dossier ou un fichier manque :
+une suppression volontaire passe par le menu de **PUBLICATIONS.cmd**.
+Le menu simule les suppressions, demande une confirmation explicite et synchronise
+les métadonnées. Il conserve toujours la publication actuelle et dispose d’un journal
+de restauration si une purge est interrompue. Il ne nettoie aucune copie sur les téléphones.
 Il n’exécute aucune commande Git et ne demande aucune automatisation GitHub.
 
 ## Invitations et sauvegardes
@@ -109,6 +122,10 @@ elle ne peut pas remplacer silencieusement celle déjà en vérification.
 Le code partagé contient l’identifiant de publication et le code de sortie du moteur,
 sans réencoder le message complet. Le résumé lisible figure une seule fois. Le contrôle
 d’intégrité lie ce résumé au code ; le moteur recalcule ensuite PROTO, COMPAT et alias.
+Le résumé tolère les accents Unicode équivalents (NFC), les retours CR/LF et les espaces
+insécables. La casse et les accents restent significatifs : aucune correction de mot
+n’est devinée. Le code n’est pas normalisé. Les anciennes invitations avec leur contrôle
+exact restent lisibles ; rejouer une présentation équivalente conserve la même sortie.
 Ce contrôle détecte les altérations accidentelles ; il n’authentifie pas l’expéditeur.
 Une invitation contient le secret : la partager seulement avec les participants.
 
@@ -143,17 +160,42 @@ Le téléphone Android réel doit être testé ; iPhone reste à valider sur un 
 
 ## Construire et vérifier
 
-Node.js suffit :
+Utiliser Node.js 22 ou plus récent. Pour préparer les fichiers sans les tests navigateur :
 
     node tools/build.cjs
     node tools/build.cjs --check
-    node --test tests/integration.test.cjs
-    node --test tests/release-catalog.test.cjs
-    node --test tests/live-preview.test.cjs
-    node --test tests/catalog-proto6.test.cjs
 
-Les fichiers publiables sont déjà construits. Playwright et Chrome servent uniquement
-aux tests sur ordinateur ; les téléphones n’ont besoin ni de Node ni des fichiers du projet.
+La première fois sur un PC, puis après un changement des dépendances verrouillées :
+
+    npm ci
+    npm run test:install
+
+`package.json` déclare Playwright comme dépendance de développement ; `package-lock.json`
+fixe les versions et leurs empreintes. Le navigateur Chromium est installé par Playwright.
+Aucun chemin Codex ou Chrome Windows n’est utilisé par défaut. L’installation initiale demande
+Internet ; la suite utilise ensuite uniquement les serveurs locaux et les fichiers du projet.
+Sur Linux, des bibliothèques système peuvent aussi être nécessaires : `npx playwright install --with-deps chromium`.
+La [documentation Playwright](https://playwright.dev/docs/browsers) décrit les plateformes prises en charge.
+
+Pour exécuter la suite complète :
+
+    npm test
+
+Cette commande vérifie d’abord les fichiers publiables avec `build.cjs --check`, sans les modifier,
+puis exécute les cinq suites. Si les sources ont changé, préparer la publication avant de valider
+sa distribution. Pour les retouches locales, `npm run test:unit` exécute les trois suites sans
+navigateur et sans exiger une publication synchronisée. `npm run test:browser` exécute les deux
+suites navigateur, précédées de la vérification de la publication.
+
+Option avancée : `VHF_CHROME` peut désigner explicitement un autre exécutable Chrome/Chromium.
+Cela remplace le navigateur verrouillé pour un essai particulier ; laisser cette variable absente
+pour la validation reproductible normale.
+
+`node_modules/` et les résultats de test sont exclus de Git. Conserver `package.json` et
+`package-lock.json` avec le projet. Les tests de génération et de purge utilisent des dossiers
+temporaires : ils ne créent ni ne suppriment de publication du projet.
+Playwright et Chromium servent uniquement aux tests sur ordinateur ; les téléphones n’ont besoin
+ni de Node ni de ces dépendances. Ces changements d’outillage ne demandent aucune nouvelle release.
 Le serveur local est tools/server.cjs : lancer `node tools/server.cjs 8082`, puis ouvrir http://127.0.0.1:8082/.
 
 ## Vérification du 29 septembre 2026

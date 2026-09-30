@@ -1,9 +1,10 @@
 import {showLoading,showPage,applyLoadingTheme,VIEW_KEY} from "./transition.js";
 import {initInstallUI} from "./install.js";
-import {randomId,wrap,unwrap} from "./protocol.js";
+import {initTechnicalInfo} from "./technical-info.js";
+import {randomId,wrap,unwrap,sameInvitationContent} from "./protocol.js";
 import {openStore,read} from "./storage.js";
 import {base,LAUNCH_KEY,ERROR_KEY,network,download,verify,fileURL} from "./release.js";
-const $=id=>document.getElementById(id);let db,busy=true;
+const $=id=>document.getElementById(id);let db,busy=true,technicalInfo;
 applyLoadingTheme();initInstallUI();
 function status(text,kind="info"){$("status").textContent=text;$("status").dataset.kind=kind;if(kind==="error")showPage();}
 let versionRefreshRevision=0;
@@ -36,7 +37,11 @@ async function prepare(imported=null){
   const expected=(await read(db,"active"))?.revision||0;let release,id,known;
   if(imported){
    release=imported.release;id=imported.id;known=await read(db,"outing:"+id);
-   if(known&&(known.envelope.release!==release||known.envelope.content!==imported.content))throw Error("Cette sortie connue ne correspond pas au message reçu.");
+   if(known){
+    if(known.envelope.release!==release||!sameInvitationContent(known.envelope.content,imported.content))throw Error("Cette sortie connue ne correspond pas au message reçu.");
+    // Une ancienne publication retrouve son invitation enregistrée à l'identique.
+    imported={...imported,content:known.envelope.content};
+   }
   }else{const latest=JSON.parse(new TextDecoder().decode(await network(new URL("latest.json",base))));if(latest.format!==2)throw Error("Publication annoncée invalide.");release=latest.release;id=randomId();}
   const manifest=await download(release,known?.manifest);
   enter({id,release,manifest,state:imported&&known?known.state:{},envelope:imported},imported?"import":"create",expected);
@@ -86,6 +91,7 @@ $("confirmDelete").onclick=async()=>{
   if("BroadcastChannel" in window){const channel=new BroadcastChannel("vhfgps-main-state-v1");channel.postMessage(revision);channel.close();}
   $("deleteDialog").close();pendingDeletion=null;$("resume").hidden=true;$("deleteOuting").hidden=true;
   $("resumeZone").textContent="";$("resumeDate").textContent="";
+  technicalInfo?.setOuting(null);
   status("");
  }catch(error){$("deleteError").textContent=error.message;}
  finally{busySet(false);}
@@ -146,6 +152,7 @@ function watchLauncherUpdate(registration){
  refreshLatestVersion();
  db=await openStore();
  const active=await read(db,"active"),hasActive=!!active&&!active.deleted;$("resume").hidden=!hasActive;$("deleteOuting").hidden=!hasActive;
+ technicalInfo=initTechnicalInfo({root:base,outing:hasActive?active:null});
  if(hasActive){
   $("resumeZone").textContent=active.summary?.zoneName||"Sortie enregistrée";
   $("resumeDate").textContent=createdLabel(active);
