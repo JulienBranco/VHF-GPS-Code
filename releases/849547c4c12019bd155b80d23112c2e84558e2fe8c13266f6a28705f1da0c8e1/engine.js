@@ -13,7 +13,7 @@ function resolvedTheme(mode){
   return systemPrefersDark()?"night":"day";
 }
 function applyTheme(mode){
-  const safe=["auto","day","night"].includes(mode)?mode:"auto";
+  const safe=["auto","day","night"].includes(mode)?mode:"day";
   document.documentElement.dataset.theme=resolvedTheme(safe);
   const themeMeta=document.getElementById("themeColorMeta");
   if(themeMeta)themeMeta.content=document.documentElement.dataset.theme==="day"?"#ffffff":"#06131a";
@@ -21,12 +21,11 @@ function applyTheme(mode){
   if(sel)sel.value=safe;
 }
 function initTheme(){
-  const saved=appStorage.getItem(THEME_STORAGE_KEY)||"auto";
+  const saved=appStorage.getItem(THEME_STORAGE_KEY)||"day";
   applyTheme(saved);
 
   const sel=document.getElementById("themeMode");
   if(sel){
-    sel.value=saved;
     sel.addEventListener("change",()=>{
       appStorage.setItem(THEME_STORAGE_KEY,sel.value);
       applyTheme(sel.value);
@@ -36,14 +35,14 @@ function initTheme(){
   if(window.matchMedia){
     const mq=window.matchMedia("(prefers-color-scheme: dark)");
     const refresh=()=>{
-      if((appStorage.getItem(THEME_STORAGE_KEY)||"auto")==="auto")applyTheme("auto");
+      if((appStorage.getItem(THEME_STORAGE_KEY)||"day")==="auto")applyTheme("auto");
     };
     if(mq.addEventListener)mq.addEventListener("change",refresh);
     else if(mq.addListener)mq.addListener(refresh);
   }
 }
 
-const APP_VERSION="3.28.113";
+const APP_VERSION="3.28.114";
 const PROTOCOL_ID="VHF-GPS-PROTO-6";
 
 function protocolShortLabel(){
@@ -2471,7 +2470,7 @@ function hideReceiverReply(){
   $("receiverCorrectionActions").innerHTML="";
 }
 
-function showProvisionalDecodedPosition(lat,lon,metricHtml){
+function showProvisionalDecodedPosition(lat,lon,metricHtml=""){
   resetRelativePosition();
   $("decodedBlock").classList.remove("position-confirmed");
   const pill=$("decodedBlock").querySelector(".protocol-state-pill");
@@ -2490,6 +2489,7 @@ function showProvisionalDecodedPosition(lat,lon,metricHtml){
 
   $("decodedCoords").innerHTML=formatCoordsBoth(lat,lon);
   $("decodedOffset").innerHTML=metricHtml;
+  $("decodedOffset").classList.toggle("hidden",!metricHtml);
   $("decodedCoordsWrap").classList.add("hidden");
   $("revealUnconfirmedCoords").classList.remove("hidden");
   $("decodedBlock").classList.remove("hidden");
@@ -3199,11 +3199,7 @@ async function runDecode(automatic=false){
     const direct=await tryDecode(words,connector,secret,z);if(stale())return;
     if(direct.ok){
       const d=direct.value;
-      showProvisionalDecodedPosition(
-        d.lat,
-        d.lon,
-        `Case #${d.index} — contrôle local 9 bits réussi.`
-      );
+      showProvisionalDecodedPosition(d.lat,d.lon);
       showReceiverReply(
         d.ack,
         "provisional",

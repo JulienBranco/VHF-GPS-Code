@@ -42,7 +42,7 @@ function initTheme(){
   }
 }
 
-const APP_VERSION="3.28.113";
+const APP_VERSION="3.28.114";
 const PROTOCOL_ID="VHF-GPS-PROTO-6";
 
 function protocolShortLabel(){
