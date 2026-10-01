@@ -2310,6 +2310,7 @@ button:focus-visible,
 <link rel="apple-touch-icon" href="../../icons/apple-touch-icon.png">
 <link rel="stylesheet" href="./transition.css">
 <link rel="stylesheet" href="./point-tracking.css">
+<link rel="stylesheet" href="./position-history.css">
 </head>
 <body>
 <div id="loadingScreen" role="status" aria-live="polite"><span class="loading-dot" aria-hidden="true"></span><span>Préparation…</span></div>
@@ -2357,6 +2358,12 @@ button:focus-visible,
       <div class="small">Empreinte radio</div>
       <div class="session-fingerprint" id="fingerprintWords"></div>
     </div>
+
+    <details id="positionHistory">
+      <summary>📋 Historique des positions <span id="positionHistoryCount">0</span></summary>
+      <p id="positionHistoryStatus" role="status" hidden></p>
+      <ul id="positionHistoryList" aria-label="Positions de cette sortie"></ul>
+    </details>
 
   </div>
 

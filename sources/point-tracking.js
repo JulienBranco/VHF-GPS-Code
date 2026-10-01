@@ -1,6 +1,6 @@
 import {distance,bearing,readFix,isFresh,reliable,plausible,guidance,project,distanceLabel,durationLabel,STALE_MS,MAX_ACCURACY} from "./point-tracking-math.js";
 
-// Un seul raccord au moteur : getTarget() fournit uniquement un point confirmé.
+// getTarget() fournit le résultat confirmé ; open(provider) permet un point du journal.
 // Pas de stockage, de secret, d'appel réseau ni de dépendance cartographique.
 export function initPointTracking({getTarget}) {
   const start=document.getElementById("startPointTracking");
@@ -30,7 +30,7 @@ export function initPointTracking({getTarget}) {
           <path id="trackingTrace" class="tracking-trace"/>
           <line id="trackingDirect" class="tracking-direct"/>
           <circle id="trackingAccuracyCircle" class="tracking-accuracy"/>
-          <g id="trackingTarget"><circle r="10" class="tracking-target"/><path d="M -16 0 H 16 M 0 -16 V 16" class="tracking-target" fill="none"/><text x="17" y="-14">Point reçu</text></g>
+          <g id="trackingTarget"><circle r="10" class="tracking-target"/><path d="M -16 0 H 16 M 0 -16 V 16" class="tracking-target" fill="none"/><text id="trackingTargetLabel" x="17" y="-14">Point reçu</text></g>
           <g id="trackingBoat"><path id="trackingBoatArrow" d="M 0 -16 L 11 13 L 0 7 L -11 13 Z" class="tracking-boat"/><circle id="trackingBoatDot" r="7" class="tracking-boat"/><text x="17" y="20">Toi</text></g>
         </g>
         <g transform="translate(560 35)"><path d="M 0 30 V 0 M -5 7 L 0 0 L 5 7" class="tracking-north" fill="none"/><text x="-5" y="-10">N</text></g>
@@ -38,18 +38,18 @@ export function initPointTracking({getTarget}) {
       </svg>
       <div class="tracking-map-controls" role="group" aria-label="Zoom de la vue relative"><button id="trackingZoomIn" type="button" aria-label="Zoomer">＋</button><button id="trackingZoomOut" type="button" aria-label="Dézoomer">−</button><button id="trackingFit" type="button">Cadrer les deux points</button></div>
       <div class="tracking-legend"><span><i class="legend-line" aria-hidden="true"></i>Direction directe</span><span><i class="legend-line legend-trace" aria-hidden="true"></i>Ton déplacement</span><span id="trackingFraming">Cadrage automatique</span></div>
-      <p class="tracking-note">Vue relative — sans carte marine. La ligne directe ne tient pas compte des dangers. Le point reçu reste fixe et représente une cellule de 100 m. L’arrivée est estimée à ton allure et ta direction actuelles.</p>
+      <p id="trackingNote" class="tracking-note">Vue relative — sans carte marine. La ligne directe ne tient pas compte des dangers. Le point enregistré reste fixe ; les échanges radio ont une maille de 100 m. L’arrivée est estimée à ton allure et ta direction actuelles.</p>
       <p id="trackingTargetCoords" class="tracking-note"></p>
     </div>
     <div class="tracking-footer"><button id="stopPointTracking" type="button" class="tracking-close">ARRÊTER LE SUIVI ET FERMER</button></div>`;
   document.body.append(dialog);
   const $=id=>dialog.querySelector("#"+id);
   let running=false,generation=0,watch=null,timer=null,wake=null,wakePending=false;
-  let target=null,fix=null,samples=[],trail=[],gap=true,errorText="",errorKind="warn";
+  let targetProvider=getTarget,target=null,fix=null,samples=[],trail=[],gap=true,errorText="",errorKind="warn";
   let autoFrame=true,camera={x:0,y:0,span:500},drag=null,minFixTime=0;
   const MAX_TRAIL=1000;
   const sameTarget=()=>{
-    const current=getTarget();
+    const current=targetProvider();
     return current && target && current.identity===target.identity && current.lat===target.lat && current.lon===target.lon;
   };
   function status(text,kind="") {
@@ -156,7 +156,7 @@ export function initPointTracking({getTarget}) {
     else if(!fix)status("🛰️ Recherche de ta position GPS…","warn");
     else if(g.reason==="stale")status("⚠️ Position GPS ancienne — estimation suspendue jusqu’au prochain relevé.","warn");
     else if(g.reason==="accuracy")status("⚠️ Précision GPS insuffisante — direction indicative, estimation suspendue.","warn");
-    else if(g.reason==="near")status("✓ À proximité du point reçu, à la précision du GPS et de la cellule de 100 m.");
+    else if(g.reason==="near")status("✓ À proximité du point, à la précision du GPS et de la maille de 100 m.");
     else if(g.reason==="stopped")status("🚤 À l’arrêt ou à faible vitesse — arrivée non estimée.");
     else if(g.reason==="away")status("↗️ Tu t’éloignes du point — arrivée non estimée.","warn");
     else if(g.reason==="across")status("↗️ Déplacement transversal au point — arrivée non estimée.");
@@ -204,21 +204,26 @@ export function initPointTracking({getTarget}) {
   function close() {
     cleanup();if(dialog.open)dialog.close();
   }
-  function open() {
-    if(running || document.body.inert) return;
-    const point=getTarget();
+  function open(provider=getTarget) {
+    if(running || document.body.inert || typeof provider!=="function") return;
+    const point=provider();
     if(!point || !Number.isFinite(point.lat) || Math.abs(point.lat)>90 || !Number.isFinite(point.lon) || Math.abs(point.lon)>180) return;
-    cleanup();target=Object.freeze({...point});running=true;autoFrame=true;camera={x:0,y:0,span:500};gap=true;
-    $("trackingTargetCoords").textContent="🎯 Point reçu : "+coords(target);
+    cleanup();targetProvider=provider;target=Object.freeze({...point});running=true;autoFrame=true;camera={x:0,y:0,span:500};gap=true;
+    const label=point.kind==="generated"?"Point généré":"Point reçu";
+    $("trackingTitle").textContent="🧭 Suivre le "+label.toLocaleLowerCase("fr-FR");
+    $("trackingTargetLabel").textContent=label;
+    $("trackingMapTitle").textContent="Déplacement vers le "+label.toLocaleLowerCase("fr-FR");
+    $("trackingMapDesc").textContent="Vue relative avec le nord en haut, sans carte marine. Le point enregistré reste fixe.";
+    $("trackingTargetCoords").textContent="🎯 "+label+" : "+coords(target);
     $("trackingWakeStatus").textContent="Maintien de l’écran…";
     dialog.showModal();render();beginGps();requestWake();timer=setInterval(render,1000);
   }
-  start.addEventListener("click",open);
+  start.addEventListener("click",()=>open());
   $("closePointTracking").addEventListener("click",close);
   $("stopPointTracking").addEventListener("click",close);
   dialog.addEventListener("cancel",event=>{event.preventDefault();close();});
   dialog.addEventListener("close",()=>{if(!dialog.open)cleanup();});
-  document.addEventListener("vhf-position-reset",close);
+  document.addEventListener("vhf-position-reset",()=>{if(targetProvider===getTarget)close();});
   window.addEventListener("pagehide",close);
   document.addEventListener("visibilitychange",()=>{
     if(!running) return;
@@ -246,5 +251,5 @@ export function initPointTracking({getTarget}) {
     autoFrame=false;camera.x=drag.center.x-dx/drag.pixelScale*drag.center.span/600;camera.y=drag.center.y+dy/drag.pixelScale*drag.center.span/600;render();
   });
   for(const name of ["pointerup","pointercancel","lostpointercapture"])map.addEventListener(name,()=>{drag=null;});
-  return {close};
+  return {close,open};
 }

@@ -35,6 +35,7 @@ sans demander plusieurs désinstallations. Les testeurs peuvent ensuite réinsta
 - sources/app-adapter.js : démarrage, préparation/import et partage de sortie.
 - sources/runtime.js : sauvegarde, reprise et navigation en pleine page.
 - sources/point-tracking.js, point-tracking-math.js et point-tracking.css : suivi GPS facultatif du point confirmé, isolé du moteur radio.
+- sources/position-history.js, position-history-model.js et position-history.css : journal local des points générés et reçus, avec reprise du suivi.
 - transition.js / transition.css : chargement commun et retour à la position de lecture.
 - install.js : bouton d’installation et instructions dans le launcher.
 - boot.js : ouverture de la bonne publication, création et réception initiales.

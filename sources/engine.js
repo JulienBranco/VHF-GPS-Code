@@ -2559,6 +2559,13 @@ function lockFinalConfirmationAttempt(){
   return true;
 }
 
+function recordPositionForHistory(kind,revision,lat,lon,phrase,z){
+  document.dispatchEvent(new CustomEvent("vhf-position-record",{detail:{
+    eventId:kind+"-"+revision,kind,at:Date.now(),lat,lon,phrase,
+    zone:{id:z.id,name:z.name,type:z.builtin?"builtin":z.ephemeral?"ephemeral":"custom",lat:z.lat,lon:z.lon}
+  }}));
+}
+
 function markPositionConfirmed(){
   if(!currentDecodedResult)return;
   hideReceiverCheckReminder();
@@ -2582,6 +2589,8 @@ function markPositionConfirmed(){
   $("relativeLatHem").value=currentDecodedResult.lat>=0?"N":"S";
   $("relativeLonHem").value=currentDecodedResult.lon>=0?"E":"W";
   $("relativePositionBlock").classList.remove("hidden");
+  recordPositionForHistory("received",decodeRevision,currentDecodedResult.lat,currentDecodedResult.lon,
+    phraseText({words:wordInputs.map(input=>displayWord(input.value)),connector:receiverConnector}),selectedZone(recvZone));
 }
 
 function markFinalConfirmationFailed(detail,selectedButton=null){
@@ -2740,6 +2749,7 @@ async function encodeSelectedPosition(){
     debugDetailsReady=true;
     refreshDebugDetails();
 
+    recordPositionForHistory("generated",revision,lat,lon,phrase,z);
     return {z,secret,lat,lon,e,phrase,d,err};
   }catch(e){
     if(revision!==encodeRevision)return null;
@@ -4532,4 +4542,3 @@ setActiveZone(activeZoneId,{refresh:false});
 populateZones();
 initPositionInputUi();
 initZoneCenterInputUi();
-

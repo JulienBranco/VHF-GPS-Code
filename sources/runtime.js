@@ -11,7 +11,7 @@ applyLoadingTheme();
 // Aucun bouton de l’application n’agit avant la vérification et la reprise complètes.
 document.body.inert=true;
 let db,record,mode="resume",expected=0,installed=false,booted=false,stopped=false,dirty=false,scheduled=false,writing=0;
-let state=Object.create(null),chain=Promise.resolve(),pointTracking=null;
+let state=Object.create(null),chain=Promise.resolve(),pointTracking=null,positionHistory=null;
 const broadcast=new BroadcastChannel("vhfgps-main-state-v1");
 async function pruneUnusedReleases(){
  try{
@@ -90,7 +90,7 @@ window.VHFIntegration={
  },
  async navigate(action){
   if(!installed||stopped)return;
-  try{rememberView(record.id);showLoading();persist();await commit();location.replace(new URL("#"+action,root));}catch(error){stop(error);}
+  try{rememberView(record.id);showLoading();await positionHistory?.flush();persist();await commit();location.replace(new URL("#"+action,root));}catch(error){stop(error);}
  },
  cancel:(destination="resume")=>{if(!installed)returnHome(null,destination==="resume"?"resume":"");}
 };
@@ -129,6 +129,16 @@ async function start(){
    console.warn("Module de suivi indisponible",error);
   }
  }else document.getElementById("startPointTracking").hidden=true;
+ try{
+  const {initPositionHistory}=await import("./position-history.js");
+  positionHistory=initPositionHistory({storage,commit,outingId:record.id,
+    canUse:()=>installed&&!stopped,
+    track:pointTracking?getTarget=>pointTracking.open(getTarget):null});
+ }catch(error){
+  const message=document.getElementById("positionHistoryStatus");
+  message.hidden=false;message.textContent="Historique indisponible pour cette ouverture.";
+  console.warn("Module d’historique indisponible",error);
+ }
  initTechnicalInfo({root,outing:record});
  booted=true;checkLauncherUpdate();
  if(installed){await commit();await changedElsewhere();if(!stopped)status("Sortie retrouvée.","success");}
