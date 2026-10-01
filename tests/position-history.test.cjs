@@ -95,12 +95,48 @@ test('journal sauvegardé dans la sortie, reprise hors réseau et suivi sans red
  assert.deepEqual(f.errors,[]);
 });
 
-test('une nouvelle sortie commence vide ; rejouer la même invitation retrouve son journal',async t=>{
+test('nouvelle sortie : ancienne supprimée ; ancienne invitation recréée avec un journal vide',async t=>{
+ const f=await fixture(t),{page}=f;await generated(page);await count(page,1);
+ const invitation=await page.evaluate(async()=>formatOutingInvitation(await activeOutingPayload()));
+ const oldId=await page.evaluate(async()=>{const s=await import('./storage.js');return (await s.read(await s.openStore(),'active')).id;});
+ await page.locator('#backHomeBtn').click();await f.create();await count(page,0);assert.deepEqual(await history(page),[]);
+ assert.equal(await page.evaluate(async id=>{const s=await import('./storage.js');return s.read(await s.openStore(),'outing:'+id);},oldId),undefined);
+ await page.locator('#backHomeBtn').click();await f.ready();await page.locator('#receive').click();await page.locator('#invitation').fill(invitation);await page.locator('#receiveForm button[type=submit]').click();
+ await page.locator('#confirmOutingImport').click();await page.locator('#closeOutingSuccess').click();await count(page,0);
+ assert.deepEqual(await history(page),[]);
+ const keys=await page.evaluate(async()=>{const s=await import('./storage.js'),db=await s.openStore();return new Promise(resolve=>{const req=db.transaction('state').objectStore('state').getAllKeys();req.onsuccess=()=>{resolve(req.result.filter(k=>String(k).startsWith('outing:')));db.close();};});});
+ assert.equal(keys.length,1);
+ assert.deepEqual(f.errors,[]);
+});
+
+
+test('rejouer la sortie encore active conserve son journal et ses réglages',async t=>{
  const f=await fixture(t),{page}=f;await generated(page);await count(page,1);
  const invitation=await page.evaluate(async()=>formatOutingInvitation(await activeOutingPayload())),before=await history(page);
- await page.locator('#backHomeBtn').click();await f.create();await count(page,0);assert.deepEqual(await history(page),[]);
  await page.locator('#backHomeBtn').click();await f.ready();await page.locator('#receive').click();await page.locator('#invitation').fill(invitation);await page.locator('#receiveForm button[type=submit]').click();
- await page.locator('#confirmOutingImport').click();await page.locator('#closeOutingSuccess').click();await count(page,1);
- assert.deepEqual(await history(page),before);await expand(page);assert.equal(await page.locator('.history-entry').count(),1);
+ await page.locator('#confirmOutingImport').click();await page.locator('#closeOutingSuccess').click();await count(page,1);assert.deepEqual(await history(page),before);
+ assert.deepEqual(f.errors,[]);
+});
+
+test('conservation unique et nettoyage des archives héritées ; échec transactionnel sans perte',async t=>{
+ const f=await fixture(t),{page}=f;await generated(page);await count(page,1);await page.evaluate(()=>VHFIntegration.commit());
+ const result=await page.evaluate(async()=>{
+  const s=await import('./storage.js'),db=await s.openStore(),active=await s.read(db,'active');
+  const all=()=>new Promise(resolve=>{const req=db.transaction('state').objectStore('state').getAllKeys();req.onsuccess=()=>resolve(req.result.filter(k=>String(k).startsWith('outing:')));});
+  await new Promise((resolve,reject)=>{const tx=db.transaction('state','readwrite');tx.objectStore('state').put({...active,id:'old'},'outing:old');tx.objectStore('state').put({...active,id:'older'},'outing:older');tx.oncomplete=resolve;tx.onabort=()=>reject(tx.error);});
+  await s.retainActiveOuting(db);const migrated=await all(),unchanged=await s.read(db,'active');
+  const next={...active,id:'b'.repeat(32),envelope:{...active.envelope,id:'b'.repeat(32)},state:{vhfGpsSessionSecretV312:'nouveau-secret'}};
+  // Faire échouer après la suppression des anciens enregistrements : la transaction doit tout restaurer.
+  const original=IDBObjectStore.prototype.delete;let once=true;
+  IDBObjectStore.prototype.delete=function(key){const request=original.call(this,key);if(once&&key==='outing:'+active.id){once=false;this.transaction.abort();}return request;};
+  let rejected=false;
+  try{await s.writeActive(db,next,active.revision,{install:true});}catch{rejected=true;}finally{IDBObjectStore.prototype.delete=original;}
+  const afterFailure=await s.read(db,'active'),known=await s.read(db,'outing:'+active.id),keysAfterFailure=await all();
+  const saved=await s.writeActive(db,next,active.revision,{install:true});const finalKeys=await all(),old=await s.read(db,'outing:'+active.id);
+  db.close();return {migrated,unchanged,active,rejected,afterFailure,known,keysAfterFailure,finalKeys,saved,old};
+ });
+ assert.deepEqual(result.migrated,['outing:'+result.active.id]);assert.deepEqual(result.unchanged,result.active);
+ assert(result.rejected);assert.deepEqual(result.afterFailure,result.active);assert.deepEqual(result.known,result.active);assert.deepEqual(result.keysAfterFailure,result.migrated);
+ assert.deepEqual(result.finalKeys,['outing:'+result.saved.id]);assert.equal(result.old,undefined);
  assert.deepEqual(f.errors,[]);
 });

@@ -2,7 +2,7 @@ import {showLoading,showPage,applyLoadingTheme,VIEW_KEY} from "./transition.js";
 import {initInstallUI} from "./install.js";
 import {initTechnicalInfo} from "./technical-info.js";
 import {randomId,wrap,unwrap,sameInvitationContent,splitContent} from "./protocol.js";
-import {openStore,read} from "./storage.js";
+import {openStore,read,retainActiveOuting} from "./storage.js";
 import {base,LAUNCH_KEY,ERROR_KEY,network,download,verify,fileURL} from "./release.js";
 const $=id=>document.getElementById(id);let db,busy=true,technicalInfo;
 applyLoadingTheme();initInstallUI();
@@ -74,12 +74,12 @@ async function restore(){
 async function prepare(imported=null){
  if(busy)return;showLoading();busySet(true);status("Préparation… La sortie précédente est conservée.");
  try{
-  const expected=(await read(db,"active"))?.revision||0;let release,id,known;
+  const active=await read(db,"active"),expected=active?.revision||0;let release,id,known;
   if(imported){
-   release=imported.release;id=imported.id;known=await read(db,"outing:"+id);
+   release=imported.release;id=imported.id;known=!active?.deleted&&active?.id===id?active:null;
    if(known){
     if(known.envelope.release!==release||!sameInvitationContent(known.envelope.content,imported.content))throw Error("Cette sortie connue ne correspond pas au message reçu.");
-    // Une ancienne publication retrouve son invitation enregistrée à l'identique.
+    // Rejouer la sortie encore active conserve son invitation et son journal.
     imported={...imported,content:known.envelope.content};
    }
   }else{const latest=JSON.parse(new TextDecoder().decode(await network(new URL("latest.json",base))));if(latest.format!==2)throw Error("Publication annoncée invalide.");release=latest.release;id=randomId();}
@@ -228,6 +228,7 @@ async function start(){
  if(!installedInfo.preview&&!/^[a-f0-9]{64}$/.test(document.querySelector('meta[name="vhf-launcher-build"]')?.content||"")){location.reload();return;}
  refreshLatestVersion();
  db=await openStore();
+ await retainActiveOuting(db);
  const active=await read(db,"active"),hasActive=!!active&&!active.deleted;$("resume").hidden=!hasActive;$("deleteOuting").hidden=!hasActive;
  technicalInfo=initTechnicalInfo({root:base,outing:hasActive?active:null});
  if(hasActive)renderOutingDetails(active,"resume");

@@ -145,13 +145,15 @@ exact restent lisibles ; rejouer une présentation équivalente conserve la mêm
 Ce contrôle détecte les altérations accidentelles ; il n’authentifie pas l’expéditeur.
 Une invitation contient le secret : la partager seulement avec les participants.
 
+Une seule sortie est conservée sur le téléphone : une création ou un import remplace la précédente et supprime ses données dans la même transaction que la sauvegarde. Un échec ou une annulation conserve la sortie actuelle. Rejouer son invitation conserve son journal ; rejouer une ancienne sortie la recrée avec un journal vide. Les anciennes archives sont nettoyées au démarrage, sans modifier la sortie active.
+
 Création et import attendent la transaction avant le message de succès.
 La confirmation d’alias à la radio prépare ses nouvelles données, bloque temporairement
 les interactions, attend la sauvegarde, puis rend la zone confirmée et utilisable.
 Un échec de sauvegarde bloque la page ; elle ne présente pas de fausse confirmation.
 Les autres réglages sont enregistrés dès la prochaine microtâche, sans délai de 40 ms.
 Leur écriture reste asynchrone : un arrêt avant son achèvement peut perdre le dernier réglage.
-Les échanges et les positions en cours ne sont pas restaurés.
+Les saisies et les échanges en cours ne sont pas restaurés. Le journal des points générés et reçus après confirmation reste conservé avec la sortie active.
 
 Une autre fenêtre qui modifie l’état bloque l’ancienne vue. Les transactions utilisent
 une révision pour empêcher une préparation devenue obsolète d’écraser la sortie actuelle.
