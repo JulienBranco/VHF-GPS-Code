@@ -34,6 +34,7 @@ sans demander plusieurs désinstallations. Les testeurs peuvent ensuite réinsta
 - sources/engine.js : moteur actif (catalogues, crypto, zones, échange).
 - sources/app-adapter.js : démarrage, préparation/import et partage de sortie.
 - sources/runtime.js : sauvegarde, reprise et navigation en pleine page.
+- sources/point-tracking.js, point-tracking-math.js et point-tracking.css : suivi GPS facultatif du point confirmé, isolé du moteur radio.
 - transition.js / transition.css : chargement commun et retour à la position de lecture.
 - install.js : bouton d’installation et instructions dans le launcher.
 - boot.js : ouverture de la bonne publication, création et réception initiales.

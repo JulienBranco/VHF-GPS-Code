@@ -42,7 +42,7 @@ function initTheme(){
   }
 }
 
-const APP_VERSION="3.28.114";
+const APP_VERSION="3.28.115";
 const PROTOCOL_ID="VHF-GPS-PROTO-6";
 
 function protocolShortLabel(){
@@ -2365,6 +2365,7 @@ function setRelativePositionMode(mode){
 }
 
 function resetRelativePosition(){
+  document.dispatchEvent(new Event("vhf-position-reset"));
   relativePositionRevision++;
   relativeGpsFix=null;
   clearRelativePositionFields();

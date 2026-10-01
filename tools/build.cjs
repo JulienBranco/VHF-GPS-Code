@@ -9,7 +9,7 @@ const engine=read("sources/engine.js");
 const version=engine.match(/const APP_VERSION="([^"]+)"/)[1],protocol=engine.match(/const PROTOCOL_ID="([^"]+)"/)[1];
 const output=new Map(),add=(name,value)=>output.set(name,Buffer.isBuffer(value)?value:Buffer.from(value));
 const files=new Map();
-for(const name of ["app.html","engine.js","app-adapter.js","runtime.js"])files.set(name,Buffer.from(read("sources/"+name)));
+for(const name of ["app.html","engine.js","app-adapter.js","runtime.js","point-tracking.js","point-tracking-math.js","point-tracking.css"])files.set(name,Buffer.from(read("sources/"+name)));
 for(const name of ["protocol.js","storage.js","release.js","transition.js","transition.css","technical-info.js"])files.set(name,Buffer.from(read(name)));
 const manifest={format:2,api:2,version,protocol,files:[...files].map(([name,value])=>({path:name,sha256:hash(value)}))};
 const raw=JSON.stringify(manifest),id=hash(raw);

@@ -1,5 +1,9 @@
 // Pont explicite entre l’interface et la distribution. Aucun remplacement de fonctions au démarrage.
 let preparedInvitation="",preparingOuting=false;
+// Le module de suivi ne reçoit ni secret ni état du protocole.
+window.confirmedTrackingPoint=()=>relativePositionReady() && protocolRuntimeState===PROTOCOL_STATE.OK
+  ? {lat:currentDecodedResult.lat,lon:currentDecodedResult.lon,identity:decodeRevision}
+  : null;
 async function formatOutingInvitation(payload){
  const content=preparedInvitation||await formatRawOutingInvitation(payload);
  return window.VHFIntegration.share(content);

@@ -16,6 +16,7 @@ Garder le terminal ouvert ; Ctrl+C arrête le serveur.
 
 - `sources/app.html` : interface et styles de l’application.
 - `sources/engine.js` : moteur, mots, zones et échanges.
+- `sources/point-tracking.js`, `point-tracking-math.js`, `point-tracking.css` : modale de suivi, calculs locaux et styles isolés.
 - `sources/app-adapter.js` et `sources/runtime.js` : préparation, import, sauvegarde et reprise.
 - `index.html`, `style.css`, `boot.js` : accueil, appelé launcher.
 - `protocol.js`, `storage.js`, `release.js`, `transition.js`, `transition.css`, `technical-info.js` : modules utilisés par le launcher et copiés dans les publications.
@@ -170,3 +171,17 @@ sans rechargement ni perte des saisies. La vérification est relancée au retour
 Après confirmation et sauvegarde d’une nouvelle sortie, créée ou importée, les copies de
 publications inutiles sont retirées. La sortie active et les autres pages ouvertes restent protégées.
 Seule la remise à zéro complète volontaire abandonne les anciennes sorties.
+
+## Suivi du point reçu (module facultatif)
+
+Le bouton « Suivre le point reçu » apparaît dans le résultat après confirmation complète de l’échange radio. La modale démarre un suivi GPS et demande le maintien de l’écran. La fermeture (bouton, Échap/Retour natif ou départ de la page) arrête le suivi et libère le maintien de l’écran. En arrière-plan le GPS est arrêté ; au retour, une nouvelle mesure est exigée avant les estimations. Le maintien de l’écran dépend du téléphone, notamment d’iOS 18.4 ou ultérieur en PWA installée, et peut être refusé ou retiré par le système.
+
+La vue SVG reste au nord, affiche les deux points, une direction directe en pointillés et une trace temporaire. Les boutons +/− et le déplacement tactile passent en cadrage manuel ; « Cadrer les deux points » réactive le cadrage automatique. La trace est limitée à 1 000 points en mémoire et disparaît à la fermeture : aucune donnée de suivi n’est écrite dans le stockage de la sortie. Le point reçu est fixe ; aucun déplacement ultérieur du bateau émetteur n’est connu.
+
+La vitesse est lissée sur les mesures récentes. Si le GPS ne la fournit pas, elle est estimée à partir de déplacements suffisamment grands et espacés. L’arrivée utilise la vitesse de rapprochement vers le point, après plusieurs relevés. Elle est suspendue à faible vitesse, en éloignement, pour un relevé de plus de 20 secondes ou une précision annoncée dépassant 100 m. La proximité tient compte de la cellule de 100 m et de la précision GPS. Les directions sont exprimées par rapport au nord vrai ; la vue ne contient ni carte marine ni calcul de dangers.
+
+Les trois fichiers du module sont inclus dans le manifeste de chaque nouvelle publication, vérifiés et conservés dans son cache avec l’application. Il n’existe aucun appel réseau dans le module. Les calculs et styles sont chargés avec la publication : une mise à jour de l’accueil ne les remplace pas. Aucun changement de PROTO ou COMPAT.
+
+Pour désactiver cette fonctionnalité, passer `POINT_TRACKING_ENABLED` à `false` dans `sources/runtime.js` : le bouton disparaît et le module n’est plus initialisé. Le moteur et le calcul manuel existant continuent de fonctionner. Une erreur d’initialisation du module désactive seulement son bouton. Pour retirer totalement le code plus tard, enlever également le bouton/lien CSS de `sources/app.html`, le raccord `confirmedTrackingPoint` de `sources/app-adapter.js`, l’événement `vhf-position-reset` de `sources/engine.js` et les trois fichiers des listes de `tools/build.cjs` et `tools/live-server.cjs`, puis supprimer les fichiers et tests dédiés. Les publications déjà diffusées restent immuables.
+
+Tests ciblés sans génération : `node --test tests/point-tracking-math.test.cjs tests/point-tracking.test.cjs`. Ils font aussi partie de `npm run test:sources` et de `npm test`. Les tests navigateur vérifient la reprise hors réseau, les fermetures, les callbacks tardifs, la veille, les erreurs GPS, le zoom et la géolocalisation Chromium. Les comportements de mise en veille et de Retour natif restent à confirmer sur de vrais Android/iPhone.

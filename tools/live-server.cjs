@@ -6,6 +6,7 @@ const types={".html":"text/html; charset=utf-8",".js":"text/javascript; charset=
 const releaseFiles=new Map([
  ["app.html","sources/app.html"],["engine.js","sources/engine.js"],
  ["app-adapter.js","sources/app-adapter.js"],["runtime.js","sources/runtime.js"],
+ ...["point-tracking.js","point-tracking-math.js","point-tracking.css"].map(name=>[name,"sources/"+name]),
  ...["protocol.js","storage.js","transition.js","transition.css","technical-info.js"].map(name=>[name,name])
 ]);
 const liveWorker=`"use strict";\nself.addEventListener("install",event=>event.waitUntil(self.skipWaiting()));\nself.addEventListener("activate",event=>event.waitUntil(self.clients.claim()));\nself.addEventListener("fetch",event=>{if(event.request.url.startsWith(self.registration.scope))event.respondWith(fetch(event.request,{cache:"no-store"}));});\n`;

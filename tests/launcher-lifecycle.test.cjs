@@ -29,7 +29,9 @@ async function activeBuild(page){return page.evaluate(async()=>{
  const reg=await navigator.serviceWorker.getRegistration();return new Promise(resolve=>{const channel=new MessageChannel();channel.port1.onmessage=e=>{channel.port1.close();resolve(e.data.build);};reg.active.postMessage({type:"VHF_LAUNCHER_INFO",api:1},[channel.port2]);});
 });}
 async function waitBuild(page,build){await waitAsync(page,async expected=>{
- const reg=await navigator.serviceWorker.getRegistration();if(reg?.active?.state!=="activated")return false;
+ const reg=await navigator.serviceWorker.getRegistration();
+ // Ne pas maintenir l’ancien worker occupé par des requêtes pendant son remplacement.
+ if(reg?.installing||reg?.waiting||reg?.active?.state!=="activated")return false;
  return new Promise(resolve=>{const channel=new MessageChannel();channel.port1.onmessage=e=>{channel.port1.close();resolve(e.data.build===expected);};reg.active.postMessage({type:"VHF_LAUNCHER_INFO",api:1},[channel.port2]);});
 },build);}
 async function create(page){await page.locator("#create").click();await page.locator("#outingBuiltinSelect").selectOption("iroise-brest");await page.locator("#checkOutingCreate").click();await page.locator("#confirmOutingCreate").click();await page.locator("#closeOutingSuccess").click();return active(page);}

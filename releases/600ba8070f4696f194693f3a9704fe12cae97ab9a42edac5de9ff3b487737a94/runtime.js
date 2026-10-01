@@ -1,6 +1,8 @@
 import {showLoading,showPage,rememberView,restoreView,applyLoadingTheme,VIEW_KEY} from "./transition.js";
 import {API,wrap,unwrap,stateCheck,sameInvitationContent} from "./protocol.js";
 import {initTechnicalInfo} from "./technical-info.js";
+// Désactiver ici le suivi expérimental sans toucher au moteur radio.
+const POINT_TRACKING_ENABLED=true;
 import {openStore,read,writeActive} from "./storage.js";
 import {distributionBase,LAUNCH_KEY,ERROR_KEY,verify} from "./release.js";
 const root=distributionBase(),release=location.pathname.split("/releases/")[1]?.split("/")[0];
@@ -9,7 +11,7 @@ applyLoadingTheme();
 // Aucun bouton de l’application n’agit avant la vérification et la reprise complètes.
 document.body.inert=true;
 let db,record,mode="resume",expected=0,installed=false,booted=false,stopped=false,dirty=false,scheduled=false,writing=0;
-let state=Object.create(null),chain=Promise.resolve();
+let state=Object.create(null),chain=Promise.resolve(),pointTracking=null;
 const broadcast=new BroadcastChannel("vhfgps-main-state-v1");
 async function pruneUnusedReleases(){
  try{
@@ -25,7 +27,7 @@ window.addEventListener("online",checkLauncherUpdate);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkLauncherUpdate();});
 setInterval(()=>{if(!document.hidden)checkLauncherUpdate();},300000);
 function status(text,kind="info"){banner.textContent=text;banner.dataset.kind=kind;banner.hidden=kind==="success";}
-function stop(error){showPage();stopped=true;document.body.inert=true;status((error.message||String(error))+" Rouvre VHF GPS pour continuer.","error");banner.style.background="#941c25";}
+function stop(error){pointTracking?.close();showPage();stopped=true;document.body.inert=true;status((error.message||String(error))+" Rouvre VHF GPS pour continuer.","error");banner.style.background="#941c25";}
 function returnHome(error,action=""){
  showLoading();sessionStorage.removeItem(LAUNCH_KEY);sessionStorage.removeItem(ERROR_KEY+"-details");
  if(error){
@@ -117,6 +119,16 @@ async function start(){
   error.diagnostic={expectedVersion:record.manifest.version,expectedProtocol:record.manifest.protocol,loadedVersion:info.version,loadedProtocol:info.protocol};
   throw error;
  }
+ if(POINT_TRACKING_ENABLED){
+  try{
+   const {initPointTracking}=await import("./point-tracking.js");
+   pointTracking=initPointTracking({getTarget:()=>window.confirmedTrackingPoint()});
+  }catch(error){
+   const button=document.getElementById("startPointTracking");
+   button.disabled=true;button.textContent="Suivi GPS indisponible";
+   console.warn("Module de suivi indisponible",error);
+  }
+ }else document.getElementById("startPointTracking").hidden=true;
  initTechnicalInfo({root,outing:record});
  booted=true;checkLauncherUpdate();
  if(installed){await commit();await changedElsewhere();if(!stopped)status("Sortie retrouvée.","success");}

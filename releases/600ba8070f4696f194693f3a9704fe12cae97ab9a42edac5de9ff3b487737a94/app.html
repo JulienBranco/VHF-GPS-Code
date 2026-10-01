@@ -2309,6 +2309,7 @@ button:focus-visible,
 <link rel="manifest" href="../../manifest.webmanifest">
 <link rel="apple-touch-icon" href="../../icons/apple-touch-icon.png">
 <link rel="stylesheet" href="./transition.css">
+<link rel="stylesheet" href="./point-tracking.css">
 </head>
 <body>
 <div id="loadingScreen" role="status" aria-live="polite"><span class="loading-dot" aria-hidden="true"></span><span>Préparation…</span></div>
@@ -2684,6 +2685,7 @@ button:focus-visible,
         <div id="decodedOffset" class="metric"></div>
       </div>
       <div id="relativePositionBlock" class="relative-position hidden">
+        <button type="button" id="startPointTracking" aria-haspopup="dialog" aria-controls="pointTrackingDialog"><span class="tracking-button-icon" aria-hidden="true">🧭</span><span>Suivre le point reçu</span></button>
         <h3>Me situer par rapport au point reçu</h3>
         <p class="small">Entre ta position actuelle ou relève-la avec le GPS du téléphone. Le calcul reste sur cet appareil.</p>
         <div class="position-entry-help">
