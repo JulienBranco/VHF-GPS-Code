@@ -1363,7 +1363,9 @@ select.custom-zone-active{
 
 .app-navigation{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
 .app-navigation>button{width:auto;margin:0;min-height:40px;padding:8px 12px;font-size:.88rem;font-weight:900;border:2px solid #5ca5e9;border-radius:10px;background:#0759a8;color:#fff}
-.app-navigation>#shareOutingBtn{background:rgba(7,89,168,.22);color:#eaf5ff}
+.app-navigation>#backHomeBtn,
+.app-navigation>#shareOutingBtn{background:rgba(7,89,168,.22);border-color:#5ca5e9;color:#eaf5ff}
+:root[data-theme="day"] .app-navigation>#backHomeBtn,
 :root[data-theme="day"] .app-navigation>#shareOutingBtn{background:#e4f1ff;border-color:#0759a8;color:#0759a8}
 .outing-details{margin-top:14px}
 .outing-details>summary{
@@ -2323,7 +2325,7 @@ button:focus-visible,
 </div>
 <header class="app-header"><div class="app-header-inner"><img class="app-brand-icon" src="../../icons/icon-192.png" width="56" height="56" alt=""><h1>VHF GPS Code</h1></div></header>
 <main>
-  <nav class="app-navigation" aria-label="Sortie"><button type="button" id="backHomeBtn">⌂ Accueil</button><button type="button" id="shareOutingBtn" class="hidden" aria-label="Partager la sortie">📤 Partager la sortie</button>
+  <nav class="app-navigation" aria-label="Sortie"><button type="button" id="backHomeBtn"><span aria-hidden="true">🏠</span> Accueil</button><button type="button" id="shareOutingBtn" class="hidden" aria-label="Partager la sortie">📤 Partager la sortie</button>
     <div class="theme-switch">
       <select id="themeMode" aria-label="Affichage : AUTO, JOUR ou NUIT" title="Affichage">
         <option value="auto">AUTO</option>

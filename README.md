@@ -10,6 +10,9 @@ Sa source et ses exports sont décrits dans [icons/README.md](icons/README.md).
 Les icônes adaptatives déclarées dans le manifeste font partie du cache du launcher.
 
 Pour les opérations courantes, lire [DEVELOPPEMENT.md](DEVELOPPEMENT.md).
+Une release seule conserve les anciennes publications. « Release + purge » suit une règle
+de conservation sans reset des téléphones. « Release + reset complet » est une opération
+distincte qui exige une demande explicite ; les effets sont détaillés dans ce guide.
 Double-cliquer sur **PUBLICATIONS.cmd** ouvre le menu local de préparation,
 vérification, affichage et purge des publications. Il utilise Node.js et ne publie rien à ta place.
 
@@ -95,7 +98,7 @@ Les modales de création et de contrôle d’import restent dans leur publicatio
 
 Une publication regroupe tous les fichiers utilisés par la sortie, y compris les modules
 de sauvegarde et de chargement de cette publication. Son identifiant est l’empreinte du
-manifeste. Le bandeau affiche aussi version et huit caractères de cet identifiant.
+manifeste. Le panneau « Informations techniques » affiche la version et huit caractères de cet identifiant.
 Une sortie mémorise cet identifiant. Elle recharge les mêmes fichiers après fermeture,
 même si le lanceur a été mis à jour. Les empreintes de chaque fichier sont vérifiées.
 
@@ -124,10 +127,11 @@ Il n’exécute aucune commande Git et ne demande aucune automatisation GitHub.
 
 ## Invitations et sauvegardes
 
-La modale de validation affiche le même message public que le champ de réception.
-Effacer puis recoller ce message permet de refaire ses contrôles. Une invitation
-différente doit repasser par l’accueil pour sélectionner sa propre publication ;
-elle ne peut pas remplacer silencieusement celle déjà en vérification.
+L’invitation se colle dans la fenêtre de réception de l’accueil. La publication indiquée
+par cette invitation effectue ensuite ses contrôles automatiquement et affiche un résumé
+dans la modale « Confirmer la sortie reçue », sans champ de texte modifiable.
+La sortie active ne change qu’après confirmation et sauvegarde. Pour vérifier une autre
+invitation, annuler et repasser par la réception de l’accueil.
 
 Le code partagé contient l’identifiant de publication et le code de sortie du moteur,
 sans réencoder le message complet. Le résumé lisible figure une seule fois. Le contrôle
@@ -163,10 +167,12 @@ Depuis l’accueil, « Supprimer la sortie active » demande une confirmation. L
 Le navigateur peut évincer les données locales. L’application ne peut pas garantir leur
 conservation après un effacement par l’utilisateur ou le système.
 Les zones personnalisées restent propres à chaque sortie ; pas de catalogue personnel
-global ajouté. Le secret manuel est en lecture seule dans cette architecture.
+global ajouté. Il n’y a plus de réglage manuel du secret dans l’interface ; la session
+est préparée ou installée avec une invitation.
 Les modules partagent l’origine Web : cette isolation fonctionnelle du stockage n’est pas
 une frontière de sécurité contre un script malveillant de la même origine.
-Le téléphone Android réel doit être testé ; iPhone reste à valider sur un appareil réel.
+Les corrections du cycle de mise à jour doivent être revalidées sur de vrais téléphones
+Android et iPhone. Les tests Chromium sur PC ne valident pas les comportements natifs d’iOS.
 
 ## Construire et vérifier
 
@@ -230,15 +236,16 @@ a temporairement contourné son contrôle de la page. Une actualisation de l’a
 Un double-clic sur index.html affiche une explication : l’application doit être servie via
 localhost (PC) ou HTTPS (GitHub Pages), et non ouvert comme fichier.
 Les deux cas font l’objet de tests navigateur dédiés, dont un vrai rechargement
-Chrome avec ignoreCache et controller null avant la reprise.
+Chrome avec ignoreCache, puis reprise sous le contrôle du service worker.
 
 Le lanceur et la publication masquent leur contenu pendant le démarrage, jusqu’à la
 modale prête ou la reprise terminée. L’adresse change encore pour charger la publication.
 Une annulation retrouve la position de lecture de la sortie précédente, dans le même onglet.
-Le bouton Installer et les consignes hors réseau sont réunis dans le lanceur. Dans le
+Le bouton Installer et les instructions d’installation sont réunis dans le lanceur. Dans le
 navigateur, le bouton lance la proposition native si elle a été reçue, sinon affiche les instructions.
 Il est masqué dans une fenêtre standalone ou après appinstalled dans cette page.
 Cela ne constitue pas une détection universelle des installations depuis un navigateur.
 Les tests simulent la proposition native et le mode standalone ; les dialogues réels
 et l’installation iPhone restent à vérifier sur appareil.
-Les publications déjà utilisées pour une sortie restent conservées.
+La préparation d’une publication conserve les précédentes. Leur suppression est volontaire
+et passe par le menu de purge ; elle peut empêcher le téléchargement d’anciennes invitations.

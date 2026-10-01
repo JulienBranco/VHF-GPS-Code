@@ -32,6 +32,28 @@ l’accueil est calculé automatiquement à partir de ses fichiers ; il n’y a 
 numéro de version à gérer. Une mise à jour en attente n’est pas présentée comme déjà installée.
 L’aperçu local affiche « Aperçu local — sources » à la place de cet identifiant.
 
+## Préciser la demande de release, de purge ou de reset
+
+Ces trois demandes ont des effets différents :
+
+| Demande | Publications sur le serveur après commit et push | Données des téléphones |
+| --- | --- | --- |
+| **Prépare une release** | Ajouter la nouvelle publication et conserver les précédentes. | Conserver les sorties enregistrées ; une sortie active garde sa publication. |
+| **Release + purge** | Ajouter la nouvelle publication et retirer les anciennes selon la règle précisée : nombre à garder et/ou date limite. La publication actuelle reste protégée. | Aucun reset. Une sortie complète déjà conservée localement reste utilisable ; une invitation dont la publication a été retirée peut ne plus être installable ou réparable. |
+| **Release + reset complet** | Préparer la nouvelle publication et ne conserver que celle-ci. | Quand le téléphone télécharge et active le nouvel accueil, effacer les sorties enregistrées et les copies locales de publications, puis revenir à l’accueil. Une sortie en cours peut être interrompue. |
+
+**Un reset complet exige une demande explicite.** Une demande de purge, même pour ne
+conserver qu’une publication, ne vaut pas autorisation de réinitialiser les téléphones.
+Si la règle de purge n’est pas précisée et qu’aucune règle n’a été convenue, la clarifier
+avant toute suppression. Les commandes Git restent séparées : aucun commit ni push sans autorisation explicite.
+
+Une publication normale et une purge ordinaire conservent le marqueur de reset existant.
+Chaque reset complet crée un nouveau marqueur ; un téléphone applique son effacement
+une seule fois pour ce marqueur. Hors réseau, il ne reçoit pas encore cette remise à zéro.
+Il n’y a aucune expiration automatique des sessions selon leur âge.
+Le nettoyage automatique des copies inutiles après sauvegarde d’une nouvelle sortie reste
+indépendant de ces demandes et protège la sortie active ainsi que les pages encore ouvertes.
+
 ## Préparer une publication quand les modifications sont terminées
 
 Double-cliquer sur **PUBLICATIONS.cmd**, puis choisir **1 · Préparer une publication**.
@@ -85,8 +107,9 @@ les contrôles du moteur, des publications, des purges et les parcours navigateu
 aucune release dans le projet et n’exécute aucun commit ou push. Les tests de génération et de purge
 travaillent dans des dossiers temporaires isolés.
 
-Pendant les retouches locales, `npm run test:unit` lance les contrôles sans navigateur et n’exige
-pas de nouvelle publication. `npm run test:browser` lance uniquement les parcours navigateur
+Pendant les retouches locales, `npm run test:sources` lance toutes les suites sans exiger
+une nouvelle publication. Les publications de test sont préparées en mémoire.
+`npm run test:unit` lance seulement les contrôles sans navigateur. `npm run test:browser` lance uniquement les parcours navigateur
 et vérifie d’abord la publication préparée. Les tests utilisent le Chromium installé par Playwright,
 sans dépendre de l’emplacement de Chrome sur ton PC ni de Codex.
 
@@ -147,5 +170,3 @@ sans rechargement ni perte des saisies. La vérification est relancée au retour
 Après confirmation et sauvegarde d’une nouvelle sortie, créée ou importée, les copies de
 publications inutiles sont retirées. La sortie active et les autres pages ouvertes restent protégées.
 Seule la remise à zéro complète volontaire abandonne les anciennes sorties.
-
-Pour vérifier les sources sans préparer une publication : `npm run test:sources`.

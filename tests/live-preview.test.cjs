@@ -28,7 +28,8 @@ test("aperçu local : rechargement des sources sans créer une publication",asyn
   await page.locator("#confirmOutingCreate").click();await page.waitForFunction(()=>document.getElementById("testBanner")?.textContent.includes("Sortie enregistrée"));
   await page.locator("#closeOutingSuccess").click();
   const source=fs.readFileSync(path.join(root,"sources/app.html"),"utf8");
-  host.state.overrides.set("/sources/app.html",Buffer.from(source.replace("⌂ Accueil</button>","⌂ Accueil modifié</button>")));
+  const edited=source.replace(" Accueil</button>"," Accueil modifié</button>");assert.notEqual(edited,source);
+  host.state.overrides.set("/sources/app.html",Buffer.from(edited));
   host.state.overrides.set("/sources/engine.js",Buffer.from(fs.readFileSync(path.join(root,"sources/engine.js"),"utf8")+"\nwindow.__liveEngineEditSeen=true;\n"));
   await page.reload();await page.waitForFunction(()=>document.getElementById("testBanner")?.textContent.includes("Sortie retrouvée"));
   assert.match(await page.locator("#backHomeBtn").innerText(),/Accueil modifié/);
