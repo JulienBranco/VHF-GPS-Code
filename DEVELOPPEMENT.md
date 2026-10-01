@@ -104,7 +104,7 @@ Le choix **4** propose quatre règles :
 1. Garder les X dernières, avec au moins une publication.
 2. Supprimer avant une date, en heure de Paris. Une publication du jour choisi est conservée.
 3. Garder les X dernières **et** toutes celles depuis une date : l’un ou l’autre suffit à conserver une publication.
-4. Générer les sources actuelles et ne conserver que cette publication.
+4. Remise à zéro complète : générer les sources actuelles, ne conserver que cette publication et abandonner les anciennes sorties sur les téléphones qui recevront la mise à jour.
 
 La publication actuelle est toujours protégée. Les publications dont la date de création
 est inconnue sont conservées par une règle de date ; la liste le signale.
@@ -119,8 +119,10 @@ Les catalogues, `latest.json` et `sw.js` sont mis à jour ensemble, puis vérifi
 
 La purge agit d’abord sur le projet local. Elle arrive sur GitHub Pages après ton commit et ton push.
 Les invitations des publications retirées ne permettront plus leur téléchargement ou leur réparation
-depuis le serveur. Les sorties actives et les copies déjà stockées sur les téléphones ne sont pas effacées.
-Ne garder que la publication actuelle remet à zéro l’historique du serveur, pas les données des utilisateurs.
+depuis le serveur. Une purge ordinaire préserve les sorties actives des téléphones.
+La quatrième règle remet aussi à zéro les données des téléphones lorsqu’ils téléchargent
+le nouvel accueil avec du réseau. Un marqueur conservé dans releases.json évite de répéter
+cet effacement aux réouvertures. Prévenir les testeurs avant de publier une remise à zéro complète.
 
 En cas d’échec pendant la purge, l’outil restaure les dossiers et les métadonnées.
 S’il est fermé brutalement, rouvrir **PUBLICATIONS.cmd** : le journal permet de restaurer
@@ -138,7 +140,12 @@ L’icône ouvre le launcher. Il propose de reprendre, préparer ou recevoir une
 - Préparer consulte `latest.json` avec Internet.
 - Recevoir suit la publication indiquée par l’invitation ; ce peut être une ancienne publication.
 
-Le launcher a son propre mécanisme de mise à jour. Une nouvelle version téléchargée peut
-attendre la fermeture de ses fenêtres ; l’accueil affiche alors un avis.
-La publication d’une sortie active reste la même. Les copies des publications sur les
-téléphones ne sont pas purgées par ces outils.
+Le launcher se télécharge entièrement et vérifie ses fichiers avant de s’activer.
+L’accueil ouvert s’actualise automatiquement, en conservant une invitation collée ;
+une préparation en cours termine d’abord. La page d’une sortie active reste sur sa publication,
+sans rechargement ni perte des saisies. La vérification est relancée au retour du réseau et au premier plan.
+Après confirmation et sauvegarde d’une nouvelle sortie, créée ou importée, les copies de
+publications inutiles sont retirées. La sortie active et les autres pages ouvertes restent protégées.
+Seule la remise à zéro complète volontaire abandonne les anciennes sorties.
+
+Pour vérifier les sources sans préparer une publication : `npm run test:sources`.

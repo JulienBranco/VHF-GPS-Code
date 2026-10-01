@@ -61,8 +61,9 @@ function planPurge(root,{mode,keep,before}={}){
   if(mode==="before"||mode==="combined")retain ||= !row.createdAt||parisDay(row.createdAt)>=before;
   (retain?retained:removed).push(row);
  }
- const prepared=prepareBuild(root,{now,excludedReleases:removed.map(row=>row.release)});
- return {root,mode,now,current,prepared,removed,retained,signature:signature(current)};
+ const resetId=mode==="reset"?crypto.randomBytes(16).toString("hex"):null;
+ const prepared=prepareBuild(root,{now,excludedReleases:removed.map(row=>row.release),resetId});
+ return {root,mode,now,current,prepared,removed,retained,resetId,signature:signature(current)};
 }
 function recoverPurge(root){
  root=fs.realpathSync(root);
@@ -97,7 +98,7 @@ function executePurge(plan,{afterMove}={}){
  if(fs.existsSync(path.join(root,BACKUP)))throw Error("Une autre purge est en cours ou attend sa restauration.");
  const fresh=prepareBuild(root,{now});
  if(signature(fresh)!==plan.signature)throw Error("Les sources ou le catalogue ont changé depuis la simulation. Recommence la purge.");
- const prepared=prepareBuild(root,{now,excludedReleases:removed.map(row=>row.release)});
+ const prepared=prepareBuild(root,{now,excludedReleases:removed.map(row=>row.release),resetId:plan.resetId});
  return commitPrepared(root,prepared,removed,{afterMove});
 }
 function executePublication(prepared){

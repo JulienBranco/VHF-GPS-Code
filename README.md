@@ -18,15 +18,12 @@ vérification, affichage et purge des publications. Il utilise Node.js et ne pub
 Le dépôt à sa racine contient l’application distribuable et ses icônes.
 La génération utilise uniquement les fichiers de ce dépôt.
 Adresse : https://julienbranco.github.io/VHF-GPS-Code/
-L’icône installée s’appelle VHF GPS. L’accueil présente les instructions d’installation et de vérification hors réseau.
+L’icône installée s’appelle VHF GPS. L’accueil présente le bouton d’installation et les étapes adaptées au téléphone.
 
-La remise à zéro du 29 septembre conserve une seule publication et utilise une
-nouvelle base locale. Les invitations de l’ancienne application ne sont pas compatibles.
-Les anciennes icônes installées ne sont pas prises en charge : demander aux testeurs
-de les désinstaller et de réinstaller l’application depuis la nouvelle adresse avec du réseau.
-Le nouveau service worker supprime les anciens caches. Les anciennes données du navigateur
-ne sont pas effacées, mais ne sont pas reprises dans la nouvelle sortie.
-Après une première diffusion réelle, conserver les publications distribuées.
+Les invitations de l’ancienne application monolithique ne sont pas compatibles.
+L’ancienne adresse vhf_gps_code.html permet de retrouver l’accueil ; aucune ancienne
+session n’est importée. Le nouveau worker débloque aussi une ancienne page restée en cache,
+sans demander plusieurs désinstallations. Les testeurs peuvent ensuite réinstaller la nouvelle icône.
 
 ## Où modifier quoi
 
@@ -79,7 +76,13 @@ en ligne ; Recevoir suit la publication de l’invitation. Annuler la saisie d�
 reprendre automatiquement la sortie. Une création annulée revient à la sortie
 précédente et à sa position de lecture. Les sorties sans résumé affichent Sortie enregistrée ; leur date est lue depuis leur état.
 
-Lorsqu’une nouvelle version du lanceur est téléchargée mais attend encore son activation, l’accueil montre un avis visible demandant de fermer complètement puis de rouvrir VHF GPS avant la prochaine sortie. La sortie active ne change pas de publication. L’accueil vérifie aussi au retour du réseau et lorsqu’il revient au premier plan ; il ne force ni activation ni rechargement.
+Une nouvelle version de l’accueil est téléchargée et vérifiée entièrement avant activation.
+L’accueil s’actualise automatiquement quand aucune préparation ni installation n’est en cours ;
+le texte collé et la fenêtre de réception sont conservés. Ses fichiers restent ceux d’un même
+accueil jusqu’à son actualisation, même si le worker a déjà changé.
+Les pages de sortie ne sont pas rechargées : leur publication et leurs saisies restent inchangées.
+La vérification a lieu à l’ouverture, au retour du réseau, au retour au premier plan et toutes
+les cinq minutes pendant l’utilisation. En arrière-plan, le système peut suspendre JavaScript.
 
 Le lanceur propose directement Reprendre, Préparer une nouvelle sortie et Recevoir une invitation.
 Dans l’application, deux boutons compacts sont placés en haut : Accueil revient
@@ -109,7 +112,14 @@ Il refuse aussi une publication référencée dont le dossier ou un fichier manq
 une suppression volontaire passe par le menu de **PUBLICATIONS.cmd**.
 Le menu simule les suppressions, demande une confirmation explicite et synchronise
 les métadonnées. Il conserve toujours la publication actuelle et dispose d’un journal
-de restauration si une purge est interrompue. Il ne nettoie aucune copie sur les téléphones.
+de restauration si une purge est interrompue.
+Une purge ordinaire retire seulement les fichiers du serveur. Le choix de remise à zéro
+complète change aussi un marqueur dans releases.json : les téléphones qui téléchargent cet
+accueil abandonnent alors les sorties et copies de publications précédentes, une seule fois.
+Cette opération est volontaire ; une publication ordinaire conserve ce marqueur.
+Après chaque nouvelle sortie sauvegardée, créée ou importée, le téléphone retire les copies
+de publications inutiles. La sortie active, les pages encore ouvertes et les téléchargements
+en cours sont protégés. Le nettoyage ne commence pas avant la confirmation et la sauvegarde.
 Il n’exécute aucune commande Git et ne demande aucune automatisation GitHub.
 
 ## Invitations et sauvegardes
@@ -182,10 +192,13 @@ Pour exécuter la suite complète :
     npm test
 
 Cette commande vérifie d’abord les fichiers publiables avec `build.cjs --check`, sans les modifier,
-puis exécute les cinq suites. Si les sources ont changé, préparer la publication avant de valider
-sa distribution. Pour les retouches locales, `npm run test:unit` exécute les trois suites sans
-navigateur et sans exiger une publication synchronisée. `npm run test:browser` exécute les deux
+puis exécute toutes les suites. Si les sources ont changé, préparer la publication avant de valider
+sa distribution. Pour les retouches locales, `npm run test:unit` exécute les suites sans
+navigateur et sans exiger une publication synchronisée. `npm run test:browser` exécute les
 suites navigateur, précédées de la vérification de la publication.
+
+Pour tester les sources sans créer de release, lancer `npm run test:sources`.
+Les tests de navigateur préparent leurs publications en mémoire et ne modifient pas releases/.
 
 Option avancée : `VHF_CHROME` peut désigner explicitement un autre exécutable Chrome/Chromium.
 Cela remplace le navigateur verrouillé pour un essai particulier ; laisser cette variable absente
@@ -198,26 +211,22 @@ Playwright et Chromium servent uniquement aux tests sur ordinateur ; les télép
 ni de Node ni de ces dépendances. Ces changements d’outillage ne demandent aucune nouvelle release.
 Le serveur local est tools/server.cjs : lancer `node tools/server.cjs 8082`, puis ouvrir http://127.0.0.1:8082/.
 
-## Vérification du 29 septembre 2026
+## Vérification du cycle de mise à jour
 
-Les 3 contrôles du catalogue passent : dates stables à la reconstruction, nouvelle
-publication répertoriée sans altérer les anciennes, date inconnue pour les anciens
-essais et refus d’un catalogue obsolète ou d’un manifeste altéré.
-
-36 tests d’intégration Chrome passent : échange radio complet, COMPAT et alias identiques,
-zones éphémères, isolation des anciennes données locales, copie, GPS simulé, partage natif simulé,
-mobile 390 px, reprises hors réseau, cache absent/réparation, écritures abandonnées,
-fenêtres concurrentes, altération du code ou du résumé, nouvelle publication disponible,
-confirmation radio avant/après acquittement et échec de sa sauvegarde.
-Un nouveau lanceur est installé en attente, puis Chrome entièrement fermé et rouvert
-hors réseau : la publication et la session restent celles de la sortie. Le même test
-vérifie que le cache d’une publication plus ancienne n’est pas supprimé.
+Les tests couvrent la reprise depuis le vrai worker 3.28.102 sous le chemin GitHub Pages,
+l’actualisation automatique d’un simple onglet avec invitation collée, la mise à jour pendant
+une préparation et pendant une sortie, puis la réouverture hors réseau.
+Une publication serveur incohérente est refusée sans perdre l’accueil précédent.
+La remise à zéro explicite, le refus des écritures obsolètes et le nettoyage des copies
+inutiles sont vérifiés, avec protection de la sortie active et des autres pages ouvertes.
+Les suites vérifient aussi l’échange radio complet, chaque zone intégrée, les invitations,
+la sauvegarde durable des confirmations et les erreurs de téléchargement.
 Le GPS et le partage simulés ne valident pas les permissions et dialogues natifs du téléphone.
 
 Les cinq contrôles des catalogues PROTO 6 sont adaptés à la source actuelle. Les anciens tests liés aux écrans et au stockage monolithiques ne sont pas repris tels quels ; la suite Chrome couvre le parcours actuel et vérifie aussi chaque zone intégrée.
 
 Le démarrage vérifie l’activation de son inscription de service worker, même si Ctrl+F5
-a temporairement contourné son contrôle de la page. Il ne force aucune mise à jour.
+a temporairement contourné son contrôle de la page. Une actualisation de l’accueil ne remplace jamais la publication d’une sortie, sauf remise à zéro complète explicite.
 Un double-clic sur index.html affiche une explication : l’application doit être servie via
 localhost (PC) ou HTTPS (GitHub Pages), et non ouvert comme fichier.
 Les deux cas font l’objet de tests navigateur dédiés, dont un vrai rechargement

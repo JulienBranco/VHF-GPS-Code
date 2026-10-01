@@ -13,7 +13,7 @@ async function main(){
  const cli=readline.createInterface({input:process.stdin,output:process.stdout});
  const ask=async text=>(await cli.question(text)).trim();
  try{
-  console.log("\nVHF GPS — gestion locale des publications\nAucun commit, push ou nettoyage des téléphones.\n");
+  console.log("\nVHF GPS — gestion locale des publications\nAucun commit ni push automatique.\n");
   while(true){
    console.log("1 · Préparer une publication\n2 · Vérifier la publication et les métadonnées\n3 · Afficher les publications\n4 · Simuler puis confirmer une purge\n0 · Quitter");
    const action=await ask("Choix : ");
@@ -49,7 +49,7 @@ async function main(){
      const catalog=JSON.parse(fs.readFileSync(path.join(root,"releases.json"),"utf8"));
      for(const row of catalog.releases)console.log((row.release===catalog.latest?"ACTUELLE · ":"           ")+describe(row));
     }else if(action==="4"){
-     console.log("1 · Garder les X dernières\n2 · Supprimer avant une date\n3 · Garder les X dernières ET toutes celles depuis une date\n4 · Générer les sources actuelles et ne garder que cette publication\n0 · Annuler");
+     console.log("1 · Garder les X dernières\n2 · Supprimer avant une date\n3 · Garder les X dernières ET toutes celles depuis une date\n4 · Remise à zéro complète : ne garder que la publication actuelle\n0 · Annuler");
      const choice=await ask("Règle : "),mode={"1":"keep","2":"before","3":"combined","4":"reset"}[choice];
      if(!mode){console.log("Annulé.");continue;}
      const keep=["keep","combined"].includes(mode)?Number(await ask("Nombre minimum à garder : ")):undefined;
@@ -58,7 +58,9 @@ async function main(){
      console.log("\nCONSERVÉES :");for(const row of plan.retained)console.log("  "+describe(row));
      console.log("SUPPRIMÉES :");for(const row of plan.removed)console.log("  "+describe(row));
      if(!plan.removed.length&&mode!=="reset"){console.log("Aucune publication à supprimer.");continue;}
-     console.log("\nLes invitations des publications supprimées ne pourront plus être téléchargées après ton push.\nLes données des téléphones et leurs sorties actives ne sont pas effacées.");
+     if(mode==="reset")console.log("\nREMIS À ZÉRO : les sessions et copies locales seront abandonnées sur les téléphones qui recevront cette version avec du réseau.");
+     console.log("\nLes invitations des publications supprimées ne pourront plus être téléchargées après ton push.");
+     if(mode!=="reset")console.log("Les sorties actives des téléphones restent conservées.");
      if(await ask("Appliquer cette purge locale ? Tape SUPPRIMER : ")!=="SUPPRIMER"){console.log("Simulation uniquement : aucun fichier modifié.");continue;}
      const prepared=executePurge(plan);
      console.log("Purge terminée : "+plan.removed.length+" publication(s) supprimée(s). Catalogue, latest.json et sw.js synchronisés.\nPublication actuelle : v"+prepared.version+" · "+prepared.id.slice(0,12)+".\nExamine les changements avant ton commit et ton push.");

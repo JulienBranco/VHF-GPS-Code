@@ -113,3 +113,14 @@ test("redémarrage après validation : nettoyage de la sauvegarde sans restaurer
  fs.writeFileSync(path.join(backup,"journal.json"),JSON.stringify({format:1,committed:true,removed:[ids[0]],newRelease:null,meta}));
  assert.equal(recoverPurge(root),"completed");check(root,[ids[3]]);
 });
+
+
+test("remise à zéro explicite : nouveau marqueur, publication identique et marqueur conservé par les opérations ordinaires",t=>{
+ const root=fixture(t),id=build(root,"98.1.0","2026-10-01T12:00:00Z");
+ const plan=planPurge(root,{mode:"reset"});assert.match(plan.resetId,/^[a-f0-9]{32}$/);
+ assert.equal(plan.prepared.id,id);executePurge(plan);
+ const marker=JSON.parse(fs.readFileSync(path.join(root,"releases.json"))).reset;assert.equal(marker,plan.resetId);
+ executePublication(prepareBuild(root));assert.equal(JSON.parse(fs.readFileSync(path.join(root,"releases.json"))).reset,marker);
+ const ordinary=planPurge(root,{mode:"keep",keep:1});executePurge(ordinary);assert.equal(JSON.parse(fs.readFileSync(path.join(root,"releases.json"))).reset,marker);
+ const again=planPurge(root,{mode:"reset"});assert.notEqual(again.resetId,marker);executePurge(again);check(root,[id]);
+});

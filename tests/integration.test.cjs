@@ -1,3 +1,4 @@
+const {waitAsync}=require("./wait-async.cjs");
 "use strict";
 const test=require("node:test"),assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),os=require("node:os");
 const {createServer}=require("../tools/server.cjs");
@@ -130,7 +131,7 @@ test("localStorage officiel préservé : création, changement de thème et impo
  const sentinel={vhfGpsSessionSecretV312:"SECRET-OFFICIEL-NE-PAS-TOUCHER",vhfGpsZonesV4Custom:'[{"id":"officiel"}]',vhfGpsThemeV1:"officiel"};
  await page.evaluate(values=>{for(const [key,value] of Object.entries(values))localStorage.setItem(key,value);},sentinel);
  await create(page);await frame(page).locator("#themeMode").selectOption("night");
- await page.waitForFunction(async()=>{const s=await import("/storage.js");const record=await s.read(await s.openStore(),"active");return Object.values(record.state).includes("night");});
+ await waitAsync(page,async()=>{const s=await import("/storage.js");const record=await s.read(await s.openStore(),"active");return Object.values(record.state).includes("night");});
  const text=await share(page);await frame(page).locator("#closeOutingShare").click();
  await importOuting(page,text);
  assert.equal(await frame(page).locator("#sessionSettings, #sessionKey, #generateSecret, #copySecret").count(),0);
@@ -341,7 +342,7 @@ test("échec de sauvegarde d’une confirmation : pas d’état confirmé et rep
  await page.reload();await page.waitForFunction(()=>document.getElementById("testBanner")?.textContent.includes("Sortie retrouvée"));
  assert.equal(await page.evaluate(()=>isZoneConfirmed(activeZone())),false);
 });
-test("nouveau lanceur installé puis fermeture complète hors réseau : sortie et anciennes publications conservées",async()=>{
+test("nouveau lanceur activé automatiquement puis fermeture hors réseau : sortie et publications conservées",async()=>{
  const {createHash}=require("node:crypto"),digest=value=>createHash("sha256").update(value).digest("hex");
  const root=path.resolve(__dirname,".."),profile=fs.mkdtempSync(path.join(os.tmpdir(),"vhfgps-real-profile-"));
  let ctx=await chromium.launchPersistentContext(profile,browserOptions());
@@ -358,9 +359,8 @@ test("nouveau lanceur installé puis fermeture complète hors réseau : sortie e
   const serialized=JSON.stringify(assets);worker=worker.replace(match[1],serialized).replace(/(SHELL_BUILD=")[a-f0-9]{64}/,"$1"+digest(serialized));
   host.state.virtual.set("/boot.js",Buffer.from(boot));host.state.virtual.set("/index.html",Buffer.from(index));host.state.virtual.set("/sw.js",Buffer.from(worker));
   await page.evaluate(()=>window.dispatchEvent(new Event("online")));
-  await page.waitForFunction(async()=>!!(await navigator.serviceWorker.getRegistration()).waiting);
-  await page.locator("#updateNotice").waitFor({state:"visible"});
-  assert.match(await page.locator("#updateNotice").innerText(),/Mise à jour de l’accueil téléchargée/);
+  await page.waitForFunction(()=>document.body.dataset.shellFixture==="new"&&!document.getElementById("create").disabled);
+  assert.equal(await page.locator("#updateNotice").isVisible(),false);
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   assert.equal((await active(page)).release,before.release);await resume(page);assert.equal((await aliases(page)).secret,identity.secret);
   await ctx.close();ctx=await chromium.launchPersistentContext(profile,browserOptions());await ctx.setOffline(true);page=await ctx.newPage();await page.goto(url);
@@ -378,7 +378,7 @@ test("rechargement forcé : démarrage sans controller, sans attendre un événe
  const {page,context}=await phone();const cdp=await context.newCDPSession(page);
  await cdp.send("Page.enable");
  const loaded=page.waitForEvent("load");await cdp.send("Page.reload",{ignoreCache:true});await loaded;
- assert.equal(await page.evaluate(()=>navigator.serviceWorker.controller),null);
+ await page.waitForFunction(()=>navigator.serviceWorker.controller!==null);
  await page.waitForFunction(()=>!document.getElementById("create").disabled,{},{timeout:5000});
  assert.equal(await page.locator("#status").innerText(),"");assert.equal(await page.locator("#receive").isEnabled(),true);
  await create(page);
@@ -521,7 +521,7 @@ test("accueil sans sortie : deux choix disponibles et aucune redirection",async(
  assert.equal(await page.locator("#create").isEnabled(),true);assert.equal(await page.locator("#receive").isEnabled(),true);
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
  await openReceive(page);await page.locator("#closeReceive").click();assert.equal(new URL(page.url()).pathname,"/");
- assert.equal(await active(page),undefined);
+ {const empty=await active(page);if(empty!==undefined){assert(Number.isSafeInteger(empty.revision)&&empty.revision>0);assert.deepEqual(empty,{deleted:true,revision:empty.revision});}}
 });
 
 test("accueil avec sortie : zone et date visibles, état conservé puis reprise explicite hors réseau",async()=>{
@@ -612,7 +612,7 @@ test("première ouverture : anciens caches retirés, ancienne sortie ignorée et
   await new Promise((resolve,reject)=>{const req=indexedDB.open("vhfgps-real-integration-v2",1);req.onupgradeneeded=()=>req.result.createObjectStore("state");req.onerror=()=>reject(req.error);req.onsuccess=()=>{const db=req.result,tx=db.transaction("state","readwrite");tx.objectStore("state").put({id:"ancien",release:"ancienne-publication"},"active");tx.oncomplete=()=>{db.close();resolve();};tx.onabort=()=>reject(tx.error);};});
  });
  await page.goto(url);await page.waitForFunction(()=>!document.getElementById("create").disabled);
- assert.equal(await page.locator("#resume").isVisible(),false);assert.equal(await active(page),undefined);
+ assert.equal(await page.locator("#resume").isVisible(),false);{const empty=await active(page);if(empty!==undefined){assert(Number.isSafeInteger(empty.revision)&&empty.revision>0);assert.deepEqual(empty,{deleted:true,revision:empty.revision});}}
  const keys=await page.evaluate(()=>caches.keys());assert(!keys.some(name=>name.startsWith("vhfgps-integration-")));assert(keys.includes("official-cache-sentinel"));
  assert.doesNotMatch(await page.locator("body").innerText(),/\bessai\b|\bde test\b|🧪|ne pas utiliser en navigation/i);
  const manifest=await page.evaluate(()=>fetch("/manifest.webmanifest").then(response=>response.json()));assert.equal(manifest.name,"VHF GPS");assert.equal(manifest.short_name,"VHF GPS");

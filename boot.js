@@ -47,7 +47,7 @@ async function refreshLatestVersion(){
  if(!navigator.onLine)return;
  try{showCatalogVersion(JSON.parse(new TextDecoder().decode(await network(url))),revision);}catch{}
 }
-function busySet(value){busy=value;$("create").disabled=busy;$("receive").disabled=busy;$("resume").disabled=busy;$("deleteOuting").disabled=busy;$("confirmDelete").disabled=busy;$("cancelDelete").disabled=busy;$("receiveForm").querySelector("button[type=submit]").disabled=busy;}
+function busySet(value){busy=value;if(!value)applyLauncherUpdate();$("create").disabled=busy;$("receive").disabled=busy;$("resume").disabled=busy;$("deleteOuting").disabled=busy;$("confirmDelete").disabled=busy;$("cancelDelete").disabled=busy;$("receiveForm").querySelector("button[type=submit]").disabled=busy;}
 function dateLabel(value,label){const time=Number(value||0);return Number.isFinite(time)&&time>0&&Number.isFinite(new Date(time).getTime())?label+new Date(time).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"}):"";}
 function createdLabel(record){return dateLabel(record.summary?.createdAt||record.state?.vhfGpsSessionCreatedAtV312,"Créée le ");}
 function sessionFingerprintLabel(record){
@@ -174,26 +174,58 @@ function waitForInstalledWorker(registration){
   registration.addEventListener("updatefound",check);check();
  });
 }
+const DRAFT_KEY="vhfgps-main-launcher-draft-v1";
+let launcherUpdateReady=false,refreshingLauncher=false;
+function applyLauncherUpdate(){
+ if(!launcherUpdateReady||busy||refreshingLauncher)return;
+ refreshingLauncher=true;
+ // Une actualisation conserve le texte collé, y compris si la fenêtre de réception est ouverte.
+ sessionStorage.setItem(DRAFT_KEY,JSON.stringify({invitation:$("invitation").value,receive:$("receiveDialog").open,technical:$("technicalInfo")?.open===true}));
+ showLoading();location.reload();
+}
+function workerInfo(worker){return new Promise((resolve,reject)=>{
+ const channel=new MessageChannel(),timer=setTimeout(()=>finish(Error("Accueil indisponible")),3000);
+ function finish(error,value){clearTimeout(timer);channel.port1.close();channel.port2.close();error?reject(error):resolve(value);}
+ channel.port1.onmessage=event=>finish(null,event.data);
+ try{worker.postMessage({type:"VHF_LAUNCHER_INFO",api:1},[channel.port2]);}catch(error){finish(error);}
+});}
 function watchLauncherUpdate(registration){
- const seen=new WeakSet();
- const refresh=()=>{$("updateNotice").hidden=!(registration.active&&registration.waiting);};
- const watchInstalling=()=>{
+ let revision=0;const seen=new WeakSet();
+ async function check(){
+  registration.waiting?.postMessage({type:"VHF_LAUNCHER_ACTIVATE",api:1});
+  // Ne pas interroger l’ancien worker pendant son remplacement.
+  if(registration.installing||registration.waiting)return;
+  const request=++revision,worker=registration.active;
+  if(worker?.state!=="activated")return;
+  try{
+   const info=await workerInfo(worker);
+   if(request!==revision||info.preview)return;
+   const loaded=document.querySelector('meta[name="vhf-launcher-build"]')?.content;
+   if(/^[a-f0-9]{64}$/.test(info.build)&&info.build!==loaded){
+    launcherUpdateReady=true;$("updateNotice").hidden=false;applyLauncherUpdate();
+   }
+  }catch{}
+ }
+ function watch(){
   const worker=registration.installing;
-  if(worker&&!seen.has(worker)){
-   seen.add(worker);
-   worker.addEventListener("statechange",()=>{refresh();if(worker.state==="installed")setTimeout(refresh,0);});
-  }
-  refresh();
- };
- registration.addEventListener("updatefound",watchInstalling);
- navigator.serviceWorker.addEventListener("controllerchange",refresh);
- window.addEventListener("online",()=>{registration.update().catch(()=>{});refreshLatestVersion();});
- document.addEventListener("visibilitychange",()=>{if(!document.hidden){registration.update().catch(()=>{});refreshLatestVersion();}});
- watchInstalling();registration.update().catch(()=>{});
-}async function start(){
+  if(worker&&!seen.has(worker)){seen.add(worker);worker.addEventListener("statechange",()=>{if(worker.state==="installed")worker.postMessage({type:"VHF_LAUNCHER_ACTIVATE",api:1});check();});}
+  check();
+ }
+ registration.addEventListener("updatefound",watch);
+ navigator.serviceWorker.addEventListener("controllerchange",check);
+ navigator.serviceWorker.addEventListener("message",event=>{if(event.data?.type==="VHF_LAUNCHER_UPDATED"&&event.data.api===1)check();});
+ function update(){if(navigator.onLine){registration.update().catch(()=>{});refreshLatestVersion();}check();}
+ window.addEventListener("online",update);
+ document.addEventListener("visibilitychange",()=>{if(!document.hidden)update();});
+ setInterval(()=>{if(!document.hidden)update();},300000);
+ watch();update();
+}
+async function start(){
  if(!isSecureContext||!navigator.serviceWorker||!indexedDB)throw Error("Ouvre cette application en HTTPS ou sur localhost.");
  const registration=await navigator.serviceWorker.register("./sw.js",{scope:"./",updateViaCache:"none"});
  await waitForInstalledWorker(registration);
+ const installedInfo=await workerInfo(registration.active);
+ if(!installedInfo.preview&&!/^[a-f0-9]{64}$/.test(document.querySelector('meta[name="vhf-launcher-build"]')?.content||"")){location.reload();return;}
  refreshLatestVersion();
  db=await openStore();
  const active=await read(db,"active"),hasActive=!!active&&!active.deleted;$("resume").hidden=!hasActive;$("deleteOuting").hidden=!hasActive;
@@ -201,8 +233,11 @@ function watchLauncherUpdate(registration){
  if(hasActive)renderOutingDetails(active,"resume");
  const message=sessionStorage.getItem(ERROR_KEY);sessionStorage.removeItem(ERROR_KEY);
  const errorDetails=sessionStorage.getItem(ERROR_KEY+"-details");sessionStorage.removeItem(ERROR_KEY+"-details");
- const action=location.hash;history.replaceState(null,"",base);
+ const action=location.hash,wasReset=new URL(location.href).searchParams.has("reset");history.replaceState(null,"",base);
  if(message){busySet(false);showStartupError(message,errorDetails);}else if(action==="#new"){busySet(false);await prepare();}else if(action==="#receive"){document.documentElement.dataset.receiveOnly="true";busySet(false);openReceive();}else if(action==="#resume"){busySet(false);if(!await restore())showPage();}else{busySet(false);status("");showPage();}
+ if(wasReset&&!message){status("Application remise à zéro. Prépare ou reçois une nouvelle sortie.");setTimeout(()=>{if($("status").textContent==="Application remise à zéro. Prépare ou reçois une nouvelle sortie.")status("");},10000);}
+ let draft=null;try{draft=JSON.parse(sessionStorage.getItem(DRAFT_KEY)||"null");}catch{}sessionStorage.removeItem(DRAFT_KEY);
+ if(draft&&!wasReset&&!message){if(draft.receive&&!$("receiveDialog").open)openReceive();if(typeof draft.invitation==="string")$("invitation").value=draft.invitation;if(draft.technical&&$("technicalInfo"))$("technicalInfo").open=true;}
  watchLauncherUpdate(registration);navigator.storage?.persist?.().catch(()=>{});
 }
 start().catch(error=>{status(error.message,"error");busySet(!db);});

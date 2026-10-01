@@ -11,6 +11,19 @@ document.body.inert=true;
 let db,record,mode="resume",expected=0,installed=false,booted=false,stopped=false,dirty=false,scheduled=false,writing=0;
 let state=Object.create(null),chain=Promise.resolve();
 const broadcast=new BroadcastChannel("vhfgps-main-state-v1");
+async function pruneUnusedReleases(){
+ try{
+  const registration=await navigator.serviceWorker.getRegistration(root.href),worker=registration?.active;
+  if(worker)worker.postMessage({type:"VHF_RELEASE_PRUNE",api:1});
+ }catch{}
+}
+async function checkLauncherUpdate(){
+ if(!navigator.onLine)return;
+ try{await(await navigator.serviceWorker.getRegistration(root.href))?.update();}catch{}
+}
+window.addEventListener("online",checkLauncherUpdate);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkLauncherUpdate();});
+setInterval(()=>{if(!document.hidden)checkLauncherUpdate();},300000);
 function status(text,kind="info"){banner.textContent=text;banner.dataset.kind=kind;banner.hidden=kind==="success";}
 function stop(error){showPage();stopped=true;document.body.inert=true;status((error.message||String(error))+" Rouvre VHF GPS pour continuer.","error");banner.style.background="#941c25";}
 function returnHome(error,action=""){
@@ -69,7 +82,7 @@ window.VHFIntegration={
   await verify(record.release,record.manifest);
   const envelope={format:2,api:API,id:record.id,release:record.release,content};
   record=await writeActive(db,{...record,envelope,state:snapshot(),summary:outingSummary()},expected,{install:true});
-  installed=true;dirty=false;sessionStorage.removeItem(LAUNCH_KEY);sessionStorage.removeItem(VIEW_KEY);broadcast.postMessage(record.revision);
+  installed=true;dirty=false;pruneUnusedReleases();sessionStorage.removeItem(LAUNCH_KEY);sessionStorage.removeItem(VIEW_KEY);broadcast.postMessage(record.revision);
   status("Sortie enregistrée.","success");
   }catch(error){sessionStorage.removeItem(LAUNCH_KEY);status(error.message,"error");throw error;}
  },
@@ -105,7 +118,7 @@ async function start(){
   throw error;
  }
  initTechnicalInfo({root,outing:record});
- booted=true;
+ booted=true;checkLauncherUpdate();
  if(installed){await commit();await changedElsewhere();if(!stopped)status("Sortie retrouvée.","success");}
  else status("Confirme la sortie dans la fenêtre de l’application.");
  if(!stopped){if(mode==="resume")restoreView(record.id);document.body.inert=false;showPage();}

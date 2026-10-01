@@ -1,7 +1,7 @@
 "use strict";
 const fs=require("node:fs"),path=require("node:path"),crypto=require("node:crypto");
 const hash=value=>crypto.createHash("sha256").update(value).digest("hex");
-function prepareBuild(root=path.resolve(__dirname,".."),{excludedReleases=[],now=new Date().toISOString()}={}){
+function prepareBuild(root=path.resolve(__dirname,".."),{excludedReleases=[],now=new Date().toISOString(),resetId=null}={}){
 root=path.resolve(root);
 const excluded=new Set(excludedReleases);
 const read=name=>fs.readFileSync(path.join(root,name),"utf8").replace(/\r\n/g,"\n");
@@ -55,7 +55,9 @@ if(release!==id){
  rows.push({release,version:info.version,protocol:info.protocol,createdAt,indexedAt});
 }
 rows.sort((a,b)=>Number(b.release===id)-Number(a.release===id)||(b.createdAt||b.indexedAt).localeCompare(a.createdAt||a.indexedAt)||a.release.localeCompare(b.release));
-add("releases.json",JSON.stringify({format:1,latest:id,releases:rows},null,2)+"\n");
+const reset=resetId||previous.reset||"initial";
+if(reset!=="initial"&&!/^[a-f0-9]{32}$/.test(reset))throw Error("Marqueur de remise à zéro invalide.");
+add("releases.json",JSON.stringify({format:1,latest:id,reset,releases:rows},null,2)+"\n");
 const escape=value=>String(value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
 const date=value=>new Intl.DateTimeFormat("fr-FR",{timeZone:"Europe/Paris",dateStyle:"short",timeStyle:"short"}).format(new Date(value));
 const table=rows.map(row=>'<tr><td>'+(row.release===id?'<strong>Dernière publication</strong>':'Ancienne publication')+'</td><td>'+escape(row.version)+'</td><td>'+escape(row.protocol)+'</td><td>'+(row.createdAt?escape(date(row.createdAt)):'Date de création inconnue<br><small>Répertoriée le '+escape(date(row.indexedAt))+'</small>')+'</td><td><code title="'+row.release+'">'+row.release.slice(0,12)+'</code><br><a href="releases/'+row.release+'/manifest.json">Manifeste</a></td></tr>').join('\n');
@@ -72,9 +74,9 @@ return {root,output,id,version,rows,now};
 function prepareShell(root=path.resolve(__dirname,".."),output=new Map(),iconPaths=null){
 const read=name=>fs.readFileSync(path.join(root,name),"utf8").replace(/\r\n/g,"\n");
 iconPaths??=[...new Set([...JSON.parse(read("manifest.webmanifest")).icons.map(icon=>icon.src),"icons/apple-touch-icon.png"])];
-const names=["index.html","boot.js","protocol.js","storage.js","release.js","transition.js","transition.css","technical-info.js","install.js","style.css","manifest.webmanifest","releases.json",...iconPaths];
+const names=["index.html","vhf_gps_code.html","boot.js","protocol.js","storage.js","release.js","transition.js","transition.css","technical-info.js","install.js","style.css","manifest.webmanifest","releases.json",...iconPaths];
 const assets=names.map(name=>({path:name,sha256:hash(output.get(name)||(name.endsWith(".png")?fs.readFileSync(path.join(root,name)):Buffer.from(read(name))))}));
-return Buffer.from(read("tools/sw.template.js").replace("__BUILD__",JSON.stringify(hash(JSON.stringify(assets)))).replace("__ASSETS__",JSON.stringify(assets)));
+return Buffer.from(read("tools/sw.template.js").replace("__BUILD__",JSON.stringify(hash(read("tools/sw.template.js")+"\n"+JSON.stringify(assets)))).replace("__ASSETS__",JSON.stringify(assets)));
 }
 function applyBuild(prepared,{check=false}={}){
 const {root,output}=prepared;
