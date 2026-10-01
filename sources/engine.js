@@ -13,7 +13,7 @@ function resolvedTheme(mode){
   return systemPrefersDark()?"night":"day";
 }
 function applyTheme(mode){
-  const safe=["auto","day","night"].includes(mode)?mode:"auto";
+  const safe=["auto","day","night"].includes(mode)?mode:"day";
   document.documentElement.dataset.theme=resolvedTheme(safe);
   const themeMeta=document.getElementById("themeColorMeta");
   if(themeMeta)themeMeta.content=document.documentElement.dataset.theme==="day"?"#ffffff":"#06131a";
@@ -21,12 +21,11 @@ function applyTheme(mode){
   if(sel)sel.value=safe;
 }
 function initTheme(){
-  const saved=appStorage.getItem(THEME_STORAGE_KEY)||"auto";
+  const saved=appStorage.getItem(THEME_STORAGE_KEY)||"day";
   applyTheme(saved);
 
   const sel=document.getElementById("themeMode");
   if(sel){
-    sel.value=saved;
     sel.addEventListener("change",()=>{
       appStorage.setItem(THEME_STORAGE_KEY,sel.value);
       applyTheme(sel.value);
@@ -36,7 +35,7 @@ function initTheme(){
   if(window.matchMedia){
     const mq=window.matchMedia("(prefers-color-scheme: dark)");
     const refresh=()=>{
-      if((appStorage.getItem(THEME_STORAGE_KEY)||"auto")==="auto")applyTheme("auto");
+      if((appStorage.getItem(THEME_STORAGE_KEY)||"day")==="auto")applyTheme("auto");
     };
     if(mq.addEventListener)mq.addEventListener("change",refresh);
     else if(mq.addListener)mq.addListener(refresh);
