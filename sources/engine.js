@@ -2470,7 +2470,7 @@ function hideReceiverReply(){
   $("receiverCorrectionActions").innerHTML="";
 }
 
-function showProvisionalDecodedPosition(lat,lon,metricHtml){
+function showProvisionalDecodedPosition(lat,lon,metricHtml=""){
   resetRelativePosition();
   $("decodedBlock").classList.remove("position-confirmed");
   const pill=$("decodedBlock").querySelector(".protocol-state-pill");
@@ -2489,6 +2489,7 @@ function showProvisionalDecodedPosition(lat,lon,metricHtml){
 
   $("decodedCoords").innerHTML=formatCoordsBoth(lat,lon);
   $("decodedOffset").innerHTML=metricHtml;
+  $("decodedOffset").classList.toggle("hidden",!metricHtml);
   $("decodedCoordsWrap").classList.add("hidden");
   $("revealUnconfirmedCoords").classList.remove("hidden");
   $("decodedBlock").classList.remove("hidden");
@@ -3198,11 +3199,7 @@ async function runDecode(automatic=false){
     const direct=await tryDecode(words,connector,secret,z);if(stale())return;
     if(direct.ok){
       const d=direct.value;
-      showProvisionalDecodedPosition(
-        d.lat,
-        d.lon,
-        `Case #${d.index} — contrôle local 9 bits réussi.`
-      );
+      showProvisionalDecodedPosition(d.lat,d.lon);
       showReceiverReply(
         d.ack,
         "provisional",

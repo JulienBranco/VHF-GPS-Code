@@ -175,7 +175,7 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
 :root[data-theme="day"] .session-card .badge{
   background:var(--session-surface)
 }
-#sessionCard #pwaStatus{margin:10px 0 0}
+#sessionCard #pwaStatus{margin:6px 0 0}
 :root[data-theme="day"] #encodedWords.message{
   background:#ffffff
 }
@@ -191,11 +191,10 @@ hr{border:none;border-top:1px solid var(--line);margin:16px 0}
 }
 .session-meta-badges{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
 @media(max-width:600px){.session-meta-badges{justify-content:flex-start}}
+.session-heading-block{display:flex;flex-direction:column;align-items:flex-start;min-width:0}
 .session-heading{display:inline-flex;align-items:center;gap:10px;white-space:nowrap}
-#sessionCard .session-step-number{
-  background:var(--session-line);
-  color:var(--session-marker-text);
-}
+.session-icon{display:block;width:36px;height:36px;flex:none}
+
 .session-compact-title strong{font-size:1.08rem;letter-spacing:.01em}
 #fingerprintBlock .small{
   text-transform:uppercase;letter-spacing:.09em;font-weight:800;text-align:center
@@ -1437,6 +1436,7 @@ dialog.outing-success-dialog{width:min(360px,calc(100vw - 32px));border-color:#2
 .outing-setup-field select,.outing-setup-field input{width:100%;box-sizing:border-box;min-height:44px;font-size:16px}
 .outing-setup-choices{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
 .outing-setup-choices button{margin:0;min-height:48px}
+.outing-choice-hint{display:block;margin-top:4px;font-size:12px;font-weight:600;line-height:1.4;text-transform:none}
 #outingBuiltinChoice,#outingMarineMode,#outingDecimalMode,#outingGpsBtn{
   background:var(--setup-blue-tint);border:2px solid var(--setup-blue);color:var(--setup-blue-text)
 }
@@ -2337,7 +2337,10 @@ button:focus-visible,
 
   <div class="card session-card" id="sessionCard">
     <div class="session-compact-title">
-      <span class="session-heading"><span class="step-number session-step-number" aria-hidden="true">S</span><strong>Session radio</strong></span>
+      <div class="session-heading-block">
+        <span class="session-heading"><img class="session-icon" src="../../icons/icon-192.png" width="36" height="36" alt=""><strong>Session radio</strong></span>
+        <div id="pwaStatus" class="pwa-status hidden" role="status" aria-live="polite"></div>
+      </div>
       <span class="session-meta-badges">
         <span class="badge" id="protocolBadgeSession"></span>
         <span class="badge" id="compatBadge">COMPAT …</span>
@@ -2348,7 +2351,6 @@ button:focus-visible,
 
     <div id="sessionCompactStatus" class="small">Aucune session active.</div>
     <div id="outingLocalTimes" class="small hidden"></div>
-    <div id="pwaStatus" class="pwa-status hidden" role="status" aria-live="polite"></div>
 
     <div id="fingerprintBlock" class="hidden">
       <div class="small">Empreinte radio</div>
@@ -2869,8 +2871,8 @@ button:focus-visible,
   <h2 id="outingCreateTitle">Préparer une nouvelle sortie</h2>
   <p id="outingCreateDescription">Choisis ici la zone de la sortie. Rien ne change sur ce téléphone avant la confirmation finale.</p>
   <div class="outing-setup-choices" role="group" aria-label="Type de zone">
-    <button type="button" id="outingBuiltinChoice">ZONE INTÉGRÉE</button>
-    <button type="button" id="outingEphemeralChoice">ZONE ÉPHÉMÈRE</button>
+    <button type="button" id="outingBuiltinChoice"><span>ZONE INTÉGRÉE</span><span class="outing-choice-hint">Zones du catalogue · France</span></button>
+    <button type="button" id="outingEphemeralChoice"><span>ZONE ÉPHÉMÈRE</span><span class="outing-choice-hint">Partout dans le monde</span><span class="outing-choice-hint"><span aria-hidden="true">⚠️</span> Usage avancé</span></button>
   </div>
   <div id="outingBuiltinFields" class="outing-setup-field">
     <label for="outingBuiltinSelect">Zone intégrée du catalogue</label>
