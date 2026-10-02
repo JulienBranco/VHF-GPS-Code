@@ -615,7 +615,7 @@ test("première ouverture : anciens caches retirés, ancienne sortie ignorée et
  assert.equal(await page.locator("#resume").isVisible(),false);{const empty=await active(page);if(empty!==undefined){assert(Number.isSafeInteger(empty.revision)&&empty.revision>0);assert.deepEqual(empty,{deleted:true,revision:empty.revision});}}
  const keys=await page.evaluate(()=>caches.keys());assert(!keys.some(name=>name.startsWith("vhfgps-integration-")));assert(keys.includes("official-cache-sentinel"));
  assert.doesNotMatch(await page.locator("body").innerText(),/\bessai\b|\bde test\b|🧪|ne pas utiliser en navigation/i);
- const manifest=await page.evaluate(()=>fetch("/manifest.webmanifest").then(response=>response.json()));assert.equal(manifest.name,"VHF GPS");assert.equal(manifest.short_name,"VHF GPS");
+ const manifest=await page.evaluate(()=>fetch("/manifest.webmanifest").then(response=>response.json()));assert.equal(manifest.name,"VHF GPS Code");assert.equal(manifest.short_name,"VHF GPS Code");
  await create(page);const invitation=await share(page);assert.match(invitation,/VHF-SORTIE2\./);assert.doesNotMatch(invitation,/\bessai\b|\bde test\b|🧪/i);
  assert.doesNotMatch(await page.locator("body").innerText(),/\bessai\b|\bde test\b|🧪|ne pas utiliser en navigation/i);
 });

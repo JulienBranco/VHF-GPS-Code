@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "VHF GPS",
-  "short_name": "VHF GPS",
+  "name": "VHF GPS Code",
+  "short_name": "VHF GPS Code",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

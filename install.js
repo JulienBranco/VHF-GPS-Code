@@ -15,7 +15,7 @@ export function initInstallUI(){
  }
  function explain(){
   $("installTitle").textContent=ios?"Installer sur iPhone / iPad":"Installer avec Chrome";
-  $("installHelp").textContent=ios?"L’ajout se fait dans Safari. Voici l’adresse de VHF GPS à copier et les étapes à suivre.":"Si la fenêtre d’installation n’apparaît pas, ajoute VHF GPS depuis le menu de Chrome.";
+  $("installHelp").textContent=ios?"L’ajout se fait dans Safari. Voici l’adresse de VHF GPS Code à copier et les étapes à suivre.":"Si la fenêtre d’installation n’apparaît pas, ajoute VHF GPS Code depuis le menu de Chrome.";
   $("installAddress").value=address;$("installCopyStatus").textContent="";
   const steps=ios?[
    "Copie l’adresse ci-dessus, ouvre Safari, puis colle-la dans la barre d’adresse.",

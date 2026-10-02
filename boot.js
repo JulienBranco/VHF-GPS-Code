@@ -6,6 +6,17 @@ import {openStore,read,retainActiveOuting} from "./storage.js";
 import {base,LAUNCH_KEY,ERROR_KEY,network,download,verify,fileURL} from "./release.js";
 const $=id=>document.getElementById(id);let db,busy=true,technicalInfo;
 applyLoadingTheme();initInstallUI();
+function openAbout(){
+ const dialog=$("aboutDialog");if(dialog.open)return;
+ dialog.showModal();$("aboutContent").scrollTop=0;
+}
+$("aboutBtn").onclick=openAbout;
+for(const id of ["closeAbout","finishAbout"])$(id).onclick=()=>$("aboutDialog").close();
+$("aboutDialog").addEventListener("click",event=>{
+ if(event.target!==$("aboutDialog"))return;
+ const rect=event.target.getBoundingClientRect();
+ if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)event.target.close();
+});
 function status(text,kind="info"){$("status").textContent=text;$("status").dataset.kind=kind;if(kind==="error")showPage();}
 function clearImportError(){$("importError").replaceChildren();$("importError").classList.remove("import-error-box");}
 function showImportError(error){
@@ -183,7 +194,7 @@ function applyLauncherUpdate(){
  if(!launcherUpdateReady||busy||refreshingLauncher)return;
  refreshingLauncher=true;
  // Une actualisation conserve le texte collé, y compris si la fenêtre de réception est ouverte.
- sessionStorage.setItem(DRAFT_KEY,JSON.stringify({invitation:$("invitation").value,receive:$("receiveDialog").open,technical:$("technicalInfo")?.open===true}));
+ sessionStorage.setItem(DRAFT_KEY,JSON.stringify({invitation:$("invitation").value,receive:$("receiveDialog").open,technical:$("technicalInfo")?.open===true,about:$("aboutDialog").open}));
  showLoading();location.reload();
 }
 function workerInfo(worker){return new Promise((resolve,reject)=>{
@@ -241,7 +252,7 @@ async function start(){
  if(message){busySet(false);showStartupError(message,errorDetails);}else if(action==="#new"){busySet(false);await prepare();}else if(action==="#receive"){document.documentElement.dataset.receiveOnly="true";busySet(false);openReceive();}else if(action==="#resume"){busySet(false);if(!await restore())showPage();}else{busySet(false);status("");showPage();}
  if(wasReset&&!message){status("Application remise à zéro. Prépare ou reçois une nouvelle sortie.");setTimeout(()=>{if($("status").textContent==="Application remise à zéro. Prépare ou reçois une nouvelle sortie.")status("");},10000);}
  let draft=null;try{draft=JSON.parse(sessionStorage.getItem(DRAFT_KEY)||"null");}catch{}sessionStorage.removeItem(DRAFT_KEY);
- if(draft&&!wasReset&&!message){if(draft.receive&&!$("receiveDialog").open)openReceive();if(typeof draft.invitation==="string")$("invitation").value=draft.invitation;if(draft.technical&&$("technicalInfo"))$("technicalInfo").open=true;}
+ if(draft&&!wasReset&&!message){if(draft.receive&&!$("receiveDialog").open)openReceive();if(typeof draft.invitation==="string")$("invitation").value=draft.invitation;if(draft.technical&&$("technicalInfo"))$("technicalInfo").open=true;if(draft.about&&!draft.receive)openAbout();}
  watchLauncherUpdate(registration);navigator.storage?.persist?.().catch(()=>{});
 }
 start().catch(error=>{status(error.message,"error");busySet(!db);});
