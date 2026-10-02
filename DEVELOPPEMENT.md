@@ -40,7 +40,7 @@ Ces trois demandes ont des effets différents :
 | Demande | Publications sur le serveur après commit et push | Données des téléphones |
 | --- | --- | --- |
 | **Prépare une release** | Ajouter la nouvelle publication et conserver les précédentes. | Conserver les sorties enregistrées ; une sortie active garde sa publication. |
-| **Release + purge** | Ajouter la nouvelle publication et retirer les anciennes selon la règle précisée : nombre à garder et/ou date limite. La publication actuelle reste protégée. | Aucun reset. Une sortie complète déjà conservée localement reste utilisable ; une invitation dont la publication a été retirée peut ne plus être installable ou réparable. |
+| **Release + purge** | Ajouter la nouvelle publication et retirer les anciennes selon la règle précisée : nombre à garder et/ou date limite. La publication actuelle reste protégée. | Aucun reset. Après réception du nouvel accueil vérifié, nettoyer les moteurs retirés du catalogue, sauf ceux utilisés par la sortie active, une page ouverte ou une préparation. Une invitation visant un moteur retiré peut ne plus être installable ou réparable. |
 | **Release + reset complet** | Préparer la nouvelle publication et ne conserver que celle-ci. | Quand le téléphone télécharge et active le nouvel accueil, effacer les sorties enregistrées et les copies locales de publications, puis revenir à l’accueil. Une sortie en cours peut être interrompue. |
 
 **Un reset complet exige une demande explicite.** Une demande de purge, même pour ne
@@ -52,8 +52,9 @@ Une publication normale et une purge ordinaire conservent le marqueur de reset e
 Chaque reset complet crée un nouveau marqueur ; un téléphone applique son effacement
 une seule fois pour ce marqueur. Hors réseau, il ne reçoit pas encore cette remise à zéro.
 Il n’y a aucune expiration automatique des sessions selon leur âge.
-Le nettoyage automatique des copies inutiles après sauvegarde d’une nouvelle sortie reste
-indépendant de ces demandes et protège la sortie active ainsi que les pages encore ouvertes.
+La conservation des moteurs téléchargés suit le catalogue publié, indépendamment des données
+privées de sortie. Les retraits sont appliqués après réception d'un nouvel accueil vérifié ;
+la sortie active, les pages ouvertes et les préparations restent protégées.
 
 ## Préparer une publication quand les modifications sont terminées
 
@@ -168,8 +169,10 @@ Le launcher se télécharge entièrement et vérifie ses fichiers avant de s’a
 L’accueil ouvert s’actualise automatiquement, en conservant une invitation collée ;
 une préparation en cours termine d’abord. La page d’une sortie active reste sur sa publication,
 sans rechargement ni perte des saisies. La vérification est relancée au retour du réseau et au premier plan.
-Après confirmation et sauvegarde d’une nouvelle sortie, créée ou importée, les copies de
-publications inutiles sont retirées. La sortie active et les autres pages ouvertes restent protégées.
+Le téléphone conserve les moteurs déjà téléchargés tant qu'ils figurent dans le catalogue.
+Après activation d'un nouvel accueil vérifié, sauvegarde d'une sortie ou suppression de la
+sortie active, il nettoie uniquement les moteurs dont le retrait a été confirmé. La sortie
+active, les autres pages ouvertes et les préparations en cours restent protégées.
 Seule la remise à zéro complète volontaire abandonne les anciennes sorties.
 
 ## Suivi d’un point (module facultatif)
@@ -208,4 +211,38 @@ Tests sans génération : `node --test tests/position-history-model.test.cjs tes
 
 Le launcher distingue les données privées de sortie et les fichiers publics de release. `download()` utilise d’abord le manifeste connu de la sortie active, puis cherche le manifeste dans le cache de la release exacte portée par l’invitation. Il vérifie son empreinte ainsi que tous les fichiers avant de charger l’application, même si les données d’une ancienne sortie ont été supprimées ou si cette invitation n’a jamais été installée. Une copie complète évite toute demande de téléchargement. Un cache absent, incomplet ou altéré exige une réparation en ligne ; aucune autre release n’est utilisée comme remplacement. Les contrôles d’invitation et la confirmation d’installation restent obligatoires.
 
-Tests : rejeu hors réseau d’une ancienne sortie supprimée avec une release encore présente ; copie complète sans manifeste de sortie connu ; manifeste ou moteur altéré ; absence de cache ; réparation en ligne sans perte de la sortie active. La création d’une nouvelle sortie reste soumise à la connexion pour choisir la dernière publication. La suppression manuelle d’une sortie efface ses données privées, mais conserve la copie de sa release pour pouvoir rejouer son invitation hors réseau. Après installation réussie d’une autre sortie, les releases inutilisées sont nettoyées ; une invitation visant une version ainsi retirée exige de pouvoir la retélécharger. Le reset complet supprime également les caches de releases. Le test « suppression manuelle hors réseau » vérifie explicitement ce parcours.
+Tests : rejeu hors réseau d’une ancienne sortie supprimée avec une release encore présente ; copie complète sans manifeste de sortie connu ; manifeste ou moteur altéré ; absence de cache ; réparation en ligne sans perte de la sortie active. La création d’une nouvelle sortie reste soumise à la connexion pour choisir la dernière publication. La suppression manuelle d’une sortie efface ses données privées, mais conserve la copie de sa release si elle est encore au catalogue, pour pouvoir rejouer son invitation hors réseau. Une copie dont le retrait a déjà été confirmé peut être nettoyée dès cette suppression. Après installation réussie d'une autre sortie, les moteurs encore au catalogue sont conservés ; seuls les moteurs dont le retrait a été confirmé deviennent éligibles au nettoyage, sans toucher à une autre page ouverte ou à une préparation. Une invitation visant un moteur effectivement retiré du téléphone exige de pouvoir le retélécharger. Le reset complet supprime également les caches de releases. Le test « suppression manuelle hors réseau » vérifie explicitement ce parcours.
+
+## Conservation des moteurs selon le catalogue
+
+Le service worker utilise uniquement le catalogue releases.json de son accueil installé,
+vérifié par son empreinte SHA-256 et contrôlé avant activation. Un téléchargement incomplet,
+un catalogue incohérent ou un cache altéré n'autorise aucun nouveau retrait. Le téléphone
+ne télécharge pas tous les moteurs du catalogue : il conserve seulement les copies déjà
+présentes et continue de vérifier tous les fichiers avant un rejeu.
+
+La clé publique release-catalog du cache de contrôle contient la version du worker et les
+identifiants des publications déjà reconnues. Une copie n'est supprimable que si elle a été
+reconnue dans un catalogue puis absente du catalogue installé actuel. Une publication
+encore inconnue peut être plus récente que l'accueil ; son absence seule ne prouve pas son
+retrait. Lors de la première adoption du mécanisme, les copies anciennes jamais reconnues
+restent donc conservées par prudence. Cette liste ne contient ni secret, ni invitation, ni
+journal. Un travail de nettoyage d'un worker remplacé n'a plus autorité pour supprimer.
+
+Le nettoyage se déclenche après activation d'un nouvel accueil vérifié, installation
+sauvegardée d'une sortie (créée ou importée) et suppression manuelle de la sortie active.
+Il protège toujours le moteur actif, toutes les pages de publication ouvertes et les
+préparations réservées. Le chargement depuis le cache réserve aussi son moteur, sans
+requête réseau, avant la vérification des fichiers. Réservations et nettoyage sont
+sérialisés dans le worker ; la nouvelle réservation est confirmée avant le chargement.
+Une copie retirée mais protégée sera nettoyée lors d'un prochain nettoyage une fois
+ces protections levées. Un retrait ne remplace jamais un moteur par une autre version.
+
+Les anciens secrets, réglages et journaux continuent d'être supprimés atomiquement lors
+du remplacement de la sortie. La conservation de moteurs publics ne rétablit pas des
+archives privées. Une purge ordinaire reste distincte d'un reset complet explicite.
+
+Tests : moteurs catalogués conservés sans préchargement ; reprise et rejeu hors réseau ;
+purge avec sortie active, autre page ou téléchargement ; préparation en cache réservée ;
+moteur plus récent qu'un ancien catalogue ; catalogue altéré ou mise à jour interrompue ;
+nettoyage après levée des protections ; reset complet inchangé.

@@ -136,6 +136,9 @@ $("confirmDelete").onclick=async()=>{
   $("deleteDialog").close();pendingDeletion=null;$("resume").hidden=true;$("deleteOuting").hidden=true;
   renderOutingDetails(null,"resume");renderOutingDetails(null,"delete");
   technicalInfo?.setOuting(null);
+  // La suppression enlève la dernière protection d'un moteur déjà retiré du
+  // catalogue. Les moteurs encore publiés restent disponibles pour un rejeu.
+  navigator.serviceWorker.getRegistration(base.href).then(registration=>registration?.active?.postMessage({type:"VHF_RELEASE_PRUNE",api:1})).catch(()=>{});
   status("");
  }catch(error){$("deleteError").textContent=error.message;}
  finally{busySet(false);}

@@ -70,7 +70,7 @@ les métadonnées. Le build les actualise automatiquement, sans commande supplé
 Les dates de création restent stables lors des reconstructions. Les publications plus anciennes
 affichent une date de référencement distincte, car leur date de création est inconnue.
 Conserver releases.json avec le projet ; ne pas modifier les dates à la main.
-Le catalogue ne supprime aucun fichier et ne sait pas quelles sorties sont encore utilisées.
+Le catalogue ne supprime aucun fichier du projet et ne sait pas quelles sorties sont encore utilisées. Il sert aussi de référence au nettoyage des moteurs sur les téléphones.
 
 ## Accueil
 
@@ -118,13 +118,17 @@ une suppression volontaire passe par le menu de **PUBLICATIONS.cmd**.
 Le menu simule les suppressions, demande une confirmation explicite et synchronise
 les métadonnées. Il conserve toujours la publication actuelle et dispose d’un journal
 de restauration si une purge est interrompue.
-Une purge ordinaire retire seulement les fichiers du serveur. Le choix de remise à zéro
-complète change aussi un marqueur dans releases.json : les téléphones qui téléchargent cet
-accueil abandonnent alors les sorties et copies de publications précédentes, une seule fois.
-Cette opération est volontaire ; une publication ordinaire conserve ce marqueur.
-Après chaque nouvelle sortie sauvegardée, créée ou importée, le téléphone retire les copies
-de publications inutiles. La sortie active, les pages encore ouvertes et les téléchargements
-en cours sont protégés. Le nettoyage ne commence pas avant la confirmation et la sauvegarde.
+Une purge ordinaire retire les fichiers du serveur et met à jour le catalogue. Quand le
+téléphone active le nouvel accueil vérifié, il nettoie les copies des moteurs retirés du
+catalogue, en protégeant la sortie active, les pages ouvertes et les préparations en cours.
+Les moteurs déjà téléchargés restent conservés tant qu'ils figurent au catalogue ; aucun
+moteur supplémentaire n'est téléchargé automatiquement. Un catalogue ancien, absent ou
+altéré ne suffit pas pour supprimer un moteur qu'il ne reconnaît pas.
+Le choix de remise à zéro complète change aussi un marqueur dans releases.json : les téléphones
+qui téléchargent cet accueil abandonnent alors les sorties et copies de publications
+précédentes, une seule fois. Cette opération est volontaire ; une publication ordinaire
+conserve ce marqueur. Le nettoyage est également relancé après sauvegarde d'une nouvelle
+sortie, créée ou importée, et après suppression manuelle de la sortie active.
 Il n’exécute aucune commande Git et ne demande aucune automatisation GitHub.
 
 ## Invitations et sauvegardes
@@ -164,7 +168,7 @@ avec l’invitation ; aucune autre publication ne remplace silencieusement la so
 
 Pour une nouvelle sortie, le type « zone intégrée » est proposé, mais aucune zone précise n’est présélectionnée. Il faut choisir explicitement dans la liste avant de vérifier la sortie. Cette règle évite le repli implicite vers IROISE / BREST, même lorsque la précédente sortie était éphémère.
 
-Depuis l’accueil, « Supprimer la sortie active » demande une confirmation. La transaction efface la sortie active et sa copie enregistrée (session, invitation et réglages). Elle conserve seulement une révision sans secret pour bloquer les écritures d’un ancien onglet. Les fichiers de publication en cache restent disponibles ; retrouver la sortie exige son invitation conservée.
+Depuis l’accueil, « Supprimer la sortie active » demande une confirmation. La transaction efface la sortie active et sa copie enregistrée (session, invitation et réglages). Elle conserve seulement une révision sans secret pour bloquer les écritures d’un ancien onglet. Les fichiers de publication encore au catalogue restent disponibles en cache ; un moteur retiré du catalogue peut être nettoyé après cette suppression. Retrouver la sortie exige son invitation conservée et une copie complète de son moteur.
 
 ## Limites de l’application
 

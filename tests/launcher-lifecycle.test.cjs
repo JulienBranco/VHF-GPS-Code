@@ -37,7 +37,20 @@ async function waitBuild(page,build){await waitAsync(page,async expected=>{
 async function create(page){await page.locator("#create").click();await page.locator("#outingBuiltinSelect").selectOption("iroise-brest");await page.locator("#checkOutingCreate").click();await page.locator("#confirmOutingCreate").click();await page.locator("#closeOutingSuccess").click();return active(page);}
 async function active(page){return page.evaluate(async()=>{const base=location.pathname.includes('/releases/')?new URL('../../',location.href):new URL('./',location.href);const s=await import(new URL('storage.js',base));const db=await s.openStore();try{return await s.read(db,'active');}finally{db.close();}});}
 async function keys(page){return page.evaluate(()=>caches.keys());}
-async function prune(page){await page.evaluate(async()=>{const reg=await navigator.serviceWorker.getRegistration();await new Promise(resolve=>{const channel=new MessageChannel();channel.port1.onmessage=()=>resolve();reg.active.postMessage({type:'VHF_RELEASE_PRUNE',api:1},[channel.port2]);});});}
+async function prune(page){return page.evaluate(async()=>{const reg=await navigator.serviceWorker.getRegistration();return new Promise(resolve=>{const channel=new MessageChannel();channel.port1.onmessage=e=>{channel.port1.close();resolve(e.data.ok);};reg.active.postMessage({type:'VHF_RELEASE_PRUNE',api:1},[channel.port2]);});});}
+function catalogFiles(files,ids,latest=ids[0]){
+ const next=new Map(files),catalog=JSON.parse(next.get('releases.json'));
+ catalog.latest=latest;catalog.releases=ids.map(release=>catalog.releases.find(row=>row.release===release)||{release,version:'fixture'});
+ next.set('releases.json',Buffer.from(JSON.stringify(catalog)));next.set('sw.js',prepareShell(root,next));return next;
+}
+function alternateRelease(files,original){
+ const next=new Map(files),manifest=structuredClone(original.manifest);
+ for(const file of manifest.files){let bytes=files.get('releases/'+original.release+'/'+file.path);if(file.path==='app.html')bytes=Buffer.from(bytes.toString().replace('<body>','<body data-publication=new>'));file.sha256=hash(bytes);next.set('candidate/'+file.path,bytes);}
+ const raw=JSON.stringify(manifest),id=hash(raw);
+ for(const file of manifest.files){next.set('releases/'+id+'/'+file.path,next.get('candidate/'+file.path));next.delete('candidate/'+file.path);}
+ next.set('releases/'+id+'/manifest.json',Buffer.from(raw));next.set('latest.json',Buffer.from(JSON.stringify({format:2,release:id})));return {files:next,id};
+}
+async function sentinel(page,id){await page.evaluate(async id=>{const cache=await caches.open('vhfgps-main-release-'+id);await cache.put('/sentinel',new Response('conservé'));},id);}
 
 test("ancien worker réel 3.28.102 : navigateur débloqué sans désinstallation, ancienne adresse utilisable hors ligne sous GitHub Pages",async t=>{
  const {host,context,page,url,files,prefix}=await fixture(t,{prefix:"/VHF-GPS-Code/"});
@@ -72,24 +85,87 @@ test("mise à jour du launcher pendant une sortie : aucun rechargement, saisie e
 });
 
 test("serveur incohérent pendant publication : installation refusée, ancien accueil intact, nouvelle tentative réussie",async t=>{
- const {page,host,files,url,context}=await fixture(t);await home(page,url);const original=await activeBuild(page),next=nextShell(files);
+ const {page,host,files,url,context}=await fixture(t);await home(page,url);const original=await activeBuild(page),catalog=JSON.parse(files.get('releases.json')),unused=catalog.releases.find(row=>row.release!==catalog.latest).release;
+ await sentinel(page,unused);const next=catalogFiles(nextShell(files),[catalog.latest]);
  serve(host,next);host.state.virtual.set('/boot.js',files.get('boot.js'));
  const failed=page.waitForFunction(()=>window.failedWorker===true);await page.evaluate(()=>{navigator.serviceWorker.getRegistration().then(reg=>{reg.addEventListener('updatefound',()=>reg.installing?.addEventListener('statechange',function(){if(this.state==='redundant')window.failedWorker=true;}));reg.update();});});await failed;
  assert.equal(await activeBuild(page),original);assert(!(await keys(page)).includes('vhfgps-main-shell-'+buildId(next.get('sw.js'))));
- await context.setOffline(true);await home(page,url);assert.equal(await activeBuild(page),original);
- await context.setOffline(false);serve(host,next);await update(page);await page.waitForFunction(()=>document.body.dataset.shellFixture==='new'&&!document.getElementById('create').disabled);
+ await context.setOffline(true);await home(page,url);assert.equal(await activeBuild(page),original);assert((await keys(page)).includes('vhfgps-main-release-'+unused),'échec de mise à jour : aucune purge');
+ await context.setOffline(false);serve(host,next);await update(page);await page.waitForFunction(()=>document.body.dataset.shellFixture==='new'&&!document.getElementById('create').disabled);await prune(page);assert(!(await keys(page)).includes('vhfgps-main-release-'+unused));
 });
 
-test("nettoyage après nouvelle sortie : publication active et autre page protégées, copies inutiles retirées",async t=>{
+test("purge du catalogue : sortie active, page ouverte et téléchargement protégés, moteur retiré nettoyé ensuite",async t=>{
  const {page,context,url,host,files}=await fixture(t);await home(page,url);const old=await create(page);
  const other=await context.newPage();await other.goto(page.url());await other.waitForFunction(()=>document.getElementById('testBanner')?.textContent.includes('Sortie retrouvée'));
- const unused='a'.repeat(64);await page.evaluate(async id=>{const cache=await caches.open('vhfgps-main-release-'+id);await cache.put('/unused',new Response('inutile'));},unused);
- const manifest=JSON.parse(JSON.stringify(old.manifest)),newFiles=new Map();
- for(const file of manifest.files){let bytes=files.get('releases/'+old.release+'/'+file.path);if(file.path==='app.html')bytes=Buffer.from(bytes.toString().replace('<body>','<body data-publication=new>'));file.sha256=hash(bytes);newFiles.set(file.path,bytes);}
- const raw=JSON.stringify(manifest),id=hash(raw);for(const [name,bytes] of newFiles)host.state.virtual.set('/releases/'+id+'/'+name,bytes);host.state.virtual.set('/releases/'+id+'/manifest.json',Buffer.from(raw));host.state.virtual.set('/latest.json',Buffer.from(JSON.stringify({format:2,release:id})));
- await home(page,url);const next=await create(page);assert.equal(next.release,id);await prune(page);
- const cachesBefore=await keys(page);assert(cachesBefore.includes('vhfgps-main-release-'+id));assert(cachesBefore.includes('vhfgps-main-release-'+old.release));assert(!cachesBefore.includes('vhfgps-main-release-'+unused));
- await other.close();await prune(page);assert(!(await keys(page)).includes('vhfgps-main-release-'+old.release));
+ const ids=JSON.parse(files.get('releases.json')).releases.map(row=>row.release),unused=ids.find(id=>id!==old.release);assert(unused);
+ await sentinel(page,unused);const unknown='a'.repeat(64);await sentinel(page,unknown);
+ const downloader=await context.newPage();await home(downloader,url);
+ await downloader.evaluate(async id=>{await fetch('/releases/'+id+'/manifest.json',{headers:{'X-VHF-Integration-Download':'1'}});},unused);
+ const alternate=alternateRelease(files,old),next=catalogFiles(nextShell(alternate.files),[alternate.id]);serve(host,next);await update(page);await waitBuild(page,buildId(next.get('sw.js')));
+ assert((await keys(page)).includes('vhfgps-main-release-'+old.release),'sortie active retirée protégée');
+ assert((await keys(page)).includes('vhfgps-main-release-'+unused),'téléchargement retiré protégé');
+ await home(page,url);const installed=await create(page);assert.equal(installed.release,alternate.id);assert.equal(await prune(page),true);
+ assert((await keys(page)).includes('vhfgps-main-release-'+old.release),'ancienne page encore ouverte protégée');
+ assert((await keys(page)).includes('vhfgps-main-release-'+unknown),'absence du catalogue seule insuffisante');
+ await downloader.close();await other.close();await prune(page);
+ assert(!(await keys(page)).includes('vhfgps-main-release-'+old.release));assert(!(await keys(page)).includes('vhfgps-main-release-'+unused));assert((await keys(page)).includes('vhfgps-main-release-'+alternate.id));
+});
+
+test("nouvelle sortie : moteurs catalogués conservés sans préchargement et ancien moteur réutilisable hors réseau",async t=>{
+ const {page,host,files,url,context}=await fixture(t);await home(page,url);const old=await create(page);
+ const alternate=alternateRelease(files,old),ids=JSON.parse(files.get('releases.json')).releases.map(row=>row.release);
+ const next=catalogFiles(nextShell(alternate.files),[alternate.id,...ids]);serve(host,next);await update(page);await waitBuild(page,buildId(next.get('sw.js')));
+ await home(page,url);const installed=await create(page);assert.equal(installed.release,alternate.id);await prune(page);
+ const cacheNames=await keys(page);assert(cacheNames.includes('vhfgps-main-release-'+old.release));assert(cacheNames.includes('vhfgps-main-release-'+alternate.id));
+ for(const id of ids.filter(id=>id!==old.release))assert(!cacheNames.includes('vhfgps-main-release-'+id),'aucun préchargement du catalogue');
+ const erased=await page.evaluate(async id=>{const s=await import('/storage.js'),db=await s.openStore();try{return await s.read(db,'outing:'+id);}finally{db.close();}},old.id);assert(!erased,'données privées anciennes effacées');
+ await context.setOffline(true);assert.equal(await prune(page),true);
+ const replay=await page.evaluate(async id=>{const r=await import('/release.js');return (await r.download(id)).version;},old.release);assert.equal(replay,old.manifest.version);
+});
+
+test("ancien catalogue : un moteur plus récent téléchargé puis remplacé reste conservé",async t=>{
+ const {page,host,files,url}=await fixture(t);await home(page,url);const old=await create(page),originalBuild=await activeBuild(page);
+ const alternate=alternateRelease(files,old);serve(host,alternate.files);await home(page,url);const installed=await create(page);assert.equal(installed.release,alternate.id);
+ host.state.virtual.set('/latest.json',files.get('latest.json'));await home(page,url);await create(page);await prune(page);
+ assert.equal(await activeBuild(page),originalBuild);assert((await keys(page)).includes('vhfgps-main-release-'+alternate.id),'nouvelle release inconnue conservée');
+ // Elle devient ensuite connue, puis seule une suppression d'un catalogue ultérieur autorise son retrait.
+ const ids=JSON.parse(files.get('releases.json')).releases.map(row=>row.release),recognized=catalogFiles(nextShell(alternate.files),[alternate.id,...ids]);serve(host,recognized);await update(page);await waitBuild(page,buildId(recognized.get('sw.js')));
+ const retired=catalogFiles(nextShell(recognized),ids,old.release);serve(host,retired);await update(page);await waitBuild(page,buildId(retired.get('sw.js')));await prune(page);
+ assert(!(await keys(page)).includes('vhfgps-main-release-'+alternate.id));assert((await keys(page)).includes('vhfgps-main-release-'+old.release));
+});
+
+test("purge reçue : moteur actif conservé après fermeture et réouverture hors réseau",async t=>{
+ const {page,host,files,url,context}=await fixture(t);await home(page,url);const old=await create(page),ids=JSON.parse(files.get('releases.json')).releases.map(row=>row.release).filter(id=>id!==old.release);assert(ids.length);
+ const unused=ids[0];await sentinel(page,unused);
+ const next=catalogFiles(nextShell(files),ids);serve(host,next);await update(page);await waitBuild(page,buildId(next.get('sw.js')));await prune(page);
+ assert((await keys(page)).includes('vhfgps-main-release-'+old.release));
+ await context.setOffline(true);const releaseURL=page.url();await page.close();const reopened=await context.newPage();await reopened.goto(releaseURL);await reopened.waitForFunction(()=>document.getElementById('testBanner')?.textContent.includes('Sortie retrouvée'));assert.equal((await active(reopened)).id,old.id);
+ await home(reopened,url);await reopened.locator('#deleteOuting').click();await reopened.locator('#confirmDelete').click();await waitAsync(reopened,async id=>!(await caches.keys()).includes('vhfgps-main-release-'+id),old.release);assert(!(await keys(reopened)).includes('vhfgps-main-release-'+old.release),'nettoyage automatique après suppression de la sortie protégée');
+});
+
+test("rejeu en cache en cours : réservation hors réseau protégée contre une purge reçue entre-temps",async t=>{
+ const {page,host,files,url,context}=await fixture(t);await home(page,url);const old=await create(page),alternate=alternateRelease(files,old),ids=JSON.parse(files.get('releases.json')).releases.map(row=>row.release);
+ const recognized=catalogFiles(nextShell(alternate.files),[alternate.id,...ids]);serve(host,recognized);await update(page);await waitBuild(page,buildId(recognized.get('sw.js')));await home(page,url);await create(page);
+ const held=await context.newPage();await held.goto(url+'held-preparation.html');await context.setOffline(true);
+ const replay=await held.evaluate(async id=>(await(await import('/release.js')).download(id)).version,old.release);assert.equal(replay,old.manifest.version);
+ await context.setOffline(false);const retired=catalogFiles(nextShell(recognized),[alternate.id]);serve(host,retired);await update(page);await waitBuild(page,buildId(retired.get('sw.js')));await prune(page);
+ assert((await keys(page)).includes('vhfgps-main-release-'+old.release),'rejeu sans requête réseau réservé');
+ await held.close();await prune(page);assert(!(await keys(page)).includes('vhfgps-main-release-'+old.release));
+});
+
+test("catalogue altéré en cache : aucun nettoyage, copie retirée conservée jusqu'à récupération d'un catalogue vérifié",async t=>{
+ const {page,files,url}=await fixture(t);await home(page,url);const original=await create(page),unused=JSON.parse(files.get('releases.json')).releases.find(row=>row.release!==original.release).release;await sentinel(page,unused);
+ const saved=await page.evaluate(async()=>{const reg=await navigator.serviceWorker.getRegistration();const name=(await caches.keys()).find(key=>key.startsWith('vhfgps-main-shell-'));const cache=await caches.open(name),url=new URL('/releases.json',location.href);const response=await cache.match(url);const saved=await response.text();await cache.put(url,new Response(JSON.stringify({format:1,latest:'f'.repeat(64),releases:[{release:'f'.repeat(64)}]})));return {name,saved};});
+ assert.equal(await prune(page),false);assert((await keys(page)).includes('vhfgps-main-release-'+unused));assert.equal((await active(page)).id,original.id);
+ await page.evaluate(async saved=>{await(await caches.open(saved.name)).put('/releases.json',new Response(saved.saved));},saved);assert.equal(await prune(page),true);assert((await keys(page)).includes('vhfgps-main-release-'+unused));
+});
+
+test("nouveau catalogue invalide malgré son empreinte correcte : mise à jour refusée et anciens moteurs préservés",async t=>{
+ const {page,files,url,host,context}=await fixture(t);await home(page,url);const old=await create(page),initial=await activeBuild(page),unused=JSON.parse(files.get('releases.json')).releases.find(row=>row.release!==old.release).release;await sentinel(page,unused);
+ const next=nextShell(files),catalog=JSON.parse(next.get('releases.json'));catalog.releases=[];next.set('releases.json',Buffer.from(JSON.stringify(catalog)));next.set('sw.js',prepareShell(root,next));serve(host,next);
+ await page.evaluate(()=>{navigator.serviceWorker.getRegistration().then(reg=>{reg.addEventListener('updatefound',()=>reg.installing?.addEventListener('statechange',function(){if(this.state==='redundant')window.invalidCatalogRejected=true;}));reg.update();});});await page.waitForFunction(()=>window.invalidCatalogRejected===true);
+ assert.equal(await activeBuild(page),initial);assert((await keys(page)).includes('vhfgps-main-release-'+unused));assert((await keys(page)).includes('vhfgps-main-release-'+old.release));
+ await context.setOffline(true);await page.reload();await page.waitForFunction(()=>document.getElementById('testBanner')?.textContent.includes('Sortie retrouvée'));assert.equal((await active(page)).id,old.id);
 });
 
 test("remise à zéro complète : anciennes données abandonnées, écritures obsolètes refusées, nouvelle sortie conservée ensuite",async t=>{

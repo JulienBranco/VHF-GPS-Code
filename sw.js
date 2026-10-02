@@ -1,5 +1,5 @@
 "use strict";
-const SHELL_BUILD="7c388f2b934b7284cb31773ba063e64d253826b9ba5975750155f811d6532235",ASSETS=[{"path":"index.html","sha256":"f7d4dd0a9e5686140a5b77270c9bcce7f943818fd34d82a90847d6eef304aae7"},{"path":"vhf_gps_code.html","sha256":"d72dffa77efbd8c1945356f6ce7d7565950b719d12ea8ad74e5e7d866e506284"},{"path":"boot.js","sha256":"9240c2263b5b72a42bc4736c973663d67b5ab0d815763f9ef64485a2b89549c5"},{"path":"protocol.js","sha256":"e221c63501fbd3f4ea02adeaa61260bb838edfedb63756d83a4f4e2375b89a9b"},{"path":"storage.js","sha256":"d032289e7eecc686c01e1acd7ff6c8051fdc789c2042f6815e5b1e1f6852b62d"},{"path":"release.js","sha256":"1e4c3b17b3a03690eaeeeebf59904eb1174a8dd51250e9fc77068ee856468f35"},{"path":"transition.js","sha256":"ca157b2f01462c9ee46f2174c69ef32444ea81f074cb9f535cd40adcde4a2058"},{"path":"transition.css","sha256":"af984953bfc51e6f14d11a5842d13131197334208d305310fff99226f3a10274"},{"path":"technical-info.js","sha256":"83bab94b3a7cec023e6f634d209a7b2c23567d989694d608413df0ca02db479d"},{"path":"install.js","sha256":"5a6d21beba6982b3cd77b8ea4c88b62f3ad76a06b056fb1253a9cbb9e3bbb599"},{"path":"style.css","sha256":"76caddfff498382569a6614a3c7f39cdf426b83bfe95a2fe348cd4b1c4d0af5e"},{"path":"manifest.webmanifest","sha256":"db8f807be14080682cf9176c0a2beed3fb3342788ac2fb5e58861f0aa37e207f"},{"path":"releases.json","sha256":"39ab864d1ee667bb2e28122a416c6e17cbae0ccc086e4f0501ef21a3c8be1d95"},{"path":"icons/icon-192.png","sha256":"c642823301de114ac0a87a02123d6a63d48dcd9f78dabd100722224f51ba147b"},{"path":"icons/icon-512.png","sha256":"b2514c68ecda4900b909d6209f326f85255ca77845df5db794e45f59028cc8c4"},{"path":"icons/icon-maskable-192.png","sha256":"4b708c534e1b2bc1c869be46d6fb1acbccd6d014bb16de40e351e981a994aa26"},{"path":"icons/icon-maskable-512.png","sha256":"0b962ff9cafd0b89b0191d3f4a0d6437135161375f778151e9b19afa5c59e4a8"},{"path":"icons/apple-touch-icon.png","sha256":"c6b9b5b9f264c2a4fad6bbe6a18ac1e846d2ba06e5a9510869f13759a5aa495c"}];
+const SHELL_BUILD="baafc39b39a03b958a740e7c8ae5901420a6a5b9e29d1242f50df95f5e3acbe6",ASSETS=[{"path":"index.html","sha256":"d7142492f7dab9429b6d0eb0d5cd14df6420eb65958980b8b1f28ca629d66b8c"},{"path":"vhf_gps_code.html","sha256":"d72dffa77efbd8c1945356f6ce7d7565950b719d12ea8ad74e5e7d866e506284"},{"path":"boot.js","sha256":"19e860e7bf2d4f038a71c620f62c7a4c9a7f00d8e586cc4a223b8d42d5799934"},{"path":"protocol.js","sha256":"e221c63501fbd3f4ea02adeaa61260bb838edfedb63756d83a4f4e2375b89a9b"},{"path":"storage.js","sha256":"d032289e7eecc686c01e1acd7ff6c8051fdc789c2042f6815e5b1e1f6852b62d"},{"path":"release.js","sha256":"5237c4a815e5c4ce199e72e215fada69826bac03857e3583b5ad32ce666b294d"},{"path":"transition.js","sha256":"ca157b2f01462c9ee46f2174c69ef32444ea81f074cb9f535cd40adcde4a2058"},{"path":"transition.css","sha256":"af984953bfc51e6f14d11a5842d13131197334208d305310fff99226f3a10274"},{"path":"technical-info.js","sha256":"83bab94b3a7cec023e6f634d209a7b2c23567d989694d608413df0ca02db479d"},{"path":"install.js","sha256":"5a6d21beba6982b3cd77b8ea4c88b62f3ad76a06b056fb1253a9cbb9e3bbb599"},{"path":"style.css","sha256":"76caddfff498382569a6614a3c7f39cdf426b83bfe95a2fe348cd4b1c4d0af5e"},{"path":"manifest.webmanifest","sha256":"db8f807be14080682cf9176c0a2beed3fb3342788ac2fb5e58861f0aa37e207f"},{"path":"releases.json","sha256":"f59e67f8e3e8e6fd6f46e4d39d1ab693627bcf0facdfbd63e14d14878edb22de"},{"path":"icons/icon-192.png","sha256":"c642823301de114ac0a87a02123d6a63d48dcd9f78dabd100722224f51ba147b"},{"path":"icons/icon-512.png","sha256":"b2514c68ecda4900b909d6209f326f85255ca77845df5db794e45f59028cc8c4"},{"path":"icons/icon-maskable-192.png","sha256":"4b708c534e1b2bc1c869be46d6fb1acbccd6d014bb16de40e351e981a994aa26"},{"path":"icons/icon-maskable-512.png","sha256":"0b962ff9cafd0b89b0191d3f4a0d6437135161375f778151e9b19afa5c59e4a8"},{"path":"icons/apple-touch-icon.png","sha256":"c6b9b5b9f264c2a4fad6bbe6a18ac1e846d2ba06e5a9510869f13759a5aa495c"}];
 const PREFIX="vhfgps-main-shell-",CACHE=PREFIX+SHELL_BUILD,CONTROL="vhfgps-main-control-v1",BASE=self.registration.scope;
 const absolute=path=>new URL(path,BASE).href;
 const shellURLs=new Set(ASSETS.map(file=>absolute(file.path)));
@@ -11,6 +11,10 @@ async function controlWrite(key,value){
  const cache=await caches.open(CONTROL);await cache.put(controlURL(key),new Response(value));
  if(/^(page|download):/.test(key))await cache.put(controlURL("created:"+key.slice(key.indexOf(":")+1)),new Response(String(Date.now())));
 }
+// Les réservations et suppressions partagent une file pour éviter une suppression
+// entre le dernier contrôle d'une copie et le début de son utilisation.
+let releaseOperation=Promise.resolve();
+function serializeReleaseOperation(task){const next=releaseOperation.catch(()=>{}).then(task);releaseOperation=next;return next;}
 async function hash(bytes){return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes)),n=>n.toString(16).padStart(2,"0")).join("");}
 async function windows(){return(await self.clients.matchAll({type:"window",includeUncontrolled:true})).filter(inScope);}
 function openStore(){return new Promise((resolve,reject)=>{
@@ -33,6 +37,33 @@ async function resetState(){
   tx.oncomplete=()=>resolve(revision);tx.onabort=()=>reject(tx.error||Error("Remise à zéro interrompue"));
  });}finally{db.close();}
 }
+async function releaseCatalog(){
+ const response=await(await caches.open(CACHE)).match(absolute("releases.json"));
+ const expected=ASSETS.find(file=>file.path==="releases.json")?.sha256;
+ if(!response||!expected)throw Error("Catalogue de publications absent");
+ const bytes=await response.arrayBuffer();
+ if(bytes.byteLength>2500000||await hash(bytes)!==expected)throw Error("Catalogue de publications altéré");
+ const catalog=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes));
+ if(catalog.format!==1||!Array.isArray(catalog.releases)||!catalog.releases.length||!/^[a-f0-9]{64}$/.test(catalog.latest))throw Error("Catalogue de publications invalide");
+ const ids=catalog.releases.map(row=>row?.release),unique=new Set(ids);
+ if(ids.some(id=>typeof id!=="string"||!/^[a-f0-9]{64}$/.test(id))||unique.size!==ids.length||!unique.has(catalog.latest))throw Error("Catalogue de publications incohérent");
+ return {catalog,ids:unique};
+}
+async function catalogState(){
+ try{
+  const state=JSON.parse(await controlRead("release-catalog"));
+  if(state?.format===1&&/^[a-f0-9]{64}$/.test(state.build)&&Array.isArray(state.known)&&state.known.every(id=>typeof id==="string"&&/^[a-f0-9]{64}$/.test(id)))return state;
+ }catch{}
+ return null;
+}
+async function adoptReleaseCatalog(){
+ const {ids}=await releaseCatalog(),previous=await catalogState();
+ // Garder la preuve qu'une publication a figuré au catalogue. Une absence seule
+ // ne prouve pas un retrait : le téléphone peut avoir téléchargé une version
+ // plus récente que son accueil, ou conserver une copie antérieure à ce mécanisme.
+ const known=new Set([...(previous?.known||[]),...ids]);
+ await controlWrite("release-catalog",JSON.stringify({format:1,build:SHELL_BUILD,known:[...known]}));
+}
 async function applyReset(){
  const response=await(await caches.open(CACHE)).match(absolute("releases.json"));
  const token=(await response.json()).reset||"initial";
@@ -46,17 +77,23 @@ async function applyReset(){
  await controlWrite("reset",token);return token!=="initial";
 }
 async function pruneReleases(){
- // L'état sauvegardé et toutes les pages de sortie encore ouvertes sont protégés.
- const keep=new Set(),active=await activeRelease();if(active)keep.add(active);
+ const {ids:keep}=await releaseCatalog(),state=await catalogState();
+ // Un travail commencé par un worker remplacé n'a plus autorité pour nettoyer.
+ if(!state||state.build!==SHELL_BUILD)return;
+ const known=new Set(state.known),active=await activeRelease();if(active)keep.add(active);
  for(const client of await windows()){
   const id=releaseId(client.url);if(id)keep.add(id);
   const pending=await controlRead("download:"+client.id);if(pending)keep.add(pending);
  }
  for(const name of await caches.keys()){
   const id=name.slice("vhfgps-main-release-".length);
-  if(!name.startsWith("vhfgps-main-release-")||keep.has(id))continue;
+  if(!name.startsWith("vhfgps-main-release-")||keep.has(id)||!known.has(id))continue;
   // Une autre page peut avoir enregistré une sortie depuis notre premier relevé.
-  if(await activeRelease()===id||(await windows()).some(client=>releaseId(client.url)===id))continue;
+  if((await catalogState())?.build!==SHELL_BUILD)return;
+  if(await activeRelease()===id)continue;
+  let protectedCopy=false;
+  for(const client of await windows())if(releaseId(client.url)===id||await controlRead("download:"+client.id)===id){protectedCopy=true;break;}
+  if(protectedCopy)continue;
   await caches.delete(name);
  }
 }
@@ -83,12 +120,14 @@ self.addEventListener("install",event=>event.waitUntil((async()=>{
    if(!response.ok||await hash(await response.clone().arrayBuffer())!==file.sha256)throw Error("Shell incomplet");
    await cache.put(absolute(file.path),response);
   }
+  await releaseCatalog();
  }catch(error){await caches.delete(CACHE);throw error;}
  // Activer uniquement après le téléchargement et la vérification de l'accueil entier.
  await self.skipWaiting();
 })()));
 self.addEventListener("activate",event=>event.waitUntil((async()=>{
  const reset=await applyReset(),upgrade=await controlRead("upgrade:"+SHELL_BUILD)==="yes";
+ await adoptReleaseCatalog();
  await self.clients.claim();
  for(const client of await windows()){
   const url=new URL(client.url),relative=url.pathname.slice(new URL(BASE).pathname.length);
@@ -99,13 +138,17 @@ self.addEventListener("activate",event=>event.waitUntil((async()=>{
   }else if(!releaseId(client.url))client.postMessage({type:"VHF_LAUNCHER_UPDATED",api:1,build:SHELL_BUILD});
  }
  await cleanShells();
+ // Un nouveau catalogue vérifié applique aussi une purge du dépôt, sans attendre
+ // qu'une autre sortie soit installée. Aucun téléchargement de moteur ici.
+ await serializeReleaseOperation(pruneReleases).catch(()=>{});
  for(const name of await caches.keys())if(name.startsWith("vhfgps-integration-")||name.startsWith("vhfgps-distribution-")||name.startsWith("vhf-gps-code-app-"))await caches.delete(name);
 })()));
 self.addEventListener("message",event=>{
  const data=event.data;if(data?.api!==1||!event.source||!inScope(event.source))return;
  if(data.type==="VHF_LAUNCHER_ACTIVATE")self.skipWaiting();
  if(data.type==="VHF_LAUNCHER_INFO"&&event.ports[0]){event.ports[0].postMessage({type:"VHF_LAUNCHER_INFO",api:1,build:SHELL_BUILD});event.ports[0].close();}
- if(data.type==="VHF_RELEASE_PRUNE")event.waitUntil(pruneReleases().then(()=>event.ports[0]?.postMessage({ok:true})).catch(()=>event.ports[0]?.postMessage({ok:false})));
+ if(data.type==="VHF_RELEASE_RESERVE"&&typeof data.release==="string"&&/^[a-f0-9]{64}$/.test(data.release))event.waitUntil(serializeReleaseOperation(()=>controlWrite("download:"+event.source.id,data.release)).then(()=>event.ports[0]?.postMessage({ok:true})).catch(()=>event.ports[0]?.postMessage({ok:false})));
+ if(data.type==="VHF_RELEASE_PRUNE")event.waitUntil(serializeReleaseOperation(pruneReleases).then(()=>event.ports[0]?.postMessage({ok:true})).catch(()=>event.ports[0]?.postMessage({ok:false})));
 });
 self.addEventListener("fetch",event=>{
  const request=event.request,url=new URL(request.url);
@@ -113,7 +156,7 @@ self.addEventListener("fetch",event=>{
  const relative=url.pathname.slice(new URL(BASE).pathname.length),release=relative.match(/^releases\/([a-f0-9]{64})\/([a-zA-Z0-9_./-]+)$/);
  if(request.headers.get("X-VHF-Integration-Download")==="1"){
   event.respondWith((async()=>{
-   if(release&&event.clientId)await controlWrite("download:"+event.clientId,release[1]);
+   if(release&&event.clientId)await serializeReleaseOperation(()=>controlWrite("download:"+event.clientId,release[1]));
    return fetch(request,{cache:"no-store"});
   })());return;
  }

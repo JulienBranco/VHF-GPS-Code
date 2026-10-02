@@ -11,6 +11,10 @@ async function controlWrite(key,value){
  const cache=await caches.open(CONTROL);await cache.put(controlURL(key),new Response(value));
  if(/^(page|download):/.test(key))await cache.put(controlURL("created:"+key.slice(key.indexOf(":")+1)),new Response(String(Date.now())));
 }
+// Les réservations et suppressions partagent une file pour éviter une suppression
+// entre le dernier contrôle d'une copie et le début de son utilisation.
+let releaseOperation=Promise.resolve();
+function serializeReleaseOperation(task){const next=releaseOperation.catch(()=>{}).then(task);releaseOperation=next;return next;}
 async function hash(bytes){return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes)),n=>n.toString(16).padStart(2,"0")).join("");}
 async function windows(){return(await self.clients.matchAll({type:"window",includeUncontrolled:true})).filter(inScope);}
 function openStore(){return new Promise((resolve,reject)=>{
@@ -33,6 +37,33 @@ async function resetState(){
   tx.oncomplete=()=>resolve(revision);tx.onabort=()=>reject(tx.error||Error("Remise à zéro interrompue"));
  });}finally{db.close();}
 }
+async function releaseCatalog(){
+ const response=await(await caches.open(CACHE)).match(absolute("releases.json"));
+ const expected=ASSETS.find(file=>file.path==="releases.json")?.sha256;
+ if(!response||!expected)throw Error("Catalogue de publications absent");
+ const bytes=await response.arrayBuffer();
+ if(bytes.byteLength>2500000||await hash(bytes)!==expected)throw Error("Catalogue de publications altéré");
+ const catalog=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes));
+ if(catalog.format!==1||!Array.isArray(catalog.releases)||!catalog.releases.length||!/^[a-f0-9]{64}$/.test(catalog.latest))throw Error("Catalogue de publications invalide");
+ const ids=catalog.releases.map(row=>row?.release),unique=new Set(ids);
+ if(ids.some(id=>typeof id!=="string"||!/^[a-f0-9]{64}$/.test(id))||unique.size!==ids.length||!unique.has(catalog.latest))throw Error("Catalogue de publications incohérent");
+ return {catalog,ids:unique};
+}
+async function catalogState(){
+ try{
+  const state=JSON.parse(await controlRead("release-catalog"));
+  if(state?.format===1&&/^[a-f0-9]{64}$/.test(state.build)&&Array.isArray(state.known)&&state.known.every(id=>typeof id==="string"&&/^[a-f0-9]{64}$/.test(id)))return state;
+ }catch{}
+ return null;
+}
+async function adoptReleaseCatalog(){
+ const {ids}=await releaseCatalog(),previous=await catalogState();
+ // Garder la preuve qu'une publication a figuré au catalogue. Une absence seule
+ // ne prouve pas un retrait : le téléphone peut avoir téléchargé une version
+ // plus récente que son accueil, ou conserver une copie antérieure à ce mécanisme.
+ const known=new Set([...(previous?.known||[]),...ids]);
+ await controlWrite("release-catalog",JSON.stringify({format:1,build:SHELL_BUILD,known:[...known]}));
+}
 async function applyReset(){
  const response=await(await caches.open(CACHE)).match(absolute("releases.json"));
  const token=(await response.json()).reset||"initial";
@@ -46,17 +77,23 @@ async function applyReset(){
  await controlWrite("reset",token);return token!=="initial";
 }
 async function pruneReleases(){
- // L'état sauvegardé et toutes les pages de sortie encore ouvertes sont protégés.
- const keep=new Set(),active=await activeRelease();if(active)keep.add(active);
+ const {ids:keep}=await releaseCatalog(),state=await catalogState();
+ // Un travail commencé par un worker remplacé n'a plus autorité pour nettoyer.
+ if(!state||state.build!==SHELL_BUILD)return;
+ const known=new Set(state.known),active=await activeRelease();if(active)keep.add(active);
  for(const client of await windows()){
   const id=releaseId(client.url);if(id)keep.add(id);
   const pending=await controlRead("download:"+client.id);if(pending)keep.add(pending);
  }
  for(const name of await caches.keys()){
   const id=name.slice("vhfgps-main-release-".length);
-  if(!name.startsWith("vhfgps-main-release-")||keep.has(id))continue;
+  if(!name.startsWith("vhfgps-main-release-")||keep.has(id)||!known.has(id))continue;
   // Une autre page peut avoir enregistré une sortie depuis notre premier relevé.
-  if(await activeRelease()===id||(await windows()).some(client=>releaseId(client.url)===id))continue;
+  if((await catalogState())?.build!==SHELL_BUILD)return;
+  if(await activeRelease()===id)continue;
+  let protectedCopy=false;
+  for(const client of await windows())if(releaseId(client.url)===id||await controlRead("download:"+client.id)===id){protectedCopy=true;break;}
+  if(protectedCopy)continue;
   await caches.delete(name);
  }
 }
@@ -83,12 +120,14 @@ self.addEventListener("install",event=>event.waitUntil((async()=>{
    if(!response.ok||await hash(await response.clone().arrayBuffer())!==file.sha256)throw Error("Shell incomplet");
    await cache.put(absolute(file.path),response);
   }
+  await releaseCatalog();
  }catch(error){await caches.delete(CACHE);throw error;}
  // Activer uniquement après le téléchargement et la vérification de l'accueil entier.
  await self.skipWaiting();
 })()));
 self.addEventListener("activate",event=>event.waitUntil((async()=>{
  const reset=await applyReset(),upgrade=await controlRead("upgrade:"+SHELL_BUILD)==="yes";
+ await adoptReleaseCatalog();
  await self.clients.claim();
  for(const client of await windows()){
   const url=new URL(client.url),relative=url.pathname.slice(new URL(BASE).pathname.length);
@@ -99,13 +138,17 @@ self.addEventListener("activate",event=>event.waitUntil((async()=>{
   }else if(!releaseId(client.url))client.postMessage({type:"VHF_LAUNCHER_UPDATED",api:1,build:SHELL_BUILD});
  }
  await cleanShells();
+ // Un nouveau catalogue vérifié applique aussi une purge du dépôt, sans attendre
+ // qu'une autre sortie soit installée. Aucun téléchargement de moteur ici.
+ await serializeReleaseOperation(pruneReleases).catch(()=>{});
  for(const name of await caches.keys())if(name.startsWith("vhfgps-integration-")||name.startsWith("vhfgps-distribution-")||name.startsWith("vhf-gps-code-app-"))await caches.delete(name);
 })()));
 self.addEventListener("message",event=>{
  const data=event.data;if(data?.api!==1||!event.source||!inScope(event.source))return;
  if(data.type==="VHF_LAUNCHER_ACTIVATE")self.skipWaiting();
  if(data.type==="VHF_LAUNCHER_INFO"&&event.ports[0]){event.ports[0].postMessage({type:"VHF_LAUNCHER_INFO",api:1,build:SHELL_BUILD});event.ports[0].close();}
- if(data.type==="VHF_RELEASE_PRUNE")event.waitUntil(pruneReleases().then(()=>event.ports[0]?.postMessage({ok:true})).catch(()=>event.ports[0]?.postMessage({ok:false})));
+ if(data.type==="VHF_RELEASE_RESERVE"&&typeof data.release==="string"&&/^[a-f0-9]{64}$/.test(data.release))event.waitUntil(serializeReleaseOperation(()=>controlWrite("download:"+event.source.id,data.release)).then(()=>event.ports[0]?.postMessage({ok:true})).catch(()=>event.ports[0]?.postMessage({ok:false})));
+ if(data.type==="VHF_RELEASE_PRUNE")event.waitUntil(serializeReleaseOperation(pruneReleases).then(()=>event.ports[0]?.postMessage({ok:true})).catch(()=>event.ports[0]?.postMessage({ok:false})));
 });
 self.addEventListener("fetch",event=>{
  const request=event.request,url=new URL(request.url);
@@ -113,7 +156,7 @@ self.addEventListener("fetch",event=>{
  const relative=url.pathname.slice(new URL(BASE).pathname.length),release=relative.match(/^releases\/([a-f0-9]{64})\/([a-zA-Z0-9_./-]+)$/);
  if(request.headers.get("X-VHF-Integration-Download")==="1"){
   event.respondWith((async()=>{
-   if(release&&event.clientId)await controlWrite("download:"+event.clientId,release[1]);
+   if(release&&event.clientId)await serializeReleaseOperation(()=>controlWrite("download:"+event.clientId,release[1]));
    return fetch(request,{cache:"no-store"});
   })());return;
  }
