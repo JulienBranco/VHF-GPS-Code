@@ -46,3 +46,29 @@ test('invitation indisponible : erreur contextualisée, sortie conservée et rej
  await page.locator('#confirmOutingImport').click();await page.waitForFunction(()=>document.getElementById('testBanner')?.textContent.includes('Sortie enregistrée'));
  assert.equal((await active()).id,original.id);assert.equal((await active()).release,original.release);
 });
+
+
+test('release en cache sans sortie connue : rejeu local complet, cache altéré refusé puis réparation en ligne',async t=>{
+ const browser=await chromium.launch(browserOptions()),host=await createServer(),prepared=prepareBuild();
+ t.after(async()=>{await browser.close();await new Promise(resolve=>host.server.close(resolve));});
+ for(const [name,bytes] of prepared.output)host.state.virtual.set('/'+name,bytes);
+ const context=await browser.newContext(),page=await context.newPage();await page.goto(host.url);await page.waitForFunction(()=>!document.getElementById('create').disabled);
+ await page.locator('#create').click();await page.locator('#outingBuiltinSelect').selectOption('iroise-brest');await page.locator('#checkOutingCreate').click();await page.locator('#confirmOutingCreate').click();await page.locator('#closeOutingSuccess').click();
+ await page.locator('#backHomeBtn').click();await page.waitForFunction(()=>!document.getElementById('receive').disabled);
+ const original=await page.evaluate(async()=>{const s=await import('/storage.js');return s.read(await s.openStore(),'active');});
+ const load=()=>page.evaluate(async id=>{try{return {manifest:await(await import('/release.js')).download(id)};}catch(error){return {error:error.message};}},prepared.id);
+ await context.setOffline(true);const cached=await load();assert.equal(cached.manifest.version,prepared.version);assert(!cached.error);
+ // Aucun accès serveur autorisé : un manifeste local altéré ne doit pas servir de confiance.
+ await page.evaluate(async id=>{const c=await caches.open('vhfgps-main-release-'+id);await c.put(new URL('/releases/'+id+'/manifest.json',location.origin),new Response('{}'));},prepared.id);
+ assert.match((await load()).error,/Connexion indisponible/);
+ await context.setOffline(false);assert.equal((await load()).manifest.version,prepared.version);
+ // Une signature de manifeste correcte ne suffit pas si un fichier du moteur est altéré.
+ await page.evaluate(async id=>{const c=await caches.open('vhfgps-main-release-'+id);await c.put(new URL('/releases/'+id+'/engine.js',location.origin),new Response('moteur altéré'));},prepared.id);
+ await context.setOffline(true);assert.match((await load()).error,/Connexion indisponible/);
+ // Un cache absent n'autorise pas une autre version ni une installation partielle.
+ const missing=await page.evaluate(async()=>{try{await(await import('/release.js')).download('f'.repeat(64));return '';}catch(error){return error.message;}});
+ assert.match(missing,/Connexion indisponible/);
+ const after=await page.evaluate(async()=>{const s=await import('/storage.js');return s.read(await s.openStore(),'active');});assert.deepEqual(after,original);
+ await context.setOffline(false);assert.equal((await load()).manifest.version,prepared.version);
+ await page.evaluate(async id=>{const r=await import('/release.js'),c=await caches.open('vhfgps-main-release-'+id),m=await(await c.match(new URL('/releases/'+id+'/manifest.json',location.origin))).json();await r.verify(id,m);},prepared.id);
+});

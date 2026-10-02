@@ -34,6 +34,17 @@ export async function verify(id,manifest){
 }
 export async function download(id,known){
  if(known){try{await verify(id,known);return known;}catch{}}
+ // Le moteur appartient à une release, pas aux données d'une sortie.
+ // Une invitation différente ou recréée peut donc réutiliser la même copie hors réseau.
+ try{
+  const cache=await caches.open(releaseCache(id)),cached=await cache.match(fileURL(id,"manifest.json"));
+  if(cached){
+   const bytes=await cached.arrayBuffer();
+   if(bytes.byteLength>2500000||await hash(bytes)!==id)throw Error("Manifeste local incohérent.");
+   const manifest=manifestCheck(JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes)));
+   await verify(id,manifest);return manifest;
+  }
+ }catch{}
  const bytes=await downloadFile(id,"manifest.json");if(await hash(bytes)!==id)throw Error("La version reçue n’est pas celle demandée.");
  const manifest=manifestCheck(JSON.parse(new TextDecoder().decode(bytes))),cache=await caches.open(releaseCache(id));
  for(const f of manifest.files){

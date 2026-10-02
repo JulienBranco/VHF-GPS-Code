@@ -158,8 +158,8 @@ Les saisies et les échanges en cours ne sont pas restaurés. Le journal des poi
 Une autre fenêtre qui modifie l’état bloque l’ancienne vue. Les transactions utilisent
 une révision pour empêcher une préparation devenue obsolète d’écraser la sortie actuelle.
 La création consulte latest.json en ligne. L’import suit exactement la publication du
-message ; une invitation déjà installée peut être rejouée sans réseau si son cache est complet.
-Une première importation demande Internet. Un cache incomplet impose une réparation
+message ; une invitation peut être installée ou rejouée sans réseau si les fichiers complets de sa release exacte sont déjà sur le téléphone, même sans ancienne sortie mémorisée.
+Une release absente demande Internet. Un cache incomplet impose une réparation
 avec l’invitation ; aucune autre publication ne remplace silencieusement la sortie.
 
 Pour une nouvelle sortie, le type « zone intégrée » est proposé, mais aucune zone précise n’est présélectionnée. Il faut choisir explicitement dans la liste avant de vérifier la sortie. Cette règle évite le repli implicite vers IROISE / BREST, même lorsque la précédente sortie était éphémère.

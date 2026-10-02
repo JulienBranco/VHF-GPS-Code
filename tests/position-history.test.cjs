@@ -140,3 +140,36 @@ test('conservation unique et nettoyage des archives héritées ; échec transact
  assert.deepEqual(result.finalKeys,['outing:'+result.saved.id]);assert.equal(result.old,undefined);
  assert.deepEqual(f.errors,[]);
 });
+
+
+test('ancienne invitation hors réseau : release complète conservée, données anciennes effacées puis sortie recréée',async t=>{
+ const f=await fixture(t),{page,context}=f;await generated(page);await count(page,1);
+ const invitation=await page.evaluate(async()=>formatOutingInvitation(await activeOutingPayload()));
+ const first=await page.evaluate(async()=>{const s=await import('./storage.js');return s.read(await s.openStore(),'active');});
+ await page.locator('#backHomeBtn').click();await f.create();await count(page,0);
+ assert.equal(await page.evaluate(async id=>{const s=await import('./storage.js');return s.read(await s.openStore(),'outing:'+id);},first.id),undefined);
+ await page.locator('#backHomeBtn').click();await f.ready();await context.setOffline(true);
+ await page.locator('#receive').click();await page.locator('#invitation').fill(invitation);await page.locator('#receiveForm button[type=submit]').click();
+ await page.locator('#confirmOutingImport').waitFor({state:'visible',timeout:5000});
+ await page.locator('#confirmOutingImport').click();await page.locator('#closeOutingSuccess').click();await count(page,0);
+ const restored=await page.evaluate(async()=>{const s=await import('./storage.js');return s.read(await s.openStore(),'active');});
+ assert.equal(restored.id,first.id);assert.equal(restored.state.vhfGpsSessionSecretV312,first.state.vhfGpsSessionSecretV312);
+ assert.deepEqual(await history(page),[]);assert.deepEqual(f.errors,[]);
+});
+
+
+test('suppression manuelle hors réseau : release conservée et invitation réinstallée sans journal',async t=>{
+ const f=await fixture(t),{page,context}=f;await generated(page);await count(page,1);
+ const invitation=await page.evaluate(async()=>formatOutingInvitation(await activeOutingPayload()));
+ const first=await page.evaluate(async()=>{const s=await import('./storage.js');return s.read(await s.openStore(),'active');});
+ await context.setOffline(true);await page.locator('#backHomeBtn').click();await f.ready();
+ await page.locator('#deleteOuting').click();await page.locator('#confirmDelete').click();await page.locator('#deleteDialog').waitFor({state:'hidden'});
+ const deleted=await page.evaluate(async id=>{const s=await import('/storage.js'),db=await s.openStore();return {active:await s.read(db,'active'),known:await s.read(db,'outing:'+id)};},first.id);
+ assert.equal(deleted.active.deleted,true);assert.equal(deleted.known,undefined);
+ assert(await page.evaluate(async id=>{const c=await caches.open('vhfgps-main-release-'+id);return !!await c.match(new URL('/releases/'+id+'/manifest.json',location.origin));},first.release));
+ await page.locator('#receive').click();await page.locator('#invitation').fill(invitation);await page.locator('#receiveForm button[type=submit]').click();
+ await page.locator('#confirmOutingImport').waitFor({state:'visible',timeout:5000});await page.locator('#confirmOutingImport').click();await page.locator('#closeOutingSuccess').click();await count(page,0);
+ const restored=await page.evaluate(async()=>{const s=await import('./storage.js');return s.read(await s.openStore(),'active');});
+ assert.equal(restored.id,first.id);assert.equal(restored.release,first.release);assert.equal(restored.state.vhfGpsSessionSecretV312,first.state.vhfGpsSessionSecretV312);
+ assert.deepEqual(await history(page),[]);assert.deepEqual(f.errors,[]);
+});
