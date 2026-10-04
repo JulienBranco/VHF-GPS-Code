@@ -9,6 +9,7 @@ export function initInstallUI(){
  function installed(){return completed||navigator.standalone===true||standalone.matches;}
  function refresh(){
   const available=isSecureContext&&!!navigator.serviceWorker&&!installed()&&(ios||androidChrome||!!prompt);
+  const reminder=$("installReminder");if(reminder)reminder.hidden=!available;
   button.classList.remove("hidden");button.hidden=!available;button.disabled=busy;
   button.textContent=ios?"Ajouter à l’écran d’accueil":"Installer l’application";
   if(!available&&dialog.open)dialog.close();

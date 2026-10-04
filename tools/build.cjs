@@ -1,6 +1,7 @@
 "use strict";
 const fs=require("node:fs"),path=require("node:path"),crypto=require("node:crypto");
 const hash=value=>crypto.createHash("sha256").update(value).digest("hex");
+const shellImages=["images/tracking-preview.png"];
 function prepareBuild(root=path.resolve(__dirname,".."),{excludedReleases=[],now=new Date().toISOString(),resetId=null}={}){
 root=path.resolve(root);
 const excluded=new Set(excludedReleases);
@@ -23,6 +24,7 @@ for(const name of iconPaths){
  if(!/^icons\/[a-zA-Z0-9_-]+\.png$/.test(name))throw Error("Chemin d’icône invalide : "+name);
  add(name,fs.readFileSync(path.join(root,name)));
 }
+for(const name of shellImages)add(name,fs.readFileSync(path.join(root,name)));
 // Le catalogue est informatif : il ne participe ni à l’invitation ni au moteur.
 // Conserver les dates enregistrées ; ne pas inventer une date de création pour les anciennes publications.
 const cataloguePath=path.join(root,"releases.json");
@@ -74,7 +76,7 @@ return {root,output,id,version,rows,now};
 function prepareShell(root=path.resolve(__dirname,".."),output=new Map(),iconPaths=null){
 const read=name=>fs.readFileSync(path.join(root,name),"utf8").replace(/\r\n/g,"\n");
 iconPaths??=[...new Set([...JSON.parse(read("manifest.webmanifest")).icons.map(icon=>icon.src),"icons/apple-touch-icon.png"])];
-const names=["index.html","vhf_gps_code.html","boot.js","protocol.js","storage.js","release.js","transition.js","transition.css","technical-info.js","install.js","style.css","manifest.webmanifest","releases.json",...iconPaths];
+const names=["index.html","vhf_gps_code.html","boot.js","protocol.js","storage.js","release.js","transition.js","transition.css","technical-info.js","install.js","style.css","manifest.webmanifest","releases.json",...iconPaths,...shellImages];
 const assets=names.map(name=>({path:name,sha256:hash(output.get(name)||(name.endsWith(".png")?fs.readFileSync(path.join(root,name)):Buffer.from(read(name))))}));
 return Buffer.from(read("tools/sw.template.js").replace("__BUILD__",JSON.stringify(hash(read("tools/sw.template.js")+"\n"+JSON.stringify(assets)))).replace("__ASSETS__",JSON.stringify(assets)));
 }

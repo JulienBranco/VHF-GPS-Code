@@ -424,12 +424,14 @@ test("installation Android : aide dans une modale du lanceur uniquement",async()
  const {page,context}=await phone({userAgent:'Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/150.0.0.0 Mobile Safari/537.36'});
  await context.addInitScript(()=>window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();event.stopImmediatePropagation();},true));
  await page.reload();await page.locator("#installAppBtn").waitFor({state:"visible"});
+ assert(await page.locator("#installReminder").isVisible());assert.equal(await page.locator("#installAppBtn").count(),1);
+ assert(await page.locator("#installReminder").evaluate(el=>!!(el.compareDocumentPosition(document.getElementById("create"))&Node.DOCUMENT_POSITION_FOLLOWING)));
  await page.locator("#installAppBtn").click();assert(await page.locator("#installDialog").isVisible());
  assert.match(await page.locator("#installSteps").innerText(),/Chrome/);assert.equal(await page.locator('#installAddress').inputValue(),url);
  await page.locator("#closeInstall").click();assert.equal(await page.locator("#installDialog").isVisible(),false);
  await create(page);assert.equal(await page.locator("#installAppBtn, #installHelp").count(),0);
  await page.locator("#backHomeBtn").click();await page.locator("#installAppBtn").waitFor({state:"visible"});
- await page.evaluate(()=>window.dispatchEvent(new Event("appinstalled")));assert.equal(await page.locator("#installAppBtn").isVisible(),false);
+ await page.evaluate(()=>window.dispatchEvent(new Event("appinstalled")));assert.equal(await page.locator("#installAppBtn").isVisible(),false);assert.equal(await page.locator("#installReminder").isVisible(),false);
 });
 
 test("installation directe proposée seulement au clic ; proposition consommée puis aide Android disponible",async()=>{
@@ -443,7 +445,7 @@ test("installation directe proposée seulement au clic ; proposition consommée 
 test("installation iPhone : étapes Safari, adresse copiable et repli manuel sans modifier la sortie",async()=>{
  const {page,context}=await phone({userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 Version/26.0 Mobile/15E148 Safari/604.1',viewport:{width:390,height:844},permissions:['clipboard-read','clipboard-write']});
  await create(page);await openHome(page);const before=await active(page);
- assert.equal(await page.locator('#installAppBtn').innerText(),'Ajouter à l’écran d’accueil');
+ assert.equal(await page.locator('#installAppBtn').innerText(),'Ajouter à l’écran d’accueil');assert(await page.locator('#installReminder').isVisible());
  await page.locator('#installAppBtn').click();assert.equal(await page.locator('#installTitle').innerText(),'Installer sur iPhone / iPad');
  assert.match(await page.locator('#installSteps').innerText(),/Safari/);assert.match(await page.locator('#installSteps').innerText(),/Ouvrir comme app web/);
  assert.equal(await page.locator('#installAddress').inputValue(),url);assert.equal(await page.locator('#installAddress').getAttribute('readonly'),'');
@@ -486,7 +488,7 @@ test("mode installé : pas de bouton Installer dans le lanceur ni dans l’appli
  const context=await browser.newContext();contexts.push(context);
  await context.addInitScript(()=>{const original=window.matchMedia.bind(window);window.matchMedia=query=>{const result=original(query);if(query==="(display-mode: standalone)")Object.defineProperty(result,"matches",{value:true});return result;};});
  const page=await context.newPage();await page.goto(url);await page.waitForFunction(()=>!document.getElementById("create").disabled);
- assert.equal(await page.locator("#installAppBtn").isVisible(),false);await create(page);assert.equal(await page.locator("#installAppBtn").count(),0);
+ assert.equal(await page.locator("#installAppBtn").isVisible(),false);assert.equal(await page.locator("#installReminder").isVisible(),false);await create(page);assert.equal(await page.locator("#installAppBtn").count(),0);
 });
 
 test("module de démarrage absent : le chargement ne reste pas bloqué et la sortie peut être réparée",async()=>{

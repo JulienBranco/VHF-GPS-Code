@@ -6,7 +6,7 @@ const source=path.resolve(__dirname,"..");
 function fixture(t){
  const root=fs.mkdtempSync(path.join(os.tmpdir(),"vhfgps-maintenance-"));
  t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
- for(const name of ["sources","tools","icons"])fs.cpSync(path.join(source,name),path.join(root,name),{recursive:true});
+ for(const name of ["sources","tools","icons","images"])fs.cpSync(path.join(source,name),path.join(root,name),{recursive:true});
  for(const entry of fs.readdirSync(source,{withFileTypes:true}))if(entry.isFile()&&!['latest.json','sw.js','releases.json','RELEASES.html'].includes(entry.name))fs.copyFileSync(path.join(source,entry.name),path.join(root,entry.name));
  return root;
 }
