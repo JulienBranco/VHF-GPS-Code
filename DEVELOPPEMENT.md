@@ -79,6 +79,28 @@ Il ne remplace pas les tests fonctionnels ou les essais sur téléphone.
 
 ## Tester les fichiers qui seront publiés
 
+Le panneau facultatif « Changer de canal VHF » est isolé dans
+`sources/vhf-channels.js` et `sources/vhf-channels-model.js`. Il associe les canaux
+navire à navire 6, 8, 72 et 77 à quatre mots distincts issus du catalogue existant
+des empreintes, en écartant les entrées contenant plusieurs mots. Le calcul HMAC
+utilise le secret canonique de la sortie et un domaine propre `VHF-CHANNELS-V1` ;
+il ne dépend pas de la zone et ne modifie ni les invitations ni le protocole des positions.
+Le tableau est calculé localement, sans stockage supplémentaire ni réseau.
+Le pont conserve le secret et le catalogue pour le calcul ; le module d'affichage
+reçoit uniquement des copies des quatre correspondances canal/mot. Son cache reste
+privé au pont. Cela réduit les données transmises au module facultatif, sans créer
+une frontière de sécurité entre les scripts de la même application.
+
+La version V1 fige l’ordre des canaux, le calcul, le filtre et l’empreinte du catalogue.
+Une modification du catalogue est refusée explicitement par ce module : ne pas changer
+son empreinte attendue sans versionner les correspondances et leurs tests de référence.
+Les tests comparent deux appareils, une implémentation indépendante, 500 sorties
+sans doublons et une reprise hors connexion. Une panne du module ne bloque pas les positions.
+Les scénarios de navigateur dans `tests/radio-navigation.test.cjs` couvrent aussi
+le mémo flottant en jour/nuit sur mobile, ses liens vers les deux panneaux, l'attente
+et la confirmation de zone, sa conservation hors connexion et les ancres après
+encodage/décodage. Ils sont inclus dans `test`, `test:browser` et `test:sources`.
+
 ```powershell
 node tools/server.cjs 8082
 ```

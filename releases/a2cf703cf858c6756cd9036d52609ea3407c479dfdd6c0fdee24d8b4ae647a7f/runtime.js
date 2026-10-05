@@ -142,7 +142,7 @@ async function start(){
  }
  try{
   const {initVhfChannels}=await import("./vhf-channels.js");
-  initVhfChannels({getTable:()=>window.getVhfChannelTable(),canUse:()=>installed&&!stopped});
+  initVhfChannels({getSession:()=>window.vhfChannelSession(),words:window.vhfChannelWords(),canUse:()=>installed&&!stopped});
  }catch(error){
   const message=document.getElementById("vhfChannelsStatus");
   message.hidden=false;message.textContent="Tableau des canaux indisponible pour cette ouverture.";

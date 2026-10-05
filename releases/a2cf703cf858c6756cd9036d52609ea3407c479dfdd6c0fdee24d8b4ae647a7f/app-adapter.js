@@ -1,24 +1,11 @@
 // Pont explicite entre l’interface et la distribution. Aucun remplacement de fonctions au démarrage.
 let preparedInvitation="",preparingOuting=false;
-// Le secret et le cache restent dans le pont : l'affichage ne reçoit que les quatre lignes.
-window.getVhfChannelTable=(()=>{
- let cachedSecret="",pending=null;
- return async()=>{
-  const value=validateOperationalSessionSecret(activeSecret());
-  if(!value.ok){cachedSecret="";pending=null;return null;}
-  const secret=value.canonical;
-  if(secret!==cachedSecret||!pending){
-   cachedSecret=secret;
-   pending=import("./vhf-channels-model.js").then(({channelTable})=>channelTable(secret,FINGERPRINT_WORDS.slice()));
-  }
-  const calculation=pending;
-  try{
-   const rows=await calculation;
-   if(activeSecret()!==secret)return null;
-   return rows.map(({channel,word})=>({channel,word}));
-  }catch(error){if(pending===calculation)pending=null;throw error;}
- };
-})();
+// Accès limité du module facultatif aux données déjà validées du moteur.
+window.vhfChannelSession=()=>{
+ const value=validateOperationalSessionSecret(activeSecret());
+ return value.ok?value.canonical:"";
+};
+window.vhfChannelWords=()=>FINGERPRINT_WORDS.slice();
 // Le module de suivi ne reçoit ni secret ni état du protocole.
 window.confirmedTrackingPoint=()=>relativePositionReady() && protocolRuntimeState===PROTOCOL_STATE.OK
   ? {lat:currentDecodedResult.lat,lon:currentDecodedResult.lon,identity:decodeRevision}

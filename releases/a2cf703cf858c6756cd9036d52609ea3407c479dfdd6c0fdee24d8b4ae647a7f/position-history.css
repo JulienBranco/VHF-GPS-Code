@@ -1,0 +1,25 @@
+/* Journal commun aux deux rôles, dans le panneau de session. */
+#positionHistory{margin-top:16px;font-size:.95rem}
+#positionHistory>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;list-style:none;font-weight:800;padding:8px 0;color:var(--focus-text)}
+#positionHistory>summary::-webkit-details-marker{display:none}
+#positionHistory>summary::marker{content:""}
+#positionHistory>summary::after{content:"";flex:none;width:28px;height:28px;border-radius:50%;background-color:#087986;background-image:linear-gradient(#fff,#fff),linear-gradient(#fff,#fff);background-size:12px 2px,2px 12px;background-position:center;background-repeat:no-repeat}
+#positionHistory[open]>summary::after{background-image:linear-gradient(#fff,#fff)}
+#positionHistory>summary:focus-visible{outline:3px solid var(--session-line);outline-offset:3px;border-radius:8px}
+#positionHistoryCount{display:inline-block;min-width:1.6em;text-align:center;margin-left:6px;border-radius:20px;background:var(--session-surface);padding:2px 7px}
+#positionHistoryList{list-style:none;padding:0;margin:8px 0 0;max-height:65dvh;overflow:auto;overscroll-behavior:contain}
+#positionHistory .history-entry{padding:14px 0;display:grid;gap:8px;border-top:1px solid color-mix(in srgb,var(--session-line) 40%,transparent)}
+#positionHistory .history-entry-heading{display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap}
+#positionHistory .history-kind{color:#91e4b2}
+:root[data-theme="day"] #positionHistory .history-kind{color:#08683a}
+#positionHistory .history-generated .history-kind{color:#9eceff}
+:root[data-theme="day"] #positionHistory .history-generated .history-kind{color:#155d9b}
+#positionHistory .history-date{font-size:.82rem;color:var(--session-muted);font-variant-numeric:tabular-nums}
+#positionHistory .history-coordinates{display:flex;flex-wrap:wrap;gap:4px 20px;font-weight:800;font-variant-numeric:tabular-nums}
+#positionHistory .history-zone{font-size:.85rem;color:var(--session-muted);overflow-wrap:anywhere}
+#positionHistory .history-phrase{font-weight:700;overflow-wrap:anywhere}
+#positionHistory button.history-track{background:#087849;color:#fff;border:1px solid #16835a;padding:10px 14px;width:auto;justify-self:start;font-weight:800;font-size:.9rem}
+#positionHistory #positionHistoryStatus{color:#ff969e;background:#63262c;padding:10px;border-radius:8px;font-weight:700}
+:root[data-theme="day"] #positionHistory #positionHistoryStatus{color:#981728;background:#ffe8eb}
+#positionHistory .history-empty{color:var(--session-muted);margin:8px 0}
+@media(max-width:420px){#positionHistory .history-coordinates{flex-direction:column}}
