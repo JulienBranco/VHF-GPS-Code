@@ -1,0 +1,49 @@
+/* Styles isolés : retirer ce fichier retire uniquement le panneau de suivi. */
+#startPointTracking{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin:0 0 14px;padding:14px;background:#087849;border:2px solid #16835a;color:#fff;font-weight:800}
+#startPointTracking[hidden]{display:none!important}
+#startPointTracking .tracking-button-icon{font-size:1.7rem;line-height:1}
+dialog.point-tracking-dialog{--pt-map:#071920;--pt-grid:#234854;--pt-direction:#82ceff;--pt-trace:#62ddb7;--pt-target:#ff8585;--pt-boat:#ffd166;--pt-muted:#b2cbc8;--pt-text:#eef9f7;background:var(--card);color:var(--pt-text);border:1px solid var(--line);border-radius:16px;padding:0;width:min(720px,calc(100vw - 24px));max-width:none;max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain}
+:root[data-theme="day"] dialog.point-tracking-dialog{--pt-map:#f1f7fa;--pt-grid:#cfdee5;--pt-direction:#0759a8;--pt-trace:#087849;--pt-target:#b42332;--pt-boat:#0759a8;--pt-muted:#475e68;--pt-text:#08151b;background:#fff}
+:root[data-theme="day"] .point-tracking-dialog button.tracking-close{background:#b42332;border-color:#b42332;color:#fff}
+html:has(#pointTrackingDialog[open]){overflow:hidden}
+.point-tracking-dialog::backdrop{background:#000b}
+.point-tracking-dialog .tracking-header{position:sticky;top:0;z-index:2;background:var(--card);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line)}
+:root[data-theme="day"] .point-tracking-dialog .tracking-header,:root[data-theme="day"] .point-tracking-dialog .tracking-footer{background:#fff}
+.point-tracking-dialog h2{margin:0;font-size:1.13rem}
+.point-tracking-dialog button{margin:0;padding:10px 12px;min-height:44px;border:2px solid #5ca5e9;background:#173f5d;color:#eaf5ff;cursor:pointer}
+:root[data-theme="day"] .point-tracking-dialog button{background:#e4f1ff;border-color:#0759a8;color:#0759a8}
+.point-tracking-dialog button.tracking-close{background:#b42332;border-color:#b42332;color:#fff;flex:none}
+.point-tracking-dialog .tracking-body{padding:14px 16px}
+.point-tracking-dialog .tracking-main-value{display:block;font-size:2rem;line-height:1.15;font-weight:850;color:var(--ok)}
+.point-tracking-dialog .tracking-direction{display:block;margin:6px 0 12px;font-size:1.15rem;font-weight:800}
+.point-tracking-dialog .tracking-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.point-tracking-dialog .tracking-stat{background:var(--pt-map);border-radius:10px;padding:10px;min-width:0}
+.point-tracking-dialog .tracking-stat span{display:block;font-size:.75rem;color:var(--pt-muted)}
+.point-tracking-dialog .tracking-stat strong{display:block;font-size:1.04rem;overflow-wrap:anywhere}
+.point-tracking-dialog .tracking-status{margin:0 0 8px;padding:9px 11px;background:var(--pt-map);border-radius:9px;font-size:.85rem;font-weight:650;line-height:1.4;color:var(--pt-text)}
+.point-tracking-dialog .tracking-status[data-kind="warn"]{color:var(--warn);background:#302813}
+.point-tracking-dialog .tracking-status[data-kind="bad"]{color:var(--bad);background:#321819}
+:root[data-theme="day"] .point-tracking-dialog .tracking-status[data-kind="warn"]{color:#704000;background:#fff4d7}
+:root[data-theme="day"] .point-tracking-dialog .tracking-status[data-kind="bad"]{color:#8e101b;background:#fff0f1}
+.point-tracking-dialog .tracking-meta{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.78rem;color:var(--pt-muted);margin:8px 0}
+.point-tracking-dialog .tracking-map{display:block;width:100%;height:clamp(210px,34dvh,390px);background:var(--pt-map);border-radius:12px;touch-action:none;cursor:grab}
+.point-tracking-dialog .tracking-map:active{cursor:grabbing}
+.point-tracking-dialog .tracking-map text{fill:var(--pt-text);font:600 24px system-ui,sans-serif}
+.point-tracking-dialog .tracking-map .tracking-grid{stroke:var(--pt-grid);stroke-width:1}
+.point-tracking-dialog .tracking-map .tracking-trace{stroke:var(--pt-trace);stroke-width:3;stroke-linejoin:round;stroke-linecap:round;fill:none}
+.point-tracking-dialog .tracking-map .tracking-direct{stroke:var(--pt-direction);stroke-width:2.5;stroke-dasharray:8 6}
+.point-tracking-dialog .tracking-map .tracking-target{stroke:var(--pt-target);stroke-width:3;fill:var(--pt-map)}
+.point-tracking-dialog .tracking-map .tracking-boat{stroke:var(--pt-map);stroke-width:2;fill:var(--pt-boat)}
+.point-tracking-dialog .tracking-map .tracking-accuracy{fill:var(--pt-direction);fill-opacity:.10;stroke:var(--pt-direction);stroke-opacity:.4;stroke-width:1}
+.point-tracking-dialog .tracking-map .tracking-cell{fill:var(--pt-target);fill-opacity:.06;stroke:var(--pt-target);stroke-opacity:.35;stroke-width:1}
+.point-tracking-dialog .tracking-map .tracking-north{stroke:var(--pt-text);stroke-width:2}
+.point-tracking-dialog .tracking-map-controls{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 6px}
+.point-tracking-dialog .tracking-map-controls button:first-child,.point-tracking-dialog .tracking-map-controls button:nth-child(2){min-width:46px;font-size:1.25rem;line-height:1}
+.point-tracking-dialog .tracking-legend{display:flex;gap:8px 14px;flex-wrap:wrap;font-size:.77rem;color:var(--pt-muted)}
+.point-tracking-dialog .tracking-legend .legend-line{display:inline-block;width:22px;vertical-align:middle;margin-right:5px;border-top:2px dashed var(--pt-direction)}
+.point-tracking-dialog .tracking-legend .legend-trace{border-top:3px solid var(--pt-trace)}
+.point-tracking-dialog .tracking-note{font-size:.77rem;color:var(--pt-muted);line-height:1.4;margin:12px 0 0}
+.point-tracking-dialog .tracking-footer{position:sticky;bottom:0;z-index:2;background:var(--card);padding:12px 16px;border-top:1px solid var(--line)}
+.point-tracking-dialog .tracking-footer button{width:100%}
+@media(max-width:600px){dialog.point-tracking-dialog{width:100vw;max-height:100dvh;height:100dvh;margin:0;border:0;border-radius:0}.point-tracking-dialog .tracking-body{padding:12px}.point-tracking-dialog .tracking-header{padding:12px}.point-tracking-dialog .tracking-main-value{font-size:1.8rem}}
+@media(prefers-reduced-motion:reduce){.point-tracking-dialog *{scroll-behavior:auto!important}}

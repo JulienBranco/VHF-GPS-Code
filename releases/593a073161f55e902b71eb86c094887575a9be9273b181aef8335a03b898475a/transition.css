@@ -1,0 +1,16 @@
+/* Même écran discret pendant le chargement du lanceur et d’une publication. */
+#loadingScreen{display:none}
+html.app-loading{background:#f7f9fc;color:#173b45}
+html.app-loading body{background:transparent!important;overflow:hidden!important}
+html.app-loading body>*:not(#loadingScreen){visibility:hidden!important;pointer-events:none!important}
+html.app-loading dialog::backdrop{background:transparent!important}
+html.app-loading #loadingScreen{display:flex;position:fixed;inset:0;z-index:2147483647;align-items:center;justify-content:center;gap:12px;background:#f7f9fc;color:#173b45;font:15px/1.4 system-ui,sans-serif}
+#loadingScreen .loading-dot{width:18px;height:18px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:vhf-loading .8s linear infinite}
+@keyframes vhf-loading{to{transform:rotate(360deg)}}
+@media(prefers-color-scheme:dark){html.app-loading,html.app-loading #loadingScreen{background:#06131a;color:#edf9f7}}
+html[data-theme=night].app-loading,html[data-theme=night].app-loading #loadingScreen{background:#06131a;color:#edf9f7}
+html[data-theme=day].app-loading,html[data-theme=day].app-loading #loadingScreen{background:#f7f9fc;color:#173b45}
+@media(prefers-reduced-motion:reduce){#loadingScreen .loading-dot{animation:none}}
+
+/* Les styles de boutons ne doivent pas annuler la visibilité demandée. */
+[hidden]{display:none!important}
