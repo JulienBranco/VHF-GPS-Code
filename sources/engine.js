@@ -2720,25 +2720,30 @@ async function encodeSelectedPosition(){
   }
 }
 
+function scrollBelowRadioNavigation(target,behavior="smooth"){
+  const navigation=$("radioNavigation"),memo=$("radioMemo");
+  const rows=[$("radioMemoSession"),$("radioMemoZone")];
+  const savedHidden=[memo,...rows].map(el=>el.hidden);
+  const receiving=!$("receivePanel").classList.contains("hidden");
+  const alias=$(receiving?"recvZoneAlias":"sendZoneAlias");
+  $("radioMemoFingerprint").textContent=$("fingerprintWords").textContent;
+  $("radioMemoAlias").textContent=alias.textContent;
+  const zoneName=alias.nextElementSibling?.querySelector(".zone-alias-help-name")?.textContent.trim();
+  $("radioMemoZoneName").textContent=zoneName?` · ${zoneName}`:"";
+  [memo,...rows].forEach(el=>el.hidden=false);
+  const scrollOffset=navigation.getBoundingClientRect().height+12;
+  [memo,...rows].forEach((el,i)=>el.hidden=savedHidden[i]);
+  target.style.scrollMarginTop=`${scrollOffset}px`;
+  target.scrollIntoView({behavior,block:"start"});
+}
+
 $("encodeBtn").onclick=async()=>{
   try{
     const result=await encodeSelectedPosition();
     if(!result)return;
     if(result.d.index===result.e.index && result.d.receivedTag===result.e.tag &&
        !$("sendPanel").classList.contains("hidden")){
-      // Le mémo apparaît pendant le défilement : réserver sa hauteur complète.
-      const navigation=$("radioNavigation"),memo=$("radioMemo");
-      const rows=[$("radioMemoSession"),$("radioMemoZone")];
-      const savedHidden=[memo,...rows].map(el=>el.hidden);
-      $("radioMemoFingerprint").textContent=$("fingerprintWords").textContent;
-      $("radioMemoAlias").textContent=$("sendZoneAlias").textContent;
-      const zoneName=$("sendZoneAlias").nextElementSibling?.querySelector(".zone-alias-help-name")?.textContent.trim();
-      $("radioMemoZoneName").textContent=zoneName?` · ${zoneName}`:"";
-      [memo,...rows].forEach(el=>el.hidden=false);
-      const scrollOffset=navigation.getBoundingClientRect().height+12;
-      [memo,...rows].forEach((el,i)=>el.hidden=savedHidden[i]);
-      $("encodedBlock").style.scrollMarginTop=`${scrollOffset}px`;
-      $("encodedBlock").scrollIntoView({behavior:"smooth",block:"start"});
+      scrollBelowRadioNavigation($("encodedBlock"));
     }
   }catch(e){
     invalidateEncodedResult();
@@ -3197,6 +3202,10 @@ async function runDecode(automatic=false){
         "Contrôle local réussi (9 bits) — position provisoire jusqu’au mot final.",
         "warn"
       );
+      if(!$("receivePanel").classList.contains("hidden")){
+        if(document.activeElement?.matches("#wordGrid input"))document.activeElement.blur();
+        scrollBelowRadioNavigation($("decodeStatus"));
+      }
       return;
     }
 
