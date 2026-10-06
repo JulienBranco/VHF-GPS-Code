@@ -1,8 +1,15 @@
 {
   "format": 1,
-  "latest": "2274797a80120064e95ac6e9c1d64a19754022593a106349d769cbfbd146d95d",
+  "latest": "a918b49ce6bdff44159d468e3d02ca49765acfc7f317010bd0e62eb17bd8acb1",
   "reset": "6f576ab4810500b84293a79f92ec7238",
   "releases": [
+    {
+      "release": "a918b49ce6bdff44159d468e3d02ca49765acfc7f317010bd0e62eb17bd8acb1",
+      "version": "3.28.124",
+      "protocol": "VHF-GPS-PROTO-6",
+      "createdAt": "2026-10-06T15:35:15.984Z",
+      "indexedAt": "2026-10-06T15:35:15.984Z"
+    },
     {
       "release": "2274797a80120064e95ac6e9c1d64a19754022593a106349d769cbfbd146d95d",
       "version": "3.28.123",

@@ -64,6 +64,58 @@ test('suivi réservé au point confirmé, trace et estimations, zoom et déplace
  }
  assert.deepEqual(f.errors,[]);
 });
+test('coordonnées en haut : cible fixe, GPS actualisé et qualité du relevé explicite',async t=>{
+ const f=await fixture(t),{page}=f;await f.confirm();await page.clock.install();
+ await page.locator('#startPointTracking').click();
+ const target=await page.locator('#trackingTargetCoords').textContent();
+ assert.match(await page.locator('#trackingTargetCoordsLabel').textContent(),/Point reçu · fixe/);
+ assert.equal(await page.locator('#trackingOwnCoords').textContent(),'Recherche GPS…');
+ assert.equal(await page.locator('#trackingOwnPosition').getAttribute('data-state'),'waiting');
+ assert(await page.locator('#trackingTargetCoords').evaluate(e=>!!(e.compareDocumentPosition(document.getElementById('trackingDistance'))&Node.DOCUMENT_POSITION_FOLLOWING)));
+ await page.evaluate(()=>__gps.emit({lat:46.0336666667,lon:-2.0337833333}));
+ assert.equal(await page.locator('#trackingOwnCoords').textContent(),'46° 2.020′ N\n002° 2.027′ W');
+ assert.equal(await page.locator('#trackingOwnPosition').getAttribute('data-state'),'live');
+ assert.match(await page.locator('#trackingOwnCoordsLabel').textContent(),/Position GPS actuelle/);
+ await page.clock.fastForward(1000);
+ await page.evaluate(()=>__gps.emit({lat:46.0338333333,lon:-2.034}));
+ const latest='46° 2.030′ N\n002° 2.040′ W';
+ assert.equal(await page.locator('#trackingOwnCoords').textContent(),latest);
+ assert.equal(await page.locator('#trackingTargetCoords').textContent(),target);
+ fs.mkdirSync(path.join(root,'test-results'),{recursive:true});
+ for(const theme of ['day','night']){
+  await page.evaluate(theme=>applyTheme(theme),theme);
+  for(const width of [320,390,900]){
+   await page.setViewportSize({width,height:844});
+   await page.locator('#pointTrackingDialog').evaluate(d=>d.scrollTo({top:0,behavior:'instant'}));
+   assert(await page.locator('#pointTrackingDialog').evaluate(d=>d.scrollWidth<=d.clientWidth));
+   assert(await page.locator('.tracking-positions').evaluate(e=>Array.from(e.querySelectorAll('.tracking-position')).every(p=>p.scrollWidth<=p.clientWidth)));
+   await page.screenshot({path:path.join(root,'test-results','tracking-coordinates-'+theme+'-'+width+'.png')});
+  }
+ }
+ await page.clock.fastForward(21000);
+ assert.equal(await page.locator('#trackingOwnPosition').getAttribute('data-state'),'last');
+ assert.match(await page.locator('#trackingOwnCoordsLabel').textContent(),/Dernière position GPS/);
+ assert.equal(await page.locator('#trackingOwnCoords').textContent(),latest);
+ await page.evaluate(()=>__gps.emit({lat:46.0338333333,lon:-2.034,accuracy:400}));
+ assert.equal(await page.locator('#trackingOwnPosition').getAttribute('data-state'),'indicative');
+ assert.match(await page.locator('#trackingOwnCoordsLabel').textContent(),/Position GPS indicative/);
+ await page.evaluate(()=>__gps.emit({lat:46.0338333333,lon:-2.034}));
+ assert.equal(await page.locator('#trackingOwnPosition').getAttribute('data-state'),'live');
+ await page.evaluate(()=>{__hidden=true;document.dispatchEvent(new Event('visibilitychange'));});
+ assert.equal(await page.locator('#trackingOwnPosition').getAttribute('data-state'),'last');
+ await page.evaluate(()=>{__hidden=false;document.dispatchEvent(new Event('visibilitychange'));});
+ assert.equal(await page.locator('#trackingOwnPosition').getAttribute('data-state'),'last');
+ await page.evaluate(()=>__gps.emit({lat:46.0338333333,lon:-2.034}));
+ assert.equal(await page.locator('#trackingOwnPosition').getAttribute('data-state'),'live');
+ await page.evaluate(()=>__gps.fail(1));
+ assert.equal(await page.locator('#trackingOwnPosition').getAttribute('data-state'),'last');
+ assert.equal(await page.locator('#trackingTargetCoords').textContent(),target);
+ await page.locator('#closePointTracking').click();await page.locator('#startPointTracking').click();
+ assert.equal(await page.locator('#trackingOwnCoords').textContent(),'Recherche GPS…');
+ assert.equal(await page.locator('#trackingOwnPosition').getAttribute('data-state'),'waiting');
+ assert.deepEqual(f.errors,[]);
+});
+
 test('fermetures, réouverture et callbacks tardifs : GPS arrêté, trace éphémère, wake lock libéré',async t=>{
  const f=await fixture(t),{page}=f;await f.confirm();
  for(const close of ['button','escape','native']){

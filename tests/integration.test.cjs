@@ -33,14 +33,14 @@ async function openReceive(page){
  await openHome(page);await page.locator("#receive").click();
  await page.locator("#invitation").waitFor({state:"visible"});
 }
-async function create(page,{ephemeral=false}={}){
+async function create(page,{ephemeral=false,zone="iroise-brest"}={}){
  await openNew(page);
  await page.waitForFunction(()=>document.getElementById("testBanner")?.textContent.includes("Confirme la sortie"));
  const app=frame(page);await app.locator("#outingCreateDialog").waitFor({state:"visible"});
  if(ephemeral){
   await app.locator("#outingEphemeralChoice").click();await app.locator("#outingDecimalMode").click();
   await app.locator("#outingLat").fill("46.2");await app.locator("#outingLon").fill("-2.4");
- }else await app.locator("#outingBuiltinSelect").selectOption("iroise-brest");
+ }else await app.locator("#outingBuiltinSelect").selectOption(zone);
  await app.locator("#checkOutingCreate").click();await app.locator("#confirmOutingCreate").waitFor({state:"visible"});
  await app.locator("#confirmOutingCreate").click();
  await page.waitForFunction(()=>(document.getElementById("testBanner")||document.getElementById("status")).textContent.includes("Sortie enregistrée"));
@@ -104,7 +104,7 @@ test("échange réel complet entre deux appareils, alias et COMPAT identiques, c
  const first=await aliases(sender.page),second=await aliases(receiver.page);
  assert.equal(first.session,second.session);assert.equal(first.zone,second.zone);assert.equal(first.secret,second.secret);
  assert.equal(first.zoneData.lat,second.zoneData.lat);assert.equal(first.zoneData.lon,second.zoneData.lon);
- assert.equal(first.compat,"4043F648E26823B18361AAC243BC490C70FDC8401484759322464B8C29B16B81");assert.equal(second.compat,first.compat);
+ assert.equal(first.compat,"D23A0BEDDA1FED281082C7651BF79F6BE6AAA1E051E397E1DB2049A71590094A");assert.equal(second.compat,first.compat);
  const message=await encode(sender.page),position=await decode(receiver.page,message);
  assert(Math.abs(position.lat-message.center.lat)<.002);assert(Math.abs(position.lon-message.center.lon)<.002);
  assert.equal(await share(receiver.page),invitation);
@@ -123,7 +123,25 @@ test("moteur PROTO 6 : encodage et décodage dans chaque zone intégrée",async(
   }
   return rows;
  });
- assert(results.length>=2);for(const row of results){assert(row.error<75,row.zone+" : écart "+row.error+" m");assert(row.ack&&row.final&&row.nacks,row.zone);}
+ assert.equal(results.length,68);for(const row of results){assert(row.error<75,row.zone+" : écart "+row.error+" m");assert(row.ack&&row.final&&row.nacks,row.zone);}
+});
+
+test("catalogue national : invitation corse et correspondance des 34 zones entre équipiers",async()=>{
+ const sender=await phone();await create(sender.page,{zone:"cap-corse-bastia"});const invitation=await share(sender.page);
+ const receiver=await phone();await importOuting(receiver.page,invitation);
+ const messages=await sender.page.evaluate(async()=>{
+  const secret=activeSecret();return Promise.all(BUILTIN_ZONES.map(async z=>{const encoded=await encodeCore(z.lat+.08,z.lon-.08,secret,z);return {id:z.id,alias:(await zoneAlias(secret,z)).text,words:encoded.phrase.words,connector:encoded.phrase.connector,ack:encoded.ack,final:encoded.finalConfirm};}));
+ });
+ assert.equal(new Set(messages.map(m=>m.alias)).size,34,"Alias du catalogue uniques pour le secret retenu");
+ const result=await receiver.page.evaluate(async messages=>{
+  const secret=activeSecret();return {active:activeZoneId,rows:await Promise.all(messages.map(async m=>{const z=BUILTIN_ZONES.find(z=>z.id===m.id),decoded=await decodeCore(m.words,m.connector,secret,z);return {id:z.id,alias:(await zoneAlias(secret,z)).text,error:haversineM(z.lat+.08,z.lon-.08,decoded.lat,decoded.lon),ack:decoded.ack===m.ack,final:decoded.finalConfirm===m.final};}))};
+ },messages);
+ assert.equal(result.active,"cap-corse-bastia");assert.equal(result.rows.length,34);
+ for(const [i,row]of result.rows.entries()){assert.equal(row.alias,messages[i].alias,row.id);assert(row.error<75&&row.ack&&row.final,row.id);}
+ assert.deepEqual(await receiver.page.locator("#sendZone optgroup").evaluateAll(nodes=>nodes.map(e=>e.label)),["Atlantique","Manche","Mer du Nord","Méditerranée","Corse"]);
+ assert.equal(await receiver.page.locator("#recvZone optgroup").count(),0);
+ const aliases=await receiver.page.locator("#recvZone option").evaluateAll(nodes=>nodes.map(e=>e.textContent.split(" — ")[0]));
+ assert.deepEqual(aliases,[...aliases].sort((a,b)=>a.localeCompare(b,"fr",{sensitivity:"base"})));
 });
 
 test("localStorage officiel préservé : création, changement de thème et import sans réglage manuel de session",async()=>{

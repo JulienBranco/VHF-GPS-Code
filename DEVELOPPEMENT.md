@@ -1,5 +1,7 @@
 # Développer et publier VHF GPS
 
+La présentation du projet et les étapes pour utiliser l’application sont dans le [README](README.md).
+
 Ce guide concerne le PC de développement. Les téléphones n’ont besoin d’aucun de ces outils.
 Node.js 22 ou plus récent doit être installé sur le PC. Aucun outil ne fait de commit ou de push.
 
@@ -201,6 +203,8 @@ Seule la remise à zéro complète volontaire abandonne les anciennes sorties.
 
 Le bouton « Suivre le point reçu » apparaît dans le résultat après confirmation complète de l’échange radio. La modale démarre un suivi GPS et demande le maintien de l’écran. La fermeture (bouton, Échap/Retour natif ou départ de la page) arrête le suivi et libère le maintien de l’écran. En arrière-plan le GPS est arrêté ; au retour, une nouvelle mesure est exigée avant les estimations. Le maintien de l’écran dépend du téléphone, notamment d’iOS 18.4 ou ultérieur en PWA installée, et peut être refusé ou retiré par le système.
 
+En haut de la modale, les coordonnées du point suivi (fixe, reçu ou généré) et du bateau sont présentées séparément. Le relevé du bateau est affiché comme position GPS actuelle uniquement lorsque le suivi est au premier plan, sans erreur et avec une mesure fraîche et précise. Une mesure fraîche trop imprécise porte le libellé « Position GPS indicative » ; un relevé ancien, en pause ou après une erreur reste explicitement une « Dernière position GPS ». Sans mesure et après réouverture, l'affichage attend le GPS.
+
 La vue SVG reste au nord, affiche les deux points, une direction directe en pointillés et une trace temporaire. Les boutons +/− et le déplacement tactile passent en cadrage manuel ; « Cadrer les deux points » réactive le cadrage automatique. La trace est limitée à 1 000 points en mémoire et disparaît à la fermeture : aucune donnée de suivi n’est écrite dans le stockage de la sortie. Le point reçu est fixe ; aucun déplacement ultérieur du bateau émetteur n’est connu.
 
 La vitesse est lissée sur les mesures récentes. Si le GPS ne la fournit pas, elle est estimée à partir de déplacements suffisamment grands et espacés. L’arrivée utilise la vitesse de rapprochement vers le point, après plusieurs relevés. Elle est suspendue à faible vitesse, en éloignement, pour un relevé de plus de 20 secondes ou une précision annoncée dépassant 100 m. La proximité tient compte de la cellule de 100 m et de la précision GPS. Les directions sont exprimées par rapport au nord vrai ; la vue ne contient ni carte marine ni calcul de dangers.
@@ -268,3 +272,149 @@ Tests : moteurs catalogués conservés sans préchargement ; reprise et rejeu ho
 purge avec sortie active, autre page ou téléchargement ; préparation en cache réservée ;
 moteur plus récent qu'un ancien catalogue ; catalogue altéré ou mise à jour interrompue ;
 nettoyage après levée des protections ; reset complet inchangé.
+
+## Module cartographique du catalogue
+
+La préparation de sortie intègre une carte interactive dans sa modale principale,
+juste sous la liste du catalogue. Dès l'ouverture, la vue France montre toutes les zones.
+La liste et les points de la carte sélectionnent le même choix ; la carte se recentre,
+la rose s'actualise et un résumé de préparation déjà vérifié est invalidé. L'activation
+reste soumise à la confirmation finale. Vue France, Centrer et +/− sont intégrés.
+La molette fait défiler la modale ; Ctrl+molette zoome sur la carte, comme les boutons.
+Le déplacement à un doigt et le pincement à deux doigts sont disponibles dans les
+deux cartes interactives (préparation et fenêtre Carte des zones). Le zoom reste
+centré entre les doigts et permet également leur déplacement simultané. Un geste
+à plusieurs doigts ne sélectionne jamais une zone ; le doigt restant peut poursuivre
+le déplacement sans saut. Les aperçus en lecture seule conservent le défilement normal.
+
+En préparation de zone éphémère, un aperçu en lecture seule apparaît sous la rose
+après vérification, lorsque toute l'emprise calculée tient dans `COVERAGE` (longitude
+−10° à +14°, latitude 39° à 54°). Il affiche le centre virtuel et les limites du brouillon,
+et non la position de référence saisie. Modifier la position, changer de type de zone
+ou fermer la modale retire cet aperçu jusqu'à une nouvelle vérification. Hors couverture,
+la rose reste disponible et la création conserve son parcours habituel.
+Le pont `getPreparedEphemeralMapZone()` ne transmet que l'identifiant, le nom, le centre
+et les limites d'un brouillon toujours valide ; aucun secret ou contenu d'invitation.
+Le fond et le rendu des aperçus sont partagés avec Émettre/Recevoir.
+
+Dans Émettre/Recevoir, un aperçu centré apparaît sous la rose pour toutes les zones
+entièrement couvertes par le fond. La liste de sélection conserve toute sa largeur. Le bouton `Voir carte des zones`,
+à droite du texte explicatif, ouvre une fenêtre centrée sur la zone active, avec le catalogue par façade, les zones éphémères
+et les zones personnalisées actuellement disponibles. La liste est relue à chaque
+ouverture et suit les modifications du moteur. Les points et la liste ne modifient
+que l'aperçu. `Changer de zone` ferme la carte puis appelle
+`switchToExistingZone(...,{clearPosition:true})` : confirmation habituelle,
+invalidation des résultats, effacement de la position et validation radio conservés.
+L'annulation garde la zone et la transmission précédentes. Le contexte de sortie
+et de zone est revérifié avant d'ouvrir la confirmation.
+Hors couverture, le bouton reste disponible sous la rose ; la fenêtre présente
+les limites encodables et permet toujours de choisir et activer depuis la liste.
+Le pont `getApplicationMapState()` fournit les centres et emprises réels,
+le type, la rose et le contexte de sélection ; aucun secret ni ancre publique.
+Les deux usages partagent le même affichage, les mêmes emprises et les mêmes gestes.
+La préparation par carte émet l'événement `change` de la liste existante ; elle ne
+contourne aucune validation du moteur. Elle est désactivée pendant l'activation.
+
+- `sources/catalog-map.js` : fenêtre, sélection, zoom et déplacement.
+- `sources/catalog-map-model.js` : projection Mercator, cadrage et échelle ; réutilisable
+  lors d'une future sous-couche du suivi.
+- `sources/catalog-map.css` : styles isolés jour/nuit.
+- `sources/catalog-map-data.js` : extrait vectoriel embarqué (environ 332 Ko), France
+  métropolitaine et abords. Les rectangles proviennent de `zoneBounds()` du moteur,
+  via des ponts limités aux coordonnées et aux limites nécessaires à l’aperçu.
+
+Pour désactiver la fonctionnalité, passer `CATALOG_MAP_ENABLED` à `false` dans
+`sources/runtime.js`. Cela retire les boutons et l'initialisation du module. Une panne
+à l'import ne bloque pas la préparation ou l'échange de positions. Les fichiers
+restent inclus dans les publications pour conserver la cohérence du manifeste.
+Le fond est chargé au premier aperçu et conservé hors connexion avec la
+publication. Aucune tuile distante, clé d'API ni requête externe n'est utilisée.
+
+### Origine et reproduction du fond
+
+Natural Earth, couches **Land 5.1.1** et **Coastline** (version inscrite dans l'archive : 5.0.0-pre9), échelle 1:10 millions,
+[domaine public](https://www.naturalearthdata.com/about/terms-of-use/).
+« 10m » désigne ici une échelle de 1:10 millions, pas une résolution de dix mètres.
+C'est un fond généralisé pour visualiser des zones de 250 km, sans sondes ni balisage.
+
+Archives officielles :
+- https://naciscdn.org/naturalearth/10m/physical/ne_10m_land.zip
+- https://naciscdn.org/naturalearth/10m/physical/ne_10m_coastline.zip
+
+Décompresser les deux archives dans un dossier de travail puis lancer :
+
+```powershell
+node tools/import-map-coast.cjs C:\chemin\natural-earth
+```
+
+L'outil découpe à longitude -10° / +14°, latitude 39° / 54°, simplifie les géométries
+à 0,001° et conserve les empreintes SHA-256 des archives dans le fichier généré.
+Les polygones de terre et les lignes de côte sont séparés pour éviter les fausses
+bordures dues au découpage des continents. Il n'effectue aucun téléchargement.
+Les tests cartographiques sont inclus dans `test:sources`, `test:browser` et `test` ;
+ils couvrent les limites moteur, les thèmes/mobile, le hors connexion et l'isolation
+lorsque le module est désactivé ou indisponible.
+
+### Étapes suivantes envisagées
+
+1. Réutiliser le fond et la projection dans le suivi, avec les points confirmés et
+   la trace GPS. Cette étape n'est pas intégrée au présent module.
+2. Étudier un trait de côte plus fin avec la [Limite terre-mer Shom-IGN](https://diffusion.shom.fr/limite-terre-mer.html),
+   publiée en Licence Ouverte 2.0. Elle remplace Histolitt pour la métropole.
+3. Pour les isobathes, traiter une extraction de [MNT bathymétriques Shom](https://diffusion.shom.fr/donnees/bathymerie.html)
+   à la résolution et à l'emprise utiles. Vérifier par produit la licence et le référentiel
+   vertical ; les profondeurs bathymétriques et les cartes nautiques complètes sont
+   des produits distincts. Préférer un extrait embarqué pour maintenir le hors connexion.
+4. Garmin/Navionics propose une [API de cartographie web](https://developer.garmin.com/marine-charts/overview/).
+   Son accès et ses conditions doivent être obtenus auprès de Garmin ; consulter son
+   site ne donne pas un droit de copie des cartes. Aucune intégration Garmin n'est présente.
+
+### Catalogue métropolitain et évolution
+
+Le catalogue contient **34 zones** de 250 × 250 km : 10 en Atlantique (identifiants,
+noms, centres et ordre historiques conservés), 10 en Manche, 2 en mer du Nord,
+8 en Méditerranée et 4 autour de la Corse. Ce sont des secteurs de l'application,
+avec des recouvrements, pas une partition administrative du littoral.
+La préparation, Émettre et la carte regroupent les choix par façade. Recevoir
+conserve le classement global par alias, pour retrouver le mot entendu à la VHF.
+La vue France calcule son cadrage à partir de toutes les emprises. Les centres
+non sélectionnés y sont représentés par des points pour éviter les numéros superposés.
+
+Pour ajouter une zone, compléter `BUILTIN_ZONES` dans `sources/engine.js` avec un
+identifiant stable et un centre WGS84 situé en mer. Le pont cartographique, les
+listes, les alias et les limites encodables utilisent cette même source. Vérifier
+que l'emprise entière tient dans `COVERAGE` et dans le fond vectoriel embarqué ;
+étendre le fond uniquement si le nouveau secteur le nécessite.
+
+Les centres du catalogue participent au digest COMPAT : un ajout change l'empreinte
+radio, même si la géométrie et les phrases des anciennes zones sont conservées.
+Pour ce catalogue, COMPAT commence par `D23A0BED` et le vecteur de référence donne
+`JIG|ANNEXE|CONGRE|PAPA` (calcul vérifié indépendamment avec PBKDF2/HMAC Node).
+Actualiser le vecteur fixe et les contrôles COMPAT lors d'une évolution volontaire,
+sans affaiblir l'autotest. Les publications déjà distribuées restent immuables et
+les invitations anciennes continuent de charger leur publication d'origine.
+
+`tests/catalog-zones.test.cjs` contrôle les centres en mer, les anciennes zones,
+les identifiants, les recouvrements et les points de côte dans des fenêtres du fond
+Natural Earth couvrant les façades et la Corse. Ce contrôle porte sur le fond
+simplifié embarqué. Les tests navigateur vérifient le cadrage à 320/390/900 px,
+l'import d'une invitation corse et les alias/décodages des 34 zones entre deux appareils.
+
+À la vérification d'une nouvelle sortie, `generateSessionSecretWithDistinctCatalogAliases()`
+calcule les alias de toutes les zones intégrées. La comparaison utilise les mots radio
+canoniques (ordre conservé, accents/casse/séparateurs neutralisés), plutôt que les textes
+d'affichage. Un secret produisant un doublon est rejeté avant le résumé et l'invitation ;
+un autre secret cryptographique est essayé. Après 16 tentatives infructueuses, la
+préparation est refusée avec un message et une nouvelle tentative reste possible.
+Une sélection modifiée ou une préparation annulée interrompt le contrôle devenu obsolète.
+La clé PBKDF2 est préparée une seule fois par candidat avant les calculs parallèles.
+
+Ce filtre s'applique à la création, y compris lorsqu'on choisit une zone éphémère,
+et garantit des alias distincts entre les zones du catalogue commun. Il ne recalcule
+pas le secret des invitations importées ni des sorties existantes. Les zones personnelles
+ou éphémères hors catalogue restent couvertes par l'avertissement de doublon existant.
+Le calcul `zoneAlias()` et le digest COMPAT restent identiques : aucune résolution locale
+ne renomme les alias et tous les équipiers obtiennent les mêmes mots avec le secret retenu.
+`tests/catalog-alias-safety.test.cjs` force une collision canonique, des collisions
+persistantes et une sélection modifiée pendant le calcul ; il vérifie le secret accepté,
+les 34 alias, la reprise et la préservation de la sortie précédente.

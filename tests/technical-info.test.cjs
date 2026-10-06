@@ -79,8 +79,8 @@ test("diagnostic protocole déplacé : secret absent de l'interface, autotest et
  assert.equal(await page.locator('#technicalInfo .technical-info-list dt').filter({hasText:'Protocole de cette sortie'}).count(),0);
  assert.equal(await page.locator("#technicalInfo").getAttribute("open"),null);
  await page.locator("#technicalInfo summary").click();const panel=page.locator("#technicalInfo");
- assert.equal(await panel.locator("#compatFull").innerText(),'4043F648E26823B18361AAC243BC490C70FDC8401484759322464B8C29B16B81');
- assert.match(await panel.locator("#compatShort").innerText(),/PROTO 6.*4043F648/);
+ assert.equal(await panel.locator("#compatFull").innerText(),'D23A0BEDDA1FED281082C7651BF79F6BE6AAA1E051E397E1DB2049A71590094A');
+ assert.match(await panel.locator("#compatShort").innerText(),/PROTO 6.*D23A0BED/);
  assert.equal(await panel.locator("#protocolSelfTestStatus").innerText(),"Autotest protocole : OK.");
  assert.equal((await panel.innerText()).includes(original),false);
  await panel.locator("#protocolSelfTestBtn").click();await page.waitForFunction(()=>protocolRuntimeState===PROTOCOL_STATE.OK);
